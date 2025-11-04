@@ -413,6 +413,10 @@ export function BookingsTable({ userId }: BookingsTableProps) {
       booking={selectedBooking}
       isOpen={showDetailsPopup}
       onClose={handleCloseDetails}
+      onEdit={() => {
+        handleCloseDetails() // Close details popup
+        handleEditBooking(selectedBooking!) // Open edit popup
+      }}
     />
     
     <EditBookingPopup
