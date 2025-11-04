@@ -490,17 +490,17 @@ async function updateAllBookingStatuses(classId: string, paymentStatus: string, 
  */
 async function processClassComplete(clase: any) {
     const classTitle = clase.title || 'Unknown Class';
-    const enrolled = clase.enrolled || 0;
     const minStudents = clase.minStudents || 0;
     const maxStudents = clase.maxStudents || 0;
+
+    // Fetch all enrolled students to get actual count
+    const allStudents = await fetchAllEnrolledStudents(clase.id);
+    const enrolled = allStudents.length; // Use actual enrolled count from bookings
     const hasMinimum = enrolled >= minStudents;
 
     console.log(`\n📚 Processing class: ${classTitle}`);
     console.log(`   Enrollment: ${enrolled}/${maxStudents} (minimum: ${minStudents})`);
     console.log(`   Status: ${hasMinimum ? '✅ WILL PROCEED (Has minimum)' : '❌ WILL BE CANCELLED (Below minimum)'}`);
-
-    // Fetch all enrolled students
-    const allStudents = await fetchAllEnrolledStudents(clase.id);
     console.log(`   Found ${allStudents.length} enrolled students`);
 
     // Fetch held bookings for payment processing

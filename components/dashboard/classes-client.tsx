@@ -19,8 +19,9 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
   const [showForm, setShowForm] = useState(false)
   const [editingClass, setEditingClass] = useState<Clase | null>(null)
   const [enrolledCounts, setEnrolledCounts] = useState<Record<string, number>>({})
+  const [cancelledClasses, setCancelledClasses] = useState<Set<string>>(new Set())
 
-  // Fetch enrolled counts from bookings
+  // Fetch enrolled counts from bookings and check for cancelled classes
   useEffect(() => {
     const fetchEnrolledCounts = async () => {
       try {
@@ -32,24 +33,47 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
         // Fetch bookings for all classes
         const { data: bookings, error } = await supabase
           .from('bookings')
-          .select('class_id')
+          .select('class_id, booking_status')
           .in('class_id', classIds)
-          .in('booking_status', ['confirmed', 'pending'])
         
         if (error) {
           console.error('Error fetching enrolled counts:', error)
           return
         }
         
-        // Count bookings per class
+        // Count enrolled bookings per class (confirmed or pending)
         const counts: Record<string, number> = {}
+        const classBookings: Record<string, any[]> = {}
+        
         bookings?.forEach((booking: any) => {
           const classId = booking.class_id
-          counts[classId] = (counts[classId] || 0) + 1
+          
+          // Group bookings by class
+          if (!classBookings[classId]) {
+            classBookings[classId] = []
+          }
+          classBookings[classId].push(booking)
+          
+          // Count only confirmed/pending as enrolled
+          if (booking.booking_status === 'confirmed' || booking.booking_status === 'pending') {
+            counts[classId] = (counts[classId] || 0) + 1
+          }
         })
         
         setEnrolledCounts(counts)
+        
+        // Check for cancelled classes - if all bookings for a class are cancelled, mark it as cancelled
+        const cancelled = new Set<string>()
+        Object.entries(classBookings).forEach(([classId, bookingsForClass]) => {
+          // If there are bookings and ALL of them are cancelled, the class is cancelled
+          if (bookingsForClass.length > 0 && bookingsForClass.every(b => b.booking_status === 'cancelled')) {
+            cancelled.add(classId)
+          }
+        })
+        
+        setCancelledClasses(cancelled)
         console.log('Enrolled counts loaded:', counts)
+        console.log('Cancelled classes:', Array.from(cancelled))
       } catch (error) {
         console.error('Error in fetchEnrolledCounts:', error)
       }
@@ -82,6 +106,11 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
 
   // Helper function to get class status
   const getClassStatus = (clase: Clase) => {
+    // Check if class is cancelled first
+    if (cancelledClasses.has(clase.id)) {
+      return { status: 'cancelled', label: 'Cancelled', variant: 'destructive' as const }
+    }
+    
     const classDate = new Date(`${clase.date}T${clase.time}`)
     const now = new Date()
     const diffTime = classDate.getTime() - now.getTime()
