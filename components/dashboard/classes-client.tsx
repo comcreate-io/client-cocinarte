@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,6 +8,7 @@ import { BookOpen, Plus, Calendar, Users, Clock, DollarSign } from 'lucide-react
 import { Clase } from '@/lib/types/clases'
 import { ClassForm } from './class-form'
 import { ClassActions } from './class-actions'
+import { createClient } from '@/lib/supabase/client'
 
 interface ClassesClientProps {
   initialClases: Clase[]
@@ -17,17 +18,51 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
   const [clases, setClases] = useState<Clase[]>(initialClases)
   const [showForm, setShowForm] = useState(false)
   const [editingClass, setEditingClass] = useState<Clase | null>(null)
+  const [enrolledCounts, setEnrolledCounts] = useState<Record<string, number>>({})
 
-  // Debug: Print all classes to console
-  console.log('=== ClassesClient Component Loaded ===')
-  console.log('Total classes loaded:', initialClases.length)
-  console.log('All classes (detailed):', initialClases)
-  console.log('All classes (JSON):', JSON.stringify(initialClases, null, 2))
-  console.log('=======================================')
+  // Fetch enrolled counts from bookings
+  useEffect(() => {
+    const fetchEnrolledCounts = async () => {
+      try {
+        const supabase = createClient()
+        const classIds = clases.map(c => c.id)
+        
+        if (classIds.length === 0) return
+        
+        // Fetch bookings for all classes
+        const { data: bookings, error } = await supabase
+          .from('bookings')
+          .select('class_id')
+          .in('class_id', classIds)
+          .in('booking_status', ['confirmed', 'pending'])
+        
+        if (error) {
+          console.error('Error fetching enrolled counts:', error)
+          return
+        }
+        
+        // Count bookings per class
+        const counts: Record<string, number> = {}
+        bookings?.forEach((booking: any) => {
+          const classId = booking.class_id
+          counts[classId] = (counts[classId] || 0) + 1
+        })
+        
+        setEnrolledCounts(counts)
+        console.log('Enrolled counts loaded:', counts)
+      } catch (error) {
+        console.error('Error in fetchEnrolledCounts:', error)
+      }
+    }
+    
+    fetchEnrolledCounts()
+  }, [clases])
 
-  // Helper function to format date
+  // Helper function to format date - parse YYYY-MM-DD format correctly
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // Parse YYYY-MM-DD format directly to avoid timezone issues
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day) // month is 0-indexed
     return date.toLocaleDateString('en-US', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -140,7 +175,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                 <div>
                   <p className="text-sm font-medium text-purple-700">Total Enrolled</p>
                   <p className="text-2xl font-bold text-purple-900">
-                    {clases.reduce((sum, clase) => sum + (clase.enrolled ?? 0), 0)}
+                    {Object.values(enrolledCounts).reduce((sum, count) => sum + count, 0)}
                   </p>
                 </div>
               </div>
@@ -212,7 +247,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                     
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" />
-                      <span>{clase.enrolled ?? 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity)</span>
+                      <span>{enrolledCounts[clase.id] ?? 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity)</span>
                     </div>
                     
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
