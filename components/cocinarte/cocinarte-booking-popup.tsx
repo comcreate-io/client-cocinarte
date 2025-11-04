@@ -410,30 +410,19 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         return
       }
 
-      // Create booking record
+      // Create booking record with payment on HOLD (verified)
       const bookingsService = new BookingsClientService()
-      const bookingData: any = {
+      const newBooking = await bookingsService.createBooking({
         user_id: user.id!,
         class_id: selectedClassData.id,
         student_id: studentInfo.id,
         payment_amount: selectedClassData.price,
+        payment_method: 'stripe',
+        payment_status: 'held',
         booking_status: 'pending',
-        notes: isFreeClass 
-          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.`
-          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.`
-      }
-
-      // Only add payment-related fields if it's not a free class
-      if (!isFreeClass && paymentIntentId) {
-        bookingData.payment_method = 'stripe'
-        bookingData.payment_status = 'held'
-        bookingData.stripe_payment_intent_id = paymentIntentId
-      } else if (isFreeClass) {
-        bookingData.payment_method = 'free'
-        bookingData.payment_status = 'paid' // Free classes are considered paid
-      }
-
-      const newBooking = await bookingsService.createBooking(bookingData)
+        stripe_payment_intent_id: paymentIntentId,
+        notes: `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.`
+      })
 
       // Update enrolled count in the class
       await clasesService.updateClassEnrollment(selectedClassData.id, 1)
