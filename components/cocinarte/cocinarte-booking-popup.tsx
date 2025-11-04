@@ -160,25 +160,36 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           const studentsService = new StudentsClientService()
           const studentInfo = await studentsService.getStudentByEmail(user.email!)
           
+          // Format date if it's a Date object
+          const classDate = selectedClassData.date instanceof Date 
+            ? selectedClassData.date.toISOString().split('T')[0]
+            : selectedClassData.date
+
+          const requestBody = {
+            amount: selectedClassData.price,
+            classTitle: selectedClassData.title,
+            userName: studentInfo?.parent_name || parentName || user.user_metadata?.full_name || 'Parent',
+            studentName: studentInfo?.child_name || childName || 'Student',
+            userEmail: user.email,
+            classId: selectedClassData.id,
+            classDate: classDate,
+            classTime: selectedClassData.time,
+          }
+
+          console.log('Creating payment intent with data:', requestBody)
+
           const response = await fetch('/api/create-payment-intent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-              amount: selectedClassData.price,
-              classTitle: selectedClassData.title,
-              userName: studentInfo?.parent_name || parentName || user.user_metadata?.full_name || 'Parent',
-              studentName: studentInfo?.child_name || childName || 'Student',
-              userEmail: user.email,
-              classId: selectedClassData.id,
-              classDate: selectedClassData.date,
-              classTime: selectedClassData.time,
-            }),
+            body: JSON.stringify(requestBody),
           })
 
           if (!response.ok) {
-            throw new Error('Failed to create payment intent')
+            const errorData = await response.json().catch(() => ({}))
+            console.error('Payment intent error response:', errorData)
+            throw new Error(errorData.error || 'Failed to create payment intent')
           }
 
           const data = await response.json()
@@ -399,19 +410,30 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         return
       }
 
-      // Create booking record with payment on HOLD (verified)
+      // Create booking record
       const bookingsService = new BookingsClientService()
-      const newBooking = await bookingsService.createBooking({
+      const bookingData: any = {
         user_id: user.id!,
         class_id: selectedClassData.id,
         student_id: studentInfo.id,
         payment_amount: selectedClassData.price,
-        payment_method: 'stripe',
-        payment_status: 'held',
         booking_status: 'pending',
-        stripe_payment_intent_id: paymentIntentId,
-        notes: `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.`
-      })
+        notes: isFreeClass 
+          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.`
+          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.`
+      }
+
+      // Only add payment-related fields if it's not a free class
+      if (!isFreeClass && paymentIntentId) {
+        bookingData.payment_method = 'stripe'
+        bookingData.payment_status = 'held'
+        bookingData.stripe_payment_intent_id = paymentIntentId
+      } else if (isFreeClass) {
+        bookingData.payment_method = 'free'
+        bookingData.payment_status = 'paid' // Free classes are considered paid
+      }
+
+      const newBooking = await bookingsService.createBooking(bookingData)
 
       // Update enrolled count in the class
       await clasesService.updateClassEnrollment(selectedClassData.id, 1)
