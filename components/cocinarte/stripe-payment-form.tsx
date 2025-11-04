@@ -34,7 +34,7 @@ export default function StripePaymentForm({
     setErrorMessage('')
 
     try {
-      const { error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/payment-success`,
@@ -45,9 +45,22 @@ export default function StripePaymentForm({
       if (error) {
         setErrorMessage(error.message || 'An error occurred during payment')
         setIsLoading(false)
+      } else if (paymentIntent) {
+        // Verify payment hold was successful
+        console.log('Payment Intent Status:', paymentIntent.status)
+        
+        if (paymentIntent.status === 'requires_capture') {
+          // Payment hold successful!
+          console.log('✅ Payment hold successful - amount authorized')
+          onSuccess()
+        } else {
+          // Unexpected status
+          setErrorMessage(`Payment authorization failed. Status: ${paymentIntent.status}. Please try again.`)
+          setIsLoading(false)
+        }
       } else {
-        // Payment successful
-        onSuccess()
+        setErrorMessage('Payment verification failed. Please try again.')
+        setIsLoading(false)
       }
     } catch (err) {
       setErrorMessage('An unexpected error occurred')

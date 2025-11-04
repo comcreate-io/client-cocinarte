@@ -360,6 +360,35 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         return
       }
 
+      // Verify payment hold was successful with Stripe
+      console.log('Verifying payment hold with Stripe...')
+      const verifyResponse = await fetch('/api/stripe/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentIntentId: paymentIntentId
+        })
+      })
+
+      if (!verifyResponse.ok) {
+        const errorData = await verifyResponse.json()
+        setPaymentError(`Payment verification failed: ${errorData.error || 'Unknown error'}`)
+        setPaymentLoading(false)
+        return
+      }
+
+      const verifyData = await verifyResponse.json()
+      
+      if (verifyData.status !== 'requires_capture') {
+        setPaymentError(`Payment hold failed. Status: ${verifyData.status}. Please try again.`)
+        setPaymentLoading(false)
+        return
+      }
+
+      console.log('✅ Payment hold verified successfully')
+
       // Get student information
       const studentsService = new StudentsClientService()
       const studentInfo = await studentsService.getStudentByEmail(user.email!)
@@ -370,7 +399,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         return
       }
 
-      // Create booking record with payment on HOLD (not charged yet)
+      // Create booking record with payment on HOLD (verified)
       const bookingsService = new BookingsClientService()
       const newBooking = await bookingsService.createBooking({
         user_id: user.id!,

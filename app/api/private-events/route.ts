@@ -53,7 +53,19 @@ export async function POST(request: NextRequest) {
     })
 
     // Email content for admin
-    const adminEmails = ['diego@comcreate.org', 'info@cocinartepdx.com'].filter(Boolean)
+    const adminEmails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map(email => email.trim())
+      .filter(Boolean)
+    
+    if (adminEmails.length === 0) {
+      console.error('No admin emails configured')
+      return NextResponse.json(
+        { error: 'Email configuration error' },
+        { status: 500 }
+      )
+    }
+    
     const mailOptions = {
       from: process.env.SMTP_FROM,
       to: adminEmails,

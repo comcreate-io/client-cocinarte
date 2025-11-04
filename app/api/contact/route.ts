@@ -36,9 +36,22 @@ export async function POST(request: NextRequest) {
     })
 
     // Email content
+    const adminEmails = (process.env.ADMIN_EMAILS || '')
+      .split(',')
+      .map(email => email.trim())
+      .filter(Boolean)
+    
+    if (adminEmails.length === 0) {
+      console.error('No admin emails configured')
+      return NextResponse.json(
+        { error: 'Email configuration error' },
+        { status: 500 }
+      )
+    }
+    
     const mailOptions = {
       from: process.env.SMTP_FROM,
-      to: ['diego@comcreate.org', process.env.CONTACT_EMAIL],
+      to: adminEmails,
       subject: `Contact Form Submission: ${subject || 'No Subject'}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
