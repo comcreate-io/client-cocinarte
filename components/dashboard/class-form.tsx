@@ -167,7 +167,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] h-[90vh] flex flex-col p-0">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="flex-shrink-0 p-6 pb-4">
           <DialogTitle>
             {editingClass ? 'Edit Cooking Class' : 'Create New Cooking Class'}
@@ -179,7 +179,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
             }
           </DialogDescription>
         </DialogHeader>
-        <form key={editingClass?.id || 'new'} onSubmit={handleSubmit} className="flex flex-col flex-1">
+        <form key={editingClass?.id || 'new'} onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <div className="flex-1 overflow-y-auto px-6 pb-6">
             <div className="grid gap-4">
             <div className="grid gap-2">
@@ -332,7 +332,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
             </div>
             </div>
           </div>
-          <DialogFooter className="flex-shrink-0 p-6 pt-4 border-t">
+          <DialogFooter className="flex-shrink-0 p-6 pt-4 border-t bg-background">
             <Button type="button" variant="outline" onClick={onClose} disabled={isUploadingImage}>
               Cancel
             </Button>

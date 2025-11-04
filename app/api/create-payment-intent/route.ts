@@ -21,10 +21,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, classTitle, userName, studentName, classId, classDate, classTime, userEmail } = body;
 
-    // Validate required fields
-    if (!amount || !classTitle || !classId) {
+    console.log('Received payment intent request:', { amount, classTitle, classId, hasDate: !!classDate, hasTime: !!classTime });
+
+    // Validate required fields - amount can be 0, so check for null/undefined specifically
+    if (amount === null || amount === undefined || !classTitle || !classId) {
+      console.error('Missing required fields:', { amount, classTitle, classId, body });
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields', details: { amount: amount !== null && amount !== undefined, classTitle: !!classTitle, classId: !!classId } },
+        { status: 400 }
+      );
+    }
+
+    // Validate amount is a valid number
+    if (typeof amount !== 'number' || isNaN(amount) || amount < 0) {
+      console.error('Invalid amount:', amount);
+      return NextResponse.json(
+        { error: 'Invalid amount. Amount must be a valid number >= 0' },
         { status: 400 }
       );
     }
@@ -44,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (classError || !classData) {
       console.error('Error fetching class data:', classError);
       return NextResponse.json(
-        { error: 'Class not found' },
+        { error: 'Class not found', details: classError?.message || 'Class data not found' },
         { status: 404 }
       );
     }
@@ -83,10 +95,10 @@ export async function POST(request: NextRequest) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating payment intent:', error);
     return NextResponse.json(
-      { error: 'Failed to create payment intent' },
+      { error: 'Failed to create payment intent', details: error?.message || 'Unknown error' },
       { status: 500 }
     );
   }
