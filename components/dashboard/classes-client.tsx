@@ -20,6 +20,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
   const [editingClass, setEditingClass] = useState<Clase | null>(null)
   const [enrolledCounts, setEnrolledCounts] = useState<Record<string, number>>({})
   const [cancelledClasses, setCancelledClasses] = useState<Set<string>>(new Set())
+  const [chargedClasses, setChargedClasses] = useState<Set<string>>(new Set())
 
   // Fetch enrolled counts from bookings and check for cancelled classes
   useEffect(() => {
@@ -33,7 +34,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
         // Fetch bookings for all classes
         const { data: bookings, error } = await supabase
           .from('bookings')
-          .select('class_id, booking_status')
+          .select('class_id, booking_status, payment_status')
           .in('class_id', classIds)
         
         if (error) {
@@ -72,8 +73,20 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
         })
         
         setCancelledClasses(cancelled)
+        
+        // Check for charged classes - if any bookings have payment_status 'completed', the class has been charged
+        const charged = new Set<string>()
+        Object.entries(classBookings).forEach(([classId, bookingsForClass]) => {
+          // If there are bookings and at least one has payment_status 'completed', the class has been charged
+          if (bookingsForClass.length > 0 && bookingsForClass.some(b => b.payment_status === 'completed')) {
+            charged.add(classId)
+          }
+        })
+        
+        setChargedClasses(charged)
         console.log('Enrolled counts loaded:', counts)
         console.log('Cancelled classes:', Array.from(cancelled))
+        console.log('Charged classes:', Array.from(charged))
       } catch (error) {
         console.error('Error in fetchEnrolledCounts:', error)
       }
@@ -109,6 +122,11 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
     // Check if class is cancelled first
     if (cancelledClasses.has(clase.id)) {
       return { status: 'cancelled', label: 'Cancelled', variant: 'destructive' as const }
+    }
+    
+    // Check if class has been charged (payments processed)
+    if (chargedClasses.has(clase.id)) {
+      return { status: 'charged', label: 'Payment Processed', variant: 'default' as const }
     }
     
     const classDate = new Date(`${clase.date}T${clase.time}`)
