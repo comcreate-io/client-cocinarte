@@ -19,9 +19,10 @@ interface BookingDetailsPopupProps {
   booking: BookingWithDetails | null
   isOpen: boolean
   onClose: () => void
+  onEdit?: () => void
 }
 
-export function BookingDetailsPopup({ booking, isOpen, onClose }: BookingDetailsPopupProps) {
+export function BookingDetailsPopup({ booking, isOpen, onClose, onEdit }: BookingDetailsPopupProps) {
   if (!booking) return null
 
   const getStatusColor = (status: string) => {
@@ -203,7 +204,10 @@ export function BookingDetailsPopup({ booking, isOpen, onClose }: BookingDetails
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
-            <Button>
+            <Button onClick={() => {
+              onClose() // Close the details popup
+              onEdit?.() // Open the edit popup
+            }}>
               Edit Booking
             </Button>
           </div>
