@@ -35,20 +35,30 @@ export class StudentsClientService {
   }
 
   async getStudentByEmail(email: string): Promise<Student | null> {
-    const { data, error } = await this.supabase
-      .from('students')
-      .select('*')
-      .eq('email', email)
-      .single();
+    try {
+      const { data, error } = await this.supabase
+        .from('students')
+        .select('*')
+        .eq('email', email)
+        .limit(1);
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // Not found
+      if (error) {
+        // Handle 406 Not Acceptable errors (often means no results found or RLS issue)
+        if (error.status === 406 || error.message?.includes('Not Acceptable')) {
+          console.warn('Student not found or access denied:', email);
+          return null; // Not found or access denied
+        }
+        console.error('Error fetching student by email:', error);
+        throw new Error(`Error fetching student by email: ${error.message}`);
       }
-      throw new Error(`Error fetching student by email: ${error.message}`);
-    }
 
-    return data;
+      // Return first result if found, otherwise null
+      return data && data.length > 0 ? data[0] : null;
+    } catch (error: any) {
+      // Catch any other errors and return null
+      console.error('Exception in getStudentByEmail:', error);
+      return null;
+    }
   }
 
   async createStudent(studentData: CreateStudentData): Promise<Student> {

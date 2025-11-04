@@ -23,8 +23,9 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!amount || !classTitle || !classId) {
+      console.error('Missing required fields:', { amount, classTitle, classId, body });
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields', details: { amount: !!amount, classTitle: !!classTitle, classId: !!classId } },
         { status: 400 }
       );
     }
@@ -44,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (classError || !classData) {
       console.error('Error fetching class data:', classError);
       return NextResponse.json(
-        { error: 'Class not found' },
+        { error: 'Class not found', details: classError?.message || 'Class data not found' },
         { status: 404 }
       );
     }
@@ -83,10 +84,10 @@ export async function POST(request: NextRequest) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating payment intent:', error);
     return NextResponse.json(
-      { error: 'Failed to create payment intent' },
+      { error: 'Failed to create payment intent', details: error?.message || 'Unknown error' },
       { status: 500 }
     );
   }
