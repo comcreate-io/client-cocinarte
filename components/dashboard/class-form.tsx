@@ -92,8 +92,11 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
           ...formData
         })
       } else {
-        // For new classes, don't include enrolled field (defaults to 0 in database)
-        const { enrolled, ...createData } = formData
+        // For new classes, explicitly set enrolled to 0
+        const createData = {
+          ...formData,
+          enrolled: 0
+        }
         await clasesService.createClase(createData)
       }
       

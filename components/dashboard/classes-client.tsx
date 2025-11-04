@@ -140,7 +140,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                 <div>
                   <p className="text-sm font-medium text-purple-700">Total Enrolled</p>
                   <p className="text-2xl font-bold text-purple-900">
-                    {clases.reduce((sum, clase) => sum + (clase.enrolled || 0), 0)}
+                    {clases.reduce((sum, clase) => sum + (clase.enrolled ?? 0), 0)}
                   </p>
                 </div>
               </div>
@@ -181,7 +181,10 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {clases.map((clase) => {
             const status = getClassStatus(clase)
-            const classDate = new Date(`${clase.date}T${clase.time}`)
+            // Parse date properly - handle both date string and time string formats
+            const dateStr = clase.date.includes('T') ? clase.date.split('T')[0] : clase.date
+            const timeStr = clase.time.includes(':') ? clase.time.split(':').slice(0, 2).join(':') : clase.time
+            const classDate = new Date(`${dateStr}T${timeStr}`)
             const isToday = new Date().toDateString() === classDate.toDateString()
             
             return (
@@ -209,7 +212,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                     
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" />
-                      <span>{clase.enrolled || 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity)</span>
+                      <span>{clase.enrolled ?? 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity)</span>
                     </div>
                     
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">

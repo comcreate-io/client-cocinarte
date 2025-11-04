@@ -401,16 +401,21 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       console.log('✅ Payment hold verified successfully')
 
       // Get student information
+      console.log('Fetching student information...')
       const studentsService = new StudentsClientService()
       const studentInfo = await studentsService.getStudentByEmail(user.email!)
       
       if (!studentInfo) {
+        console.error('Student profile not found for email:', user.email)
         setPaymentError('Student profile not found. Please contact support.')
         setPaymentLoading(false)
         return
       }
 
+      console.log('Student info found:', studentInfo.id)
+
       // Create booking record with payment on HOLD (verified)
+      console.log('Creating booking record...')
       const bookingsService = new BookingsClientService()
       const newBooking = await bookingsService.createBooking({
         user_id: user.id!,
@@ -424,8 +429,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         notes: `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.`
       })
 
+      console.log('Booking created:', newBooking.id)
+
       // Update enrolled count in the class
+      console.log('Updating class enrollment...')
       await clasesService.updateClassEnrollment(selectedClassData.id, 1)
+      console.log('Class enrollment updated')
       
       // Send confirmation emails
       try {
@@ -457,14 +466,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       }
       
       // Payment successful, clear pending booking and show confirmation
+      console.log('Booking completed successfully, showing confirmation...')
       sessionStorage.removeItem('pendingBooking')
       setAuthStep('confirmation')
+      setPaymentLoading(false)
+      console.log('Payment loading set to false')
     } catch (error) {
       console.error('Payment/booking error:', error)
+      console.error('Error details:', error instanceof Error ? error.message : error)
       setPaymentError('Booking creation failed. Please contact support.')
+      setPaymentLoading(false)
     }
-    
-    setPaymentLoading(false)
   }
 
   const handleBackToPayment = () => {
