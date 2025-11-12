@@ -148,51 +148,98 @@ export default function CocinarteBirthday() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div className="bg-gradient-to-br from-cocinarte-yellow to-cocinarte-yellow rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
+        {/* Available Themes Banner */}
+        <div className="mb-12 bg-cocinarte-orange rounded-2xl p-6 text-center shadow-lg">
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">Ask us about available party themes!</h3>
+          <p className="text-white text-lg">
+            We offer: <strong>Pastel • Rainbow • Jungle • Encanto • Coco • Princess • Baking Theme</strong> and more!
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+          {/* DIY Party */}
+          <div className="bg-purple-500 rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
+            <Cake className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white mx-auto mb-2 sm:mb-3" />
+            <h3 className="font-semibold text-white text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">DIY Party</h3>
+            <p className="text-sm sm:text-base lg:text-lg text-white mb-2 sm:mb-3">Do It Yourself</p>
+            <p className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">$450</p>
+            <p className="text-xs text-white/90 mb-2">Deposit: $200</p>
+            <ul className="text-xs sm:text-sm text-white space-y-1 sm:space-y-2 text-left">
+              <li>• Room rental (both rooms)</li>
+              <li>• Adult & kids tables/chairs</li>
+              <li>• 2-hour party time</li>
+              <li>• Set-up time included</li>
+              <li>• Up to 16 kids included</li>
+            </ul>
+          </div>
+
+          {/* Mini Fiesta */}
+          <div className="bg-cocinarte-yellow rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
             <Cake className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white mx-auto mb-2 sm:mb-3" />
             <h3 className="font-semibold text-white text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">Mini Fiesta</h3>
             <p className="text-sm sm:text-base lg:text-lg text-white mb-2 sm:mb-3">Up to 8 kids</p>
             <p className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">$450</p>
-            <ul className="text-xs sm:text-sm text-white space-y-1 sm:space-y-2">
-                  <li>• 1.5-hour cooking session</li>
-                  <li>• All ingredients</li>
-                  <li>• Birthday cake-making</li>
-                  <li>• Take-home treats</li>
-                  <li>• Party decorations</li>
-                </ul>
-              </div>
+            <ul className="text-xs sm:text-sm text-white space-y-1 sm:space-y-2 text-left">
+              <li>• 1.5-hour party</li>
+              <li>• All ingredients</li>
+              <li>• Birthday cake-making</li>
+              <li>• Take-home treats</li>
+              <li>• Party decorations</li>
+            </ul>
+          </div>
 
-          <div className="bg-gradient-to-br from-cocinarte-red to-cocinarte-red rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
+          {/* Deluxe Fiesta */}
+          <div className="bg-cocinarte-red rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
             <PartyPopper className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white mx-auto mb-2 sm:mb-3" />
             <h3 className="font-semibold text-white text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">Deluxe Fiesta</h3>
             <p className="text-sm sm:text-base lg:text-lg text-white mb-2 sm:mb-3">Up to 12 kids</p>
             <p className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">$650</p>
-            <ul className="text-xs sm:text-sm text-white space-y-1 sm:space-y-2">
-                  <li>• 2.5-hour cooking session</li>
-                  <li>• All ingredients</li>
-                  <li>• Custom birthday cake</li>
-                  <li>• Goodie bags</li>
-                  <li>• Full party decorations</li>
-                  <li>• Photo Booth station for pictures</li>
-                </ul>
-              </div>
+            <ul className="text-xs sm:text-sm text-white space-y-1 sm:space-y-2 text-left">
+              <li>• 2-hour party</li>
+              <li>• All ingredients</li>
+              <li>• Custom birthday cake</li>
+              <li>• Goodie bags</li>
+              <li>• Full party decorations</li>
+              <li>• Photo Booth station</li>
+            </ul>
+          </div>
 
-          <div className="bg-cocinarte-navy rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300 sm:col-span-2 lg:col-span-1">
+          {/* Premium Fiesta */}
+          <div className="bg-cocinarte-navy rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
             <Star className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white mx-auto mb-2 sm:mb-3" />
             <h3 className="font-semibold text-white text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">Premium Fiesta</h3>
             <p className="text-sm sm:text-base lg:text-lg text-white mb-2 sm:mb-3">Up to 18 kids</p>
             <p className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">$850</p>
-            <ul className="text-xs sm:text-sm text-white space-y-1 sm:space-y-2">
-                  <li>• 3-hour cooking session</li>
-                  <li>• All ingredients</li>
-                  <li>• Custom themed cake</li>
-                  <li>• Premium goodie bags</li>
-                  <li>• Themed decorations</li>
-                  <li>• Party coordinator</li>
-                  <li>• Photo Booth station for pictures</li>
-                </ul>
-              </div>
+            <ul className="text-xs sm:text-sm text-white space-y-1 sm:space-y-2 text-left">
+              <li>• 2.5-hour party</li>
+              <li>• All ingredients</li>
+              <li>• Custom themed cake</li>
+              <li>• Premium goodie bags</li>
+              <li>• Themed decorations</li>
+              <li>• Party coordinator</li>
+              <li>• Photo Booth station</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* VIP Package - Full Width */}
+        <div className="mb-8 bg-amber-500 rounded-2xl p-6 md:p-8 text-center shadow-xl">
+          <div className="inline-block bg-white px-6 py-2 rounded-full mb-4">
+            <p className="text-cocinarte-navy font-bold text-sm uppercase tracking-wider">⭐ VIP Experience ⭐</p>
+          </div>
+          <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">VIP Party Package</h3>
+          <p className="text-5xl font-bold text-white mb-6">$1,078</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-white max-w-4xl mx-auto">
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Full décor package</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Small balloon garland</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Pizzas included</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Veggie tray</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Sodas & kids juices</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Goodie bags</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Character visit</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Tables & chairs</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Both party rooms</div>
+          </div>
         </div>
 
         {/* Weekend Party Room Rentals Section */}
@@ -246,11 +293,11 @@ export default function CocinarteBirthday() {
 
             {/* Time Slots & Holiday Pricing */}
             <div>
-              <h4 className="text-xl font-bold text-cocinarte-navy mb-4">Weekend Time Slots</h4>
+              <h4 className="text-xl font-bold text-cocinarte-navy mb-4">Party Time Slots</h4>
               <ul className="space-y-2 text-slate-700 mb-6">
                 <li>• 9:00 am – 11:00 am</li>
-                <li>• 12:00 pm – 2:00 pm</li>
-                <li>• 3:00 pm – 5:00 pm</li>
+                <li>• 1:30 pm – 3:30 pm</li>
+                <li>• 4:30 pm – 6:30 pm</li>
               </ul>
               <p className="text-xs text-slate-500 mb-6">Extra availability may open depending on the day</p>
 
@@ -259,11 +306,8 @@ export default function CocinarteBirthday() {
                 <p className="text-sm text-slate-700 mb-2"><strong>Add $100</strong> for:</p>
                 <ul className="text-sm text-slate-600 space-y-1">
                   <li>• Federal Holidays</li>
-                  <li>• Spring Break</li>
-                  <li>• Winter Break</li>
-                  <li>• Thanksgiving Break</li>
+                  <li>• School Breaks</li>
                 </ul>
-                <p className="text-xs text-slate-500 mt-2 italic">Not applied during Summer Break</p>
               </div>
             </div>
           </div>
@@ -276,12 +320,12 @@ export default function CocinarteBirthday() {
               <div className="border-2 border-cocinarte-orange rounded-lg p-4 bg-orange-50 hover:shadow-lg transition-shadow">
                 <h5 className="font-bold text-cocinarte-orange mb-2">⏰ Extra Time</h5>
                 <p className="text-sm text-slate-700">+30 min: <strong>$90</strong></p>
-                <p className="text-sm text-slate-700">+1 hour: <strong>$175</strong></p>
               </div>
 
               <div className="border-2 border-cocinarte-red rounded-lg p-4 bg-red-50 hover:shadow-lg transition-shadow">
                 <h5 className="font-bold text-cocinarte-red mb-2">🍕 Food</h5>
                 <p className="text-sm text-slate-700">Large pizza: <strong>$30</strong></p>
+                <p className="text-sm text-slate-700">Veggie tray: <strong>Price varies</strong></p>
                 <p className="text-sm text-slate-700">Drink pitchers: <strong>$10</strong></p>
                 <p className="text-sm text-slate-700">Party cake: <strong>$80</strong></p>
               </div>
@@ -294,8 +338,9 @@ export default function CocinarteBirthday() {
               <div className="border-2 border-cocinarte-navy rounded-lg p-4 bg-blue-50 hover:shadow-lg transition-shadow">
                 <h5 className="font-bold text-cocinarte-navy mb-2">✨ Experience</h5>
                 <p className="text-sm text-slate-700">Character visit: <strong>$150</strong></p>
-                <p className="text-sm text-slate-700">Smash cleanup: <strong>$35</strong></p>
-                <p className="text-sm text-slate-700">20+ kids fee: <strong>$75</strong></p>
+                <p className="text-sm text-slate-700">Piñata w/ candy: <strong>$180</strong></p>
+                <p className="text-sm text-slate-700">Smash cake cleanup: <strong>$35</strong></p>
+                <p className="text-sm text-slate-700">Smash full cleanup: <strong>$150</strong></p>
               </div>
             </div>
 
@@ -306,7 +351,8 @@ export default function CocinarteBirthday() {
                 <span className="text-xl">▼</span>
               </summary>
               <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-slate-700">
-                <div className="bg-white p-2 rounded border border-purple-200">Full Décor Package: <strong>$225+</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Full Décor Package (includes plates & cups): <strong>$225+</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Small balloon garland: <strong>$250</strong></div>
                 <div className="bg-white p-2 rounded border border-purple-200">Metal arches: <strong>$50</strong></div>
                 <div className="bg-white p-2 rounded border border-purple-200">w/ white covers: <strong>$75</strong></div>
                 <div className="bg-white p-2 rounded border border-purple-200">Additional tables: <strong>$10</strong></div>
@@ -340,8 +386,9 @@ export default function CocinarteBirthday() {
                 <li>✓ Banners with ribbon (7.6 ft max)</li>
               </ul>
               <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
-                <strong>🚫 Not Allowed:</strong> Nails, tape, tacks, greenery wall attachments, glitter, confetti, slime, paint, piñatas, alcohol
+                <strong>🚫 Not Allowed:</strong> Nails, tape, tacks, attaching to foliage wall, glitter, confetti, slime, paint, alcohol
               </div>
+              <p className="text-xs text-slate-500 mt-2 italic">Piñatas available as add-on only</p>
             </div>
           </div>
           </div>
@@ -399,13 +446,29 @@ export default function CocinarteBirthday() {
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Package Selection *
               </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-purple-100 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="package"
+                    value="diy-party"
+                    checked={formData.package === 'diy-party'}
+                    onChange={handleInputChange}
+                    required
+                    className="mr-2 text-cocinarte-orange focus:ring-cocinarte-orange"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-slate text-sm">DIY Party</div>
+                    <div className="text-xs text-slate-medium">$450 • Up to 16 kids • 2 hours</div>
+                  </div>
+                </label>
+
                 <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-cocinarte-yellow/10 cursor-pointer transition-colors">
                   <input
                     type="radio"
                     name="package"
-                    value="mini-party"
-                    checked={formData.package === 'mini-party'}
+                    value="mini-fiesta"
+                    checked={formData.package === 'mini-fiesta'}
                     onChange={handleInputChange}
                     required
                     className="mr-2 text-cocinarte-orange focus:ring-cocinarte-orange"
@@ -420,15 +483,15 @@ export default function CocinarteBirthday() {
                   <input
                     type="radio"
                     name="package"
-                    value="deluxe-party"
-                    checked={formData.package === 'deluxe-party'}
+                    value="deluxe-fiesta"
+                    checked={formData.package === 'deluxe-fiesta'}
                     onChange={handleInputChange}
                     required
                     className="mr-2 text-cocinarte-orange focus:ring-cocinarte-orange"
                   />
                   <div className="flex-1">
                     <div className="font-semibold text-slate text-sm">Deluxe Fiesta</div>
-                    <div className="text-xs text-slate-medium">$650 • Up to 12 kids • 2.5 hours</div>
+                    <div className="text-xs text-slate-medium">$650 • Up to 12 kids • 2 hours</div>
                   </div>
                 </label>
 
@@ -436,15 +499,31 @@ export default function CocinarteBirthday() {
                   <input
                     type="radio"
                     name="package"
-                    value="premium-party"
-                    checked={formData.package === 'premium-party'}
+                    value="premium-fiesta"
+                    checked={formData.package === 'premium-fiesta'}
                     onChange={handleInputChange}
                     required
                     className="mr-2 text-cocinarte-orange focus:ring-cocinarte-orange"
                   />
                   <div className="flex-1">
                     <div className="font-semibold text-slate text-sm">Premium Fiesta</div>
-                    <div className="text-xs text-slate-medium">$850 • Up to 18 kids • 3 hours</div>
+                    <div className="text-xs text-slate-medium">$850 • Up to 18 kids • 2.5 hours</div>
+                  </div>
+                </label>
+
+                <label className="flex items-center p-3 border border-gray-300 rounded-lg hover:bg-amber-100 cursor-pointer transition-colors sm:col-span-2 lg:col-span-2">
+                  <input
+                    type="radio"
+                    name="package"
+                    value="vip-package"
+                    checked={formData.package === 'vip-package'}
+                    onChange={handleInputChange}
+                    required
+                    className="mr-2 text-cocinarte-orange focus:ring-cocinarte-orange"
+                  />
+                  <div className="flex-1">
+                    <div className="font-semibold text-slate text-sm">⭐ VIP Party Package ⭐</div>
+                    <div className="text-xs text-slate-medium">$1,078 • All-inclusive premium experience</div>
                   </div>
                 </label>
               </div>
