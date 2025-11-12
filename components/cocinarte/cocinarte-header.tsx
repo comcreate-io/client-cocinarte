@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield } from "lucide-react"
+import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink } from "lucide-react"
 import { useState, useEffect } from "react"
 import CocinarteBookingPopup from "./cocinarte-booking-popup"
 import CocinarteAuthPopup from "./cocinarte-auth-popup"
@@ -210,13 +210,22 @@ export default function CocinarteHeader() {
             {/* CTA Buttons */}
             <div className="hidden lg:flex items-center space-x-4 flex-shrink-0">
               <div className="flex items-center space-x-1">
-                <Link href="https://www.instagram.com/corcinartepdx/" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 lg:p-3">
+                <Link href="https://www.instagram.com/cocinartepdx/" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 lg:p-3">
                   <Instagram className="h-5 w-5 lg:h-6 lg:w-6 text-cocinarte-white" />
                 </Link>
                 <Link href="https://www.facebook.com/profile.php?id=61580541556926" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 lg:p-3">
                   <Facebook className="h-5 w-5 lg:h-6 lg:w-6 text-cocinarte-white" />
                 </Link>
               </div>
+              <Link href="https://www.casitaazuleducation.com/" target="_blank" rel="noopener noreferrer">
+                <Button
+                  size="lg"
+                  className="bg-cocinarte-blue hover:bg-cocinarte-navy text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base font-semibold"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Discover More
+                </Button>
+              </Link>
               <Button
                 size="lg"
                 className="bg-cocinarte-red hover:bg-cocinarte-orange text-cocinarte-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base"
@@ -297,14 +306,25 @@ export default function CocinarteHeader() {
             {/* CTA Buttons */}
             <div className="hidden lg:flex items-center space-x-4 flex-shrink-0">
               <div className="flex items-center space-x-1">
-                <Link href="https://www.instagram.com/corcinartepdx/" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 lg:p-3">
+                <Link href="https://www.instagram.com/cocinartepdx/" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 lg:p-3">
                   <Instagram className="h-5 w-5 lg:h-6 lg:w-6 text-cocinarte-white" />
                 </Link>
                 <Link href="https://www.facebook.com/profile.php?id=61580541556926" target="_blank" rel="noopener noreferrer" className="flex items-center p-2 lg:p-3">
                   <Facebook className="h-5 w-5 lg:h-6 lg:w-6 text-cocinarte-white" />
                 </Link>
               </div>
-              
+
+              {/* Discover More Button */}
+              <Link href="https://www.casitaazuleducation.com/" target="_blank" rel="noopener noreferrer">
+                <Button
+                  size="lg"
+                  className="bg-cocinarte-blue hover:bg-cocinarte-navy text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base font-semibold"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Discover More
+                </Button>
+              </Link>
+
               {/* My Account Button */}
               <Button
                 size="lg"
@@ -314,7 +334,7 @@ export default function CocinarteHeader() {
                 <User className="h-4 w-4 mr-2" />
                 {user ? 'My Account' : 'Sign In'}
               </Button>
-              
+
               <Button
                 size="lg"
                 onClick={() => setIsBookingOpen(true)}
@@ -379,7 +399,19 @@ export default function CocinarteHeader() {
               FAQ
             </Link>
             <div className="space-y-2 pt-2">
-              <Button 
+              <Link
+                href="https://www.casitaazuleducation.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsMenuOpen(false)}
+                className="w-full block"
+              >
+                <Button className="w-full bg-cocinarte-blue hover:bg-cocinarte-navy text-white font-medium py-3 text-sm rounded-xl shadow-lg transition-all duration-200">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Discover More
+                </Button>
+              </Link>
+              <Button
                 onClick={() => {
                   handleAccountClick();
                   setIsMenuOpen(false);
@@ -389,7 +421,7 @@ export default function CocinarteHeader() {
                 <User className="w-4 h-4 mr-2" />
                 {user ? 'My Account' : 'Sign In'}
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
                   setIsBookingOpen(true);
                   setIsMenuOpen(false);
@@ -401,7 +433,7 @@ export default function CocinarteHeader() {
             </div>
             <div className="flex space-x-2 pt-2">
               <Button className="flex-1 bg-cocinarte-yellow hover:bg-cocinarte-orange text-cocinarte-black font-medium py-3 text-sm rounded-xl shadow-lg transition-all duration-200">
-                <Link href="https://www.instagram.com/corcinartepdx/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
+                <Link href="https://www.instagram.com/cocinartepdx/" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center">
                   <Instagram className="w-4 h-4 mr-2" />
                   Instagram
                 </Link>

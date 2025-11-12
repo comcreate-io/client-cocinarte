@@ -98,6 +98,7 @@
   
   html {
     font-family: 'Coming Soon' !important;
+    scroll-behavior: smooth;
   }
   
   /* Force Coming Soon on all text elements */

@@ -5,8 +5,8 @@ import { Phone, Mail, MapPin, Instagram, Facebook, Twitter } from "lucide-react"
 
 export default function CocinarteFooter() {
   return (
-    <footer className="bg-cocinarte-navy text-cocinarte-white py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <footer className="bg-cocinarte-navy text-cocinarte-white py-12 w-full">
+      <div className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1">
             <Image 
@@ -55,7 +55,7 @@ export default function CocinarteFooter() {
             <h3 className="font-bold text-lg mb-4 text-cocinarte-yellow">Follow Us</h3>
             <div className="space-y-4">
               <div className="flex space-x-2">
-                <Link href="https://www.instagram.com/corcinartepdx/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-cocinarte-yellow rounded-full flex items-center justify-center hover:bg-cocinarte-orange transition-colors cursor-pointer">
+                <Link href="https://www.instagram.com/cocinartepdx/" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-cocinarte-yellow rounded-full flex items-center justify-center hover:bg-cocinarte-orange transition-colors cursor-pointer">
                   <Instagram className="w-4 h-4 text-cocinarte-black" />
                 </Link>
                 <Link href="https://www.facebook.com/profile.php?id=61580541556926" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-cocinarte-yellow rounded-full flex items-center justify-center hover:bg-cocinarte-orange transition-colors cursor-pointer">
