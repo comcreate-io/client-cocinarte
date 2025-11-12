@@ -197,361 +197,150 @@ export default function CocinarteBirthday() {
 
         {/* Weekend Party Room Rentals Section */}
         <div className="mt-20">
-          {/* Hero Header */}
-          <div className="bg-gradient-to-br from-cocinarte-navy via-cocinarte-blue to-cocinarte-navy rounded-3xl p-8 md:p-12 mb-8 text-white shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-cocinarte-yellow/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-cocinarte-red/10 rounded-full blur-3xl"></div>
-
-            <div className="relative z-10 text-center">
-              <div className="inline-block bg-cocinarte-yellow px-6 py-2 rounded-full mb-4">
-                <p className="text-cocinarte-navy font-bold text-sm uppercase tracking-wider">Weekend Special</p>
-              </div>
-              <h3 className="text-4xl md:text-5xl font-bold mb-4">Weekend Party Room Rentals</h3>
-              <p className="text-xl md:text-2xl text-cocinarte-blue mb-2">Two beautiful party rooms available</p>
-
-              <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-6">
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border-2 border-white/20">
-                  <p className="text-5xl md:text-6xl font-bold text-cocinarte-yellow">$450</p>
-                  <p className="text-sm text-cocinarte-blue mt-2">Base Price</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border-2 border-white/20">
-                  <p className="text-3xl md:text-4xl font-bold text-white">$200</p>
-                  <p className="text-sm text-cocinarte-blue mt-2">Non-refundable Deposit</p>
-                </div>
-              </div>
-
-              <p className="text-cocinarte-blue mt-6 text-lg">Remaining balance due day of event</p>
+          {/* Header */}
+          <div className="bg-cocinarte-navy rounded-t-2xl p-8 md:p-12 text-white shadow-lg text-center mb-0">
+            <div className="inline-block bg-cocinarte-yellow px-6 py-2 rounded-full mb-4">
+              <p className="text-cocinarte-navy font-bold text-sm uppercase tracking-wider">Weekend Special</p>
             </div>
+            <h3 className="text-3xl md:text-4xl font-bold mb-4">Weekend Party Room Rentals</h3>
+            <p className="text-lg text-cocinarte-blue mb-6">Two beautiful party rooms available</p>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mb-4">
+              <div className="text-center">
+                <p className="text-5xl font-bold text-cocinarte-yellow">$450</p>
+                <p className="text-sm text-cocinarte-blue mt-1">Base Price</p>
+              </div>
+              <div className="text-center">
+                <p className="text-3xl font-bold text-white">$200</p>
+                <p className="text-sm text-cocinarte-blue mt-1">Non-refundable Deposit</p>
+              </div>
+            </div>
+            <p className="text-cocinarte-blue">Remaining balance due day of event</p>
           </div>
 
-          {/* Main Content Grid */}
-          <div className="grid lg:grid-cols-3 gap-8 mb-8">
-            {/* What's Included - Takes 2 columns */}
-            <div className="lg:col-span-2 bg-white rounded-2xl shadow-xl p-8 border-2 border-cocinarte-blue/10">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="bg-cocinarte-red p-3 rounded-xl">
-                  <PartyPopper className="w-6 h-6 text-white" />
-                </div>
-                <h4 className="text-2xl font-bold text-cocinarte-navy">What's Included</h4>
-              </div>
+          <div className="bg-white rounded-b-2xl shadow-lg p-6 md:p-8">
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">⏱️</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">2 hours party time</p>
-                      <p className="text-xs text-slate-600">Party + cleanup included</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">🚪</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">TWO party rooms</p>
-                      <p className="text-xs text-slate-600">Exclusive access</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">👶</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">Up to 16 kids included</p>
-                      <p className="text-xs text-slate-600">MAX 20 kids (+$12 each)</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">👨‍👩‍👧‍👦</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">Space for 45 guests</p>
-                      <p className="text-xs text-slate-600">Kids under 10 months free</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">⚙️</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">30 min setup time</p>
-                      <p className="text-xs text-slate-600">Before your event</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">🎉</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">Exclusive party host</p>
-                      <p className="text-xs text-slate-600">Dedicated to your event</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">🪑</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">Tables & chairs</p>
-                      <p className="text-xs text-slate-600">Café tables included</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">🎂</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">Cake cutter & lighter</p>
-                      <p className="text-xs text-slate-600">Ready for your celebration</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 bg-cocinarte-blue/5 rounded-lg hover:bg-cocinarte-blue/10 transition-colors">
-                    <span className="text-cocinarte-orange text-xl">🍕</span>
-                    <div>
-                      <p className="font-semibold text-slate-800">BYOF (Bring Your Own)</p>
-                      <p className="text-xs text-slate-600">Food, drinks, snacks (nut-free)</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-cocinarte-yellow rounded-lg">
-                <p className="text-sm font-bold text-slate-800 mb-2">⚠️ Important Requirements:</p>
-                <div className="grid sm:grid-cols-2 gap-2 text-sm text-slate-700">
-                  <p>• All guests must sign a waiver</p>
-                  <p>• Parent must stay with each child</p>
-                </div>
+          {/* Main Content */}
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
+            {/* What's Included */}
+            <div>
+              <h4 className="text-xl font-bold text-cocinarte-navy mb-4">What's Included</h4>
+              <ul className="space-y-2 text-slate-700">
+                <li>• 2 hours of party time (party + cleanup)</li>
+                <li>• 30 minutes of set-up time before event</li>
+                <li>• Use of TWO party rooms</li>
+                <li>• Up to 16 kids included (MAX 20 kids — $12 per additional child)</li>
+                <li>• Children under 10 months are free</li>
+                <li>• Space for up to 45 guests</li>
+                <li>• Exclusive party host</li>
+                <li>• Tables, chairs & café tables</li>
+                <li>• Cake cutter & lighter provided</li>
+                <li>• Bring your own food/drinks/snacks (nut-free)</li>
+              </ul>
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm font-semibold text-slate-800">⚠️ Important:</p>
+                <p className="text-xs text-slate-600 mt-1">• All guests must sign a waiver</p>
+                <p className="text-xs text-slate-600">• Parent must stay with each child</p>
               </div>
             </div>
 
-            {/* Time Slots - Takes 1 column */}
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-cocinarte-yellow to-cocinarte-orange rounded-2xl shadow-xl p-6 text-white">
-                <div className="flex items-center gap-3 mb-6">
-                  <Cake className="w-6 h-6" />
-                  <h4 className="text-xl font-bold">Weekend Time Slots</h4>
-                </div>
+            {/* Time Slots & Holiday Pricing */}
+            <div>
+              <h4 className="text-xl font-bold text-cocinarte-navy mb-4">Weekend Time Slots</h4>
+              <ul className="space-y-2 text-slate-700 mb-6">
+                <li>• 9:00 am – 11:00 am</li>
+                <li>• 12:00 pm – 2:00 pm</li>
+                <li>• 3:00 pm – 5:00 pm</li>
+              </ul>
+              <p className="text-xs text-slate-500 mb-6">Extra availability may open depending on the day</p>
 
-                <div className="space-y-3">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/30 transition-colors">
-                    <p className="font-bold text-lg">9:00 am – 11:00 am</p>
-                    <p className="text-xs text-white/90">Morning slot</p>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/30 transition-colors">
-                    <p className="font-bold text-lg">12:00 pm – 2:00 pm</p>
-                    <p className="text-xs text-white/90">Afternoon slot</p>
-                  </div>
-                  <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 hover:bg-white/30 transition-colors">
-                    <p className="font-bold text-lg">3:00 pm – 5:00 pm</p>
-                    <p className="text-xs text-white/90">Evening slot</p>
-                  </div>
-                </div>
-
-                <p className="text-xs text-white/80 mt-4 text-center">Extra availability may open depending on the day</p>
-              </div>
-
-              <div className="bg-gradient-to-br from-cocinarte-red to-pink-600 rounded-2xl shadow-xl p-6 text-white">
-                <h4 className="text-xl font-bold mb-4">🎄 Holiday Pricing</h4>
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 border border-white/30 mb-4">
-                  <p className="text-3xl font-bold">+$100</p>
-                  <p className="text-xs text-white/90">Added to base price</p>
-                </div>
-                <div className="space-y-1 text-sm">
-                  <p>• Federal Holidays</p>
-                  <p>• Spring Break</p>
-                  <p>• Winter Break</p>
-                  <p>• Thanksgiving Break</p>
-                </div>
-                <p className="text-xs text-white/80 mt-3 italic">Not applied during Summer Break</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <h5 className="text-lg font-bold text-cocinarte-navy mb-2">🎄 Holiday Pricing</h5>
+                <p className="text-sm text-slate-700 mb-2"><strong>Add $100</strong> for:</p>
+                <ul className="text-sm text-slate-600 space-y-1">
+                  <li>• Federal Holidays</li>
+                  <li>• Spring Break</li>
+                  <li>• Winter Break</li>
+                  <li>• Thanksgiving Break</li>
+                </ul>
+                <p className="text-xs text-slate-500 mt-2 italic">Not applied during Summer Break</p>
               </div>
             </div>
           </div>
 
-          {/* Add-Ons Section */}
-          <div className="bg-gradient-to-br from-slate-50 to-white rounded-2xl shadow-xl p-8 mb-8 border-2 border-cocinarte-blue/10">
-            <div className="text-center mb-8">
-              <h4 className="text-3xl font-bold text-cocinarte-navy mb-2">Enhance Your Party</h4>
-              <p className="text-slate-600">Choose from our delicious add-ons to make your party extra special</p>
-            </div>
+          {/* Add-Ons */}
+          <div className="mb-8">
+            <h4 className="text-xl font-bold text-cocinarte-navy mb-4 text-center">Add-Ons</h4>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {/* Extra Time */}
-              <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-cocinarte-orange/20 hover:border-cocinarte-orange hover:shadow-xl transition-all">
-                <div className="text-3xl mb-3">⏰</div>
-                <h5 className="text-lg font-bold text-cocinarte-navy mb-3">Extra Time</h5>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">+30 minutes</span>
-                    <span className="font-bold text-cocinarte-orange">$90</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">+1 hour</span>
-                    <span className="font-bold text-cocinarte-orange">$175</span>
-                  </div>
-                </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              <div className="border border-slate-200 rounded-lg p-4">
+                <h5 className="font-bold text-cocinarte-navy mb-2">⏰ Extra Time</h5>
+                <p className="text-sm text-slate-600">+30 min: <strong>$90</strong></p>
+                <p className="text-sm text-slate-600">+1 hour: <strong>$175</strong></p>
               </div>
 
-              {/* Food */}
-              <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-cocinarte-red/20 hover:border-cocinarte-red hover:shadow-xl transition-all">
-                <div className="text-3xl mb-3">🍕</div>
-                <h5 className="text-lg font-bold text-cocinarte-navy mb-3">Food</h5>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Large pizza</span>
-                    <span className="font-bold text-cocinarte-red">$30</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Drink pitchers</span>
-                    <span className="font-bold text-cocinarte-red">$10</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Party cake</span>
-                    <span className="font-bold text-cocinarte-red">$80</span>
-                  </div>
-                </div>
+              <div className="border border-slate-200 rounded-lg p-4">
+                <h5 className="font-bold text-cocinarte-navy mb-2">🍕 Food</h5>
+                <p className="text-sm text-slate-600">Large pizza: <strong>$30</strong></p>
+                <p className="text-sm text-slate-600">Drink pitchers: <strong>$10</strong></p>
+                <p className="text-sm text-slate-600">Party cake: <strong>$80</strong></p>
               </div>
 
-              {/* Coffee */}
-              <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-amber-200 hover:border-amber-400 hover:shadow-xl transition-all">
-                <div className="text-3xl mb-3">☕</div>
-                <h5 className="text-lg font-bold text-cocinarte-navy mb-3">Coffee</h5>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">2.5L pot</span>
-                    <span className="font-bold text-amber-600">$20</span>
-                  </div>
-                </div>
+              <div className="border border-slate-200 rounded-lg p-4">
+                <h5 className="font-bold text-cocinarte-navy mb-2">☕ Coffee</h5>
+                <p className="text-sm text-slate-600">2.5L pot: <strong>$20</strong></p>
               </div>
 
-              {/* Experience */}
-              <div className="bg-white rounded-xl p-5 shadow-lg border-2 border-cocinarte-navy/20 hover:border-cocinarte-navy hover:shadow-xl transition-all">
-                <div className="text-3xl mb-3">✨</div>
-                <h5 className="text-lg font-bold text-cocinarte-navy mb-3">Experience</h5>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Character visit</span>
-                    <span className="font-bold text-cocinarte-navy">$150</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">Smash cleanup</span>
-                    <span className="font-bold text-cocinarte-navy">$35</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-slate-600">20+ kids fee</span>
-                    <span className="font-bold text-cocinarte-navy">$75</span>
-                  </div>
-                </div>
+              <div className="border border-slate-200 rounded-lg p-4">
+                <h5 className="font-bold text-cocinarte-navy mb-2">✨ Experience</h5>
+                <p className="text-sm text-slate-600">Character visit: <strong>$150</strong></p>
+                <p className="text-sm text-slate-600">Smash cleanup: <strong>$35</strong></p>
+                <p className="text-sm text-slate-600">20+ kids fee: <strong>$75</strong></p>
               </div>
             </div>
 
-            {/* Decor Add-Ons - Full Width Expandable Section */}
-            <details className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200 group">
-              <summary className="cursor-pointer list-none flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl">🎈</span>
-                  <div>
-                    <h5 className="text-xl font-bold text-cocinarte-navy">Decor Add-Ons</h5>
-                    <p className="text-sm text-slate-600">Click to see all decoration options</p>
-                  </div>
-                </div>
-                <span className="text-2xl text-purple-500 group-open:rotate-180 transition-transform">⌄</span>
-              </summary>
-              <div className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="bg-white rounded-lg p-4 shadow">
-                  <div className="flex justify-between items-start">
-                    <span className="text-sm text-slate-700">Full Party Décor Package</span>
-                    <span className="font-bold text-purple-600 text-sm whitespace-nowrap ml-2">$225+</span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">Tables, balloons, goody bags</p>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Metal arches</span>
-                  <span className="font-bold text-purple-600">$50</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">w/ white covers</span>
-                  <span className="font-bold text-purple-600">$75</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Additional tables</span>
-                  <span className="font-bold text-purple-600">$10</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Table covers</span>
-                  <span className="font-bold text-purple-600">$5</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Cake stand</span>
-                  <span className="font-bold text-purple-600">$10</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Cupcake stands (2)</span>
-                  <span className="font-bold text-purple-600">$15</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Candles</span>
-                  <span className="font-bold text-purple-600">$2-$8</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Easel</span>
-                  <span className="font-bold text-purple-600">$25</span>
-                </div>
-                <div className="bg-white rounded-lg p-4 shadow flex justify-between items-center">
-                  <span className="text-sm text-slate-700">Marquee Number</span>
-                  <span className="font-bold text-purple-600">$30</span>
-                </div>
+            {/* Decor Add-Ons */}
+            <details className="border border-slate-200 rounded-lg p-4">
+              <summary className="cursor-pointer font-bold text-cocinarte-navy">🎈 Decor Add-Ons (Click to expand)</summary>
+              <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-slate-600">
+                <p>Full Décor Package: <strong>$225+</strong></p>
+                <p>Metal arches: <strong>$50</strong></p>
+                <p>w/ white covers: <strong>$75</strong></p>
+                <p>Additional tables: <strong>$10</strong></p>
+                <p>Table covers: <strong>$5</strong></p>
+                <p>Cake stand: <strong>$10</strong></p>
+                <p>Cupcake stands (2): <strong>$15</strong></p>
+                <p>Candles: <strong>$2-$8</strong></p>
+                <p>Easel: <strong>$25</strong></p>
+                <p>Marquee Number: <strong>$30</strong></p>
               </div>
             </details>
           </div>
 
-          {/* Policies Section */}
+          {/* Policies */}
           <div className="grid md:grid-cols-2 gap-6">
-            {/* Cancellation Policy */}
-            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-slate-100 hover:border-cocinarte-blue/30 transition-colors">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="bg-slate-100 p-3 rounded-xl">
-                  <span className="text-2xl">📋</span>
-                </div>
-                <h4 className="text-xl font-bold text-cocinarte-navy">Cancellation Policy</h4>
-              </div>
-              <ul className="space-y-3 text-sm text-slate-700">
-                <li className="flex items-start gap-2">
-                  <span className="text-cocinarte-red mt-0.5">•</span>
-                  <span>Deposits are <strong>nonrefundable</strong></span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-cocinarte-orange mt-0.5">•</span>
-                  <span>Reschedule <strong>once within 3 months</strong> (20+ day notice)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-cocinarte-orange mt-0.5">•</span>
-                  <span>Sick-day reschedule available with <strong>$75 fee</strong></span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-500 mt-0.5">•</span>
-                  <span>Snow/weather: <strong>reschedule or refund</strong></span>
-                </li>
+            <div>
+              <h4 className="text-lg font-bold text-cocinarte-navy mb-3">📋 Cancellation Policy</h4>
+              <ul className="space-y-2 text-sm text-slate-700">
+                <li>• Deposits are nonrefundable</li>
+                <li>• Reschedule once within 3 months (20+ day notice)</li>
+                <li>• Sick-day reschedule: $75 fee</li>
+                <li>• Snow/weather: reschedule or refund</li>
               </ul>
             </div>
 
-            {/* Decor Rules */}
-            <div className="bg-white rounded-2xl shadow-xl p-6 border-2 border-slate-100 hover:border-cocinarte-blue/30 transition-colors">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="bg-slate-100 p-3 rounded-xl">
-                  <span className="text-2xl">🎨</span>
-                </div>
-                <h4 className="text-xl font-bold text-cocinarte-navy">Decor Rules</h4>
-              </div>
-              <div className="space-y-3 text-sm">
-                <div className="flex items-start gap-2 text-slate-700">
-                  <span className="text-green-500 mt-0.5">✓</span>
-                  <span>Bring your own décor</span>
-                </div>
-                <div className="flex items-start gap-2 text-slate-700">
-                  <span className="text-green-500 mt-0.5">✓</span>
-                  <span>Command hooks only</span>
-                </div>
-                <div className="flex items-start gap-2 text-slate-700">
-                  <span className="text-green-500 mt-0.5">✓</span>
-                  <span>Banners with ribbon (7.6 ft max)</span>
-                </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-3">
-                  <p className="font-semibold text-red-800 text-xs mb-2">🚫 NOT ALLOWED:</p>
-                  <p className="text-xs text-red-700">Nails, tape, tacks • Greenery wall attachments • Glitter, confetti, slime • Paint, piñatas, alcohol</p>
-                </div>
+            <div>
+              <h4 className="text-lg font-bold text-cocinarte-navy mb-3">🎨 Decor Rules</h4>
+              <ul className="space-y-2 text-sm text-slate-700">
+                <li>✓ Bring your own décor</li>
+                <li>✓ Command hooks only</li>
+                <li>✓ Banners with ribbon (7.6 ft max)</li>
+              </ul>
+              <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs text-red-700">
+                <strong>🚫 Not Allowed:</strong> Nails, tape, tacks, greenery wall attachments, glitter, confetti, slime, paint, piñatas, alcohol
               </div>
             </div>
+          </div>
           </div>
         </div>
 
