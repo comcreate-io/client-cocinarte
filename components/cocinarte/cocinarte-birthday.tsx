@@ -273,46 +273,49 @@ export default function CocinarteBirthday() {
             <h4 className="text-xl font-bold text-cocinarte-navy mb-4 text-center">Add-Ons</h4>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div className="border border-slate-200 rounded-lg p-4">
-                <h5 className="font-bold text-cocinarte-navy mb-2">⏰ Extra Time</h5>
-                <p className="text-sm text-slate-600">+30 min: <strong>$90</strong></p>
-                <p className="text-sm text-slate-600">+1 hour: <strong>$175</strong></p>
+              <div className="border-2 border-cocinarte-orange rounded-lg p-4 bg-orange-50 hover:shadow-lg transition-shadow">
+                <h5 className="font-bold text-cocinarte-orange mb-2">⏰ Extra Time</h5>
+                <p className="text-sm text-slate-700">+30 min: <strong>$90</strong></p>
+                <p className="text-sm text-slate-700">+1 hour: <strong>$175</strong></p>
               </div>
 
-              <div className="border border-slate-200 rounded-lg p-4">
-                <h5 className="font-bold text-cocinarte-navy mb-2">🍕 Food</h5>
-                <p className="text-sm text-slate-600">Large pizza: <strong>$30</strong></p>
-                <p className="text-sm text-slate-600">Drink pitchers: <strong>$10</strong></p>
-                <p className="text-sm text-slate-600">Party cake: <strong>$80</strong></p>
+              <div className="border-2 border-cocinarte-red rounded-lg p-4 bg-red-50 hover:shadow-lg transition-shadow">
+                <h5 className="font-bold text-cocinarte-red mb-2">🍕 Food</h5>
+                <p className="text-sm text-slate-700">Large pizza: <strong>$30</strong></p>
+                <p className="text-sm text-slate-700">Drink pitchers: <strong>$10</strong></p>
+                <p className="text-sm text-slate-700">Party cake: <strong>$80</strong></p>
               </div>
 
-              <div className="border border-slate-200 rounded-lg p-4">
-                <h5 className="font-bold text-cocinarte-navy mb-2">☕ Coffee</h5>
-                <p className="text-sm text-slate-600">2.5L pot: <strong>$20</strong></p>
+              <div className="border-2 border-amber-500 rounded-lg p-4 bg-amber-50 hover:shadow-lg transition-shadow">
+                <h5 className="font-bold text-amber-700 mb-2">☕ Coffee</h5>
+                <p className="text-sm text-slate-700">2.5L pot: <strong>$20</strong></p>
               </div>
 
-              <div className="border border-slate-200 rounded-lg p-4">
+              <div className="border-2 border-cocinarte-navy rounded-lg p-4 bg-blue-50 hover:shadow-lg transition-shadow">
                 <h5 className="font-bold text-cocinarte-navy mb-2">✨ Experience</h5>
-                <p className="text-sm text-slate-600">Character visit: <strong>$150</strong></p>
-                <p className="text-sm text-slate-600">Smash cleanup: <strong>$35</strong></p>
-                <p className="text-sm text-slate-600">20+ kids fee: <strong>$75</strong></p>
+                <p className="text-sm text-slate-700">Character visit: <strong>$150</strong></p>
+                <p className="text-sm text-slate-700">Smash cleanup: <strong>$35</strong></p>
+                <p className="text-sm text-slate-700">20+ kids fee: <strong>$75</strong></p>
               </div>
             </div>
 
             {/* Decor Add-Ons */}
-            <details className="border border-slate-200 rounded-lg p-4">
-              <summary className="cursor-pointer font-bold text-cocinarte-navy">🎈 Decor Add-Ons (Click to expand)</summary>
-              <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-2 text-sm text-slate-600">
-                <p>Full Décor Package: <strong>$225+</strong></p>
-                <p>Metal arches: <strong>$50</strong></p>
-                <p>w/ white covers: <strong>$75</strong></p>
-                <p>Additional tables: <strong>$10</strong></p>
-                <p>Table covers: <strong>$5</strong></p>
-                <p>Cake stand: <strong>$10</strong></p>
-                <p>Cupcake stands (2): <strong>$15</strong></p>
-                <p>Candles: <strong>$2-$8</strong></p>
-                <p>Easel: <strong>$25</strong></p>
-                <p>Marquee Number: <strong>$30</strong></p>
+            <details className="border-2 border-purple-400 rounded-lg p-4 bg-purple-50 hover:shadow-lg transition-shadow">
+              <summary className="cursor-pointer font-bold text-purple-700 flex items-center justify-between">
+                <span>🎈 Decor Add-Ons (Click to expand)</span>
+                <span className="text-xl">▼</span>
+              </summary>
+              <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-slate-700">
+                <div className="bg-white p-2 rounded border border-purple-200">Full Décor Package: <strong>$225+</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Metal arches: <strong>$50</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">w/ white covers: <strong>$75</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Additional tables: <strong>$10</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Table covers: <strong>$5</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Cake stand: <strong>$10</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Cupcake stands (2): <strong>$15</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Candles: <strong>$2-$8</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Easel: <strong>$25</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Marquee Number: <strong>$30</strong></div>
               </div>
             </details>
           </div>

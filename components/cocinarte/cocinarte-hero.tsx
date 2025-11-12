@@ -22,12 +22,12 @@ export default function CocinarteHero() {
         <div className="absolute inset-0 flex items-center -mt-8 sm:-mt-20 md:-mt-24 lg:-mt-28">
           <div className="text-left text-white px-4 sm:px-6 md:px-12 lg:px-16 xl:px-24 max-w-4xl">
             {/* Title */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 sm:mb-4 md:mb-6 drop-shadow-2xl leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold mb-3 sm:mb-4 md:mb-6 leading-tight" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), 3px 3px 6px rgba(0, 0, 0, 0.6), 1px 1px 2px rgba(0, 0, 0, 0.9)' }}>
               Cooking Adventures for Kids
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-6 md:mb-8 drop-shadow-lg">
+            <p className="text-base sm:text-lg md:text-xl lg:text-2xl mb-4 sm:mb-6 md:mb-8" style={{ textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8), 1px 1px 3px rgba(0, 0, 0, 0.7)' }}>
               Where young chefs discover the joy of cooking
             </p>
 

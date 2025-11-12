@@ -24,7 +24,7 @@ import { useAuth } from "@/contexts/auth-context"
 
 export default function CocinarteMonthlyCalendar() {
   const { user } = useAuth()
-  const [currentMonth, setCurrentMonth] = useState(new Date(2025, 9)) // October 2025
+  const [currentMonth, setCurrentMonth] = useState(new Date()) // Current month
   const [isMounted, setIsMounted] = useState(false)
   const [selectedClass, setSelectedClass] = useState<CalendarClass | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
