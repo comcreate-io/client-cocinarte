@@ -158,7 +158,7 @@ export default function CocinarteBirthday() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {/* DIY Party */}
-          <div className="bg-purple-500 rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
+          <div className="bg-cocinarte-orange rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
             <Cake className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white mx-auto mb-2 sm:mb-3" />
             <h3 className="font-semibold text-white text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">DIY Party</h3>
             <p className="text-sm sm:text-base lg:text-lg text-white mb-2 sm:mb-3">Do It Yourself</p>
@@ -223,7 +223,7 @@ export default function CocinarteBirthday() {
         </div>
 
         {/* VIP Package - Full Width */}
-        <div className="mb-8 bg-amber-500 rounded-2xl p-6 md:p-8 text-center shadow-xl">
+        <div className="mb-8 bg-cocinarte-yellow rounded-2xl p-6 md:p-8 text-center shadow-xl">
           <div className="inline-block bg-white px-6 py-2 rounded-full mb-4">
             <p className="text-cocinarte-navy font-bold text-sm uppercase tracking-wider">⭐ VIP Experience ⭐</p>
           </div>
