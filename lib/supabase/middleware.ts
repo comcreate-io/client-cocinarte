@@ -55,7 +55,8 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) ||
     request.nextUrl.pathname.startsWith('/auth') ||
-    request.nextUrl.pathname.startsWith('/api')
+    request.nextUrl.pathname.startsWith('/api') ||
+    request.nextUrl.pathname.startsWith('/landing')
 
   // Admin-only routes (dashboard only, login is public)
   const isAdminRoute = request.nextUrl.pathname.startsWith('/dashboard')

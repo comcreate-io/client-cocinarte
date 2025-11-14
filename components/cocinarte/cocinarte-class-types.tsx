@@ -51,7 +51,7 @@ export default function CocinarteClassTypes() {
                 <ChefHat className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-amber" />
               </div>
               <CardTitle className="text-lg sm:text-xl lg:text-2xl text-slate">Mini Chefcitos</CardTitle>
-              <CardDescription className="text-amber font-semibold text-sm sm:text-base lg:text-lg">Kids Drop-off Classes</CardDescription>
+              <CardDescription className="text-amber font-semibold text-sm sm:text-base lg:text-lg">Ages 7-12</CardDescription>
             </CardHeader>
             <CardContent className="text-center pt-0">
               <p className="text-slate-medium mb-3 text-sm sm:text-base lg:text-lg leading-relaxed">
@@ -72,7 +72,7 @@ export default function CocinarteClassTypes() {
                 <Heart className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-amber" />
               </div>
               <CardTitle className="text-lg sm:text-xl lg:text-2xl text-slate">Chefcitos Together</CardTitle>
-              <CardDescription className="text-golden font-semibold text-sm sm:text-base lg:text-lg">Family Classes</CardDescription>
+              <CardDescription className="text-golden font-semibold text-sm sm:text-base lg:text-lg">Ages 3+ with parents</CardDescription>
             </CardHeader>
             <CardContent className="text-center pt-0">
               <p className="text-slate-medium mb-3 text-sm sm:text-base lg:text-lg leading-relaxed">
@@ -93,7 +93,7 @@ export default function CocinarteClassTypes() {
                 <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8 text-amber" />
               </div>
               <CardTitle className="text-lg sm:text-xl lg:text-2xl text-slate">Cocina Creativa</CardTitle>
-              <CardDescription className="text-amber font-semibold text-sm sm:text-base lg:text-lg">Teens & Adults</CardDescription>
+              <CardDescription className="text-amber font-semibold text-sm sm:text-base lg:text-lg">Ages 12+</CardDescription>
             </CardHeader>
             <CardContent className="text-center pt-0">
               <p className="text-slate-medium mb-3 text-sm sm:text-base lg:text-lg leading-relaxed">

@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink } from "lucide-react"
+import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle } from "lucide-react"
 import { useState, useEffect } from "react"
 import CocinarteBookingPopup from "./cocinarte-booking-popup"
 import CocinarteAuthPopup from "./cocinarte-auth-popup"
@@ -40,6 +40,7 @@ export default function CocinarteHeader() {
   // Bookings state
   const [bookings, setBookings] = useState<BookingWithDetails[]>([])
   const [loadingBookings, setLoadingBookings] = useState(false)
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null)
   
   const { user, signOut } = useAuth()
 
@@ -137,7 +138,7 @@ export default function CocinarteHeader() {
         phone: editForm.phone,
         address: editForm.address
       })
-      
+
       setStudentInfo(updatedStudent)
       setIsEditing(false)
       setUpdateMessage('Profile updated successfully!')
@@ -145,6 +146,68 @@ export default function CocinarteHeader() {
       setUpdateError('Error updating profile. Please try again.')
     } finally {
       setUpdateLoading(false)
+    }
+  }
+
+  const canCancelBooking = (classDate: string, classTime: string): boolean => {
+    const now = new Date()
+    const classDateTime = new Date(`${classDate}T${classTime}`)
+    const hoursDifference = (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    return hoursDifference >= 24
+  }
+
+  const handleCancelBooking = async (booking: BookingWithDetails) => {
+    if (!canCancelBooking(booking.class.date, booking.class.time)) {
+      alert('Cannot cancel booking less than 24 hours before the class starts.')
+      return
+    }
+
+    if (!confirm(`Are you sure you want to cancel the booking for "${booking.class.title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    setCancellingBookingId(booking.id)
+
+    try {
+      const bookingsService = new BookingsClientService()
+
+      // Update booking status to cancelled
+      await bookingsService.updateBooking({
+        id: booking.id,
+        booking_status: 'cancelled',
+        payment_status: 'canceled'
+      })
+
+      // Send cancellation emails
+      const response = await fetch('/api/booking-cancellation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail: booking.student.email,
+          userName: booking.student.parent_name,
+          studentName: booking.student.child_name,
+          classTitle: booking.class.title,
+          classDate: booking.class.date,
+          classTime: booking.class.time,
+          classPrice: booking.class.price,
+          bookingId: booking.id
+        }),
+      })
+
+      if (!response.ok) {
+        console.error('Failed to send cancellation emails')
+      }
+
+      // Refresh bookings list
+      await fetchBookings()
+      alert('Booking cancelled successfully. You will receive a confirmation email shortly.')
+    } catch (error) {
+      console.error('Error cancelling booking:', error)
+      alert('Failed to cancel booking. Please try again or contact support.')
+    } finally {
+      setCancellingBookingId(null)
     }
   }
 
@@ -220,7 +283,7 @@ export default function CocinarteHeader() {
               <Link href="https://www.casitaazuleducation.com/" target="_blank" rel="noopener noreferrer">
                 <Button
                   size="lg"
-                  className="bg-cocinarte-blue hover:bg-cocinarte-navy text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base font-semibold"
+                  className="bg-cocinarte-yellow hover:bg-cocinarte-orange text-cocinarte-black rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base font-semibold"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Discover More
@@ -318,7 +381,7 @@ export default function CocinarteHeader() {
               <Link href="https://www.casitaazuleducation.com/" target="_blank" rel="noopener noreferrer">
                 <Button
                   size="lg"
-                  className="bg-cocinarte-blue hover:bg-cocinarte-navy text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base font-semibold"
+                  className="bg-cocinarte-yellow hover:bg-cocinarte-orange text-cocinarte-black rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base font-semibold"
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Discover More
@@ -406,7 +469,7 @@ export default function CocinarteHeader() {
                 onClick={() => setIsMenuOpen(false)}
                 className="w-full block"
               >
-                <Button className="w-full bg-cocinarte-blue hover:bg-cocinarte-navy text-white font-medium py-3 text-sm rounded-xl shadow-lg transition-all duration-200">
+                <Button className="w-full bg-cocinarte-yellow hover:bg-cocinarte-orange text-cocinarte-black font-medium py-3 text-sm rounded-xl shadow-lg transition-all duration-200">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Discover More
                 </Button>
@@ -734,39 +797,74 @@ export default function CocinarteHeader() {
                 </div>
               ) : bookings.length > 0 ? (
                 <div className="space-y-4">
-                  {bookings.map((booking) => (
-                    <div key={booking.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-lg">
-                      <div className="bg-cocinarte-red/10 p-2 rounded-lg">
-                        <ChefHat className="h-5 w-5 text-cocinarte-red" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-semibold text-slate-800">{booking.class.title}</h4>
-                            <p className="text-sm text-slate-600">
-                              {new Date(booking.class.date).toLocaleDateString()} at {booking.class.time}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-cocinarte-navy">${booking.payment_amount}</p>
-                            <Badge 
-                              variant={booking.booking_status === 'confirmed' ? 'default' : 'secondary'}
-                              className={
-                                booking.booking_status === 'confirmed' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-slate-100 text-slate-600'
-                              }
-                            >
-                              {booking.booking_status}
-                            </Badge>
+                  {bookings.map((booking) => {
+                    const canCancel = canCancelBooking(booking.class.date, booking.class.time)
+                    const isCancelled = booking.booking_status === 'cancelled'
+
+                    return (
+                      <div key={booking.id} className="flex items-start gap-4 p-4 bg-slate-50 rounded-lg">
+                        <div className="bg-cocinarte-red/10 p-2 rounded-lg">
+                          <ChefHat className="h-5 w-5 text-cocinarte-red" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-slate-800">{booking.class.title}</h4>
+                              <p className="text-sm text-slate-600">
+                                {new Date(booking.class.date).toLocaleDateString()} at {booking.class.time}
+                              </p>
+                              <div className="mt-2 text-sm text-slate-500">
+                                Duration: {booking.class.classDuration} minutes
+                              </div>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                              <div className="text-right">
+                                <p className="font-bold text-cocinarte-navy">${booking.payment_amount}</p>
+                                <Badge
+                                  variant={booking.booking_status === 'confirmed' ? 'default' : 'secondary'}
+                                  className={
+                                    booking.booking_status === 'confirmed'
+                                      ? 'bg-green-100 text-green-800'
+                                      : booking.booking_status === 'cancelled'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-slate-100 text-slate-600'
+                                  }
+                                >
+                                  {booking.booking_status}
+                                </Badge>
+                              </div>
+                              {!isCancelled && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleCancelBooking(booking)}
+                                  disabled={!canCancel || cancellingBookingId === booking.id}
+                                  className={`${
+                                    canCancel
+                                      ? 'text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700'
+                                      : 'opacity-50 cursor-not-allowed'
+                                  }`}
+                                  title={!canCancel ? 'Cannot cancel within 24 hours of class' : 'Cancel booking'}
+                                >
+                                  {cancellingBookingId === booking.id ? (
+                                    <div className="flex items-center gap-1">
+                                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-red-600"></div>
+                                      <span className="text-xs">Cancelling...</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <XCircle className="h-3 w-3 mr-1" />
+                                      <span className="text-xs">Cancel</span>
+                                    </>
+                                  )}
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="mt-2 text-sm text-slate-500">
-                          Duration: {booking.class.classDuration} minutes
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8">
