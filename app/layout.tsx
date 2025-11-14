@@ -175,7 +175,11 @@ export default function RootLayout({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content="https://cocinartepdx.com/openGraphCocinarte.png" />
         <meta name="twitter:image:alt" content="Cocinarte - Cooking Classes for Kids in Hillsboro, Oregon" />
-        
+
+        {/* WhatsApp Specific - Uses Open Graph */}
+        <meta property="og:site_name" content="Cocinarte" />
+        <meta property="og:url" content="https://cocinartepdx.com" />
+
         {/* Additional Meta Tags */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <meta name="format-detection" content="telephone=no" />
