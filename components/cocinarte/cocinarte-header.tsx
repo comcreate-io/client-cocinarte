@@ -80,9 +80,9 @@ export default function CocinarteHeader() {
 
   const handleAccountClick = () => {
     if (user) {
-      fetchStudentInfo()
-      fetchBookings()
-      setIsAccountOpen(true)
+      // Open booking popup in account view mode
+      setBookingInitialStep('account')
+      setIsBookingOpen(true)
     } else {
       // If not logged in, show auth popup
       setIsAuthOpen(true)
@@ -289,6 +289,13 @@ export default function CocinarteHeader() {
                   Discover More
                 </Button>
               </Link>
+              <Button
+                size="lg"
+                className="bg-white hover:bg-cocinarte-blue/90 text-cocinarte-navy rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
               <Button
                 size="lg"
                 className="bg-cocinarte-red hover:bg-cocinarte-orange text-cocinarte-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base"

@@ -9,6 +9,7 @@ import {
   BookOpen,
   DollarSign,
   CalendarDays,
+  Ticket,
 } from "lucide-react"
 
 import {
@@ -52,6 +53,11 @@ const navigationItems = [
     title: "Students",
     url: "/dashboard/students",
     icon: Users,
+  },
+  {
+    title: "Coupons",
+    url: "/dashboard/coupons",
+    icon: Ticket,
   },
 ]
 

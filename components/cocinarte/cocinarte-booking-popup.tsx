@@ -8,11 +8,12 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
 import { StudentsClientService } from "@/lib/supabase/students-client"
 import { BookingsClientService } from "@/lib/supabase/bookings-client"
+import { CouponsClientService } from "@/lib/supabase/coupons-client"
 import { useAuth } from "@/contexts/auth-context"
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
@@ -24,7 +25,7 @@ interface BookingPopupProps {
   isOpen: boolean
   onClose: () => void
   selectedClass?: Clase
-  initialStep?: 'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation'
+  initialStep?: 'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'
   initialSelectedClassId?: string
 }
 
@@ -34,7 +35,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [selectedClassId, setSelectedClassId] = useState<string | null>(initialSelectedClassId || selectedClass?.id || null)
   
   // Authentication states
-  const [authStep, setAuthStep] = useState<'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation'>(initialStep || 'class-selection')
+  const [authStep, setAuthStep] = useState<'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'>(initialStep || 'class-selection')
+  const [studentProfile, setStudentProfile] = useState<any>(null)
+  const [loadingProfile, setLoadingProfile] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -57,7 +60,14 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [paymentError, setPaymentError] = useState('')
   const [clientSecret, setClientSecret] = useState<string>('')
   const [paymentIntentId, setPaymentIntentId] = useState<string>('')
-  
+
+  // Coupon states
+  const [couponCode, setCouponCode] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null)
+  const [couponValidating, setCouponValidating] = useState(false)
+  const [couponError, setCouponError] = useState('')
+  const [couponSuccess, setCouponSuccess] = useState('')
+
   const { user, signIn, signUp } = useAuth()
 
   const selectedClassData = classes.find(c => c.id === selectedClassId)
@@ -81,7 +91,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       if (initialSelectedClassId) setSelectedClassId(initialSelectedClassId)
       if (initialStep) setAuthStep(initialStep)
       fetchClasses()
-      
+
       // Check for pending booking when popup opens
       const pendingBooking = sessionStorage.getItem('pendingBooking')
       if (pendingBooking && user) {
@@ -98,8 +108,20 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           sessionStorage.removeItem('pendingBooking')
         }
       }
+    } else {
+      // When popup closes, clear payment states to prevent reuse
+      setClientSecret('')
+      setPaymentIntentId('')
+      setPaymentError('')
     }
   }, [isOpen, initialSelectedClassId, initialStep, user])
+
+  // Fetch student profile when viewing account page
+  useEffect(() => {
+    if (authStep === 'account' && user) {
+      fetchStudentProfile()
+    }
+  }, [authStep, user])
 
   // Handle post-signup flow - restore booking and proceed to payment
   useEffect(() => {
@@ -165,8 +187,10 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             ? selectedClassData.date.toISOString().split('T')[0]
             : selectedClassData.date
 
+          const finalAmount = calculateFinalPrice()
+
           const requestBody = {
-            amount: selectedClassData.price,
+            amount: finalAmount,
             classTitle: selectedClassData.title,
             userName: studentInfo?.parent_name || parentName || user.user_metadata?.full_name || 'Parent',
             studentName: studentInfo?.child_name || childName || 'Student',
@@ -239,6 +263,66 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         setAuthStep('login')
       }
     }
+  }
+
+  // Coupon handling
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Please enter a coupon code')
+      return
+    }
+
+    if (!selectedClassId) {
+      setCouponError('Please select a class first')
+      return
+    }
+
+    setCouponValidating(true)
+    setCouponError('')
+    setCouponSuccess('')
+
+    try {
+      const couponsService = new CouponsClientService()
+      const result = await couponsService.validateCoupon(
+        couponCode.trim().toUpperCase(),
+        selectedClassId
+      )
+
+      if (result.valid && result.coupon) {
+        setAppliedCoupon({
+          code: result.coupon.code,
+          discount: result.coupon.discount_percentage
+        })
+        setCouponSuccess(`${result.coupon.discount_percentage}% discount applied!`)
+        setCouponCode('')
+      } else {
+        setCouponError(result.error || 'Invalid coupon code')
+      }
+    } catch (error: any) {
+      setCouponError('Failed to validate coupon')
+    } finally {
+      setCouponValidating(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponError('')
+    setCouponSuccess('')
+  }
+
+  // Calculate final price with coupon discount
+  const calculateFinalPrice = () => {
+    if (!selectedClassData) return 0
+    if (!appliedCoupon) return selectedClassData.price
+
+    const discount = (selectedClassData.price * appliedCoupon.discount) / 100
+    return selectedClassData.price - discount
+  }
+
+  const getDiscountAmount = () => {
+    if (!selectedClassData || !appliedCoupon) return 0
+    return (selectedClassData.price * appliedCoupon.discount) / 100
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -338,6 +422,10 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const goBackToClassSelection = () => {
     setAuthStep('class-selection')
     resetAuthForm()
+    // Clear payment states to prevent reuse of old PaymentIntent
+    setClientSecret('')
+    setPaymentIntentId('')
+    setPaymentError('')
   }
 
   const handlePaymentSuccess = async () => {
@@ -355,7 +443,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       // Check if class is already full (prevent overbooking)
       const clasesService = new ClasesClientService()
       const currentClass = await clasesService.getClaseById(selectedClassData.id)
-      
+
       if (!currentClass) {
         setPaymentError('Class not found. Please try again.')
         setPaymentLoading(false)
@@ -371,65 +459,128 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         return
       }
 
-      // Verify payment hold was successful with Stripe
-      console.log('Verifying payment hold with Stripe...')
-      const verifyResponse = await fetch('/api/stripe/verify-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          paymentIntentId: paymentIntentId
+      const finalPrice = calculateFinalPrice()
+      const isFreeBooking = finalPrice === 0
+
+      // Only verify Stripe payment if there's a charge
+      if (!isFreeBooking) {
+        // Verify payment hold was successful with Stripe
+        console.log('Verifying payment hold with Stripe...')
+        const verifyResponse = await fetch('/api/stripe/verify-payment', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            paymentIntentId: paymentIntentId
+          })
         })
-      })
 
-      if (!verifyResponse.ok) {
-        const errorData = await verifyResponse.json()
-        setPaymentError(`Payment verification failed: ${errorData.error || 'Unknown error'}`)
-        setPaymentLoading(false)
-        return
+        if (!verifyResponse.ok) {
+          const errorData = await verifyResponse.json()
+          setPaymentError(`Payment verification failed: ${errorData.error || 'Unknown error'}`)
+          setPaymentLoading(false)
+          return
+        }
+
+        const verifyData = await verifyResponse.json()
+
+        if (verifyData.status !== 'requires_capture') {
+          setPaymentError(`Payment hold failed. Status: ${verifyData.status}. Please try again.`)
+          setPaymentLoading(false)
+          return
+        }
+
+        console.log('✅ Payment hold verified successfully')
+      } else {
+        console.log('✅ Free booking (100% discount coupon applied)')
       }
 
-      const verifyData = await verifyResponse.json()
-      
-      if (verifyData.status !== 'requires_capture') {
-        setPaymentError(`Payment hold failed. Status: ${verifyData.status}. Please try again.`)
-        setPaymentLoading(false)
-        return
-      }
-
-      console.log('✅ Payment hold verified successfully')
-
-      // Get student information
+      // Get or create student information
       console.log('Fetching student information...')
       const studentsService = new StudentsClientService()
-      const studentInfo = await studentsService.getStudentByEmail(user.email!)
-      
+      let studentInfo = await studentsService.getStudentByEmail(user.email!)
+
       if (!studentInfo) {
-        console.error('Student profile not found for email:', user.email)
-        setPaymentError('Student profile not found. Please contact support.')
-        setPaymentLoading(false)
-        return
+        console.log('Student profile not found, creating one...')
+
+        // Check if we have the required data from signup or session
+        if (!parentName || !childName) {
+          // Try to get from sessionStorage
+          const pendingBooking = sessionStorage.getItem('pendingBooking')
+          if (pendingBooking) {
+            const bookingData = JSON.parse(pendingBooking)
+            setParentName(bookingData.parentName || '')
+            setChildName(bookingData.childName || '')
+            setPhone(bookingData.phone || '')
+            setAddress(bookingData.address || '')
+          }
+        }
+
+        // If still missing required data, show error
+        if (!parentName || !childName) {
+          setPaymentError('Missing required information. Please go back and fill in parent and child names.')
+          setPaymentLoading(false)
+          return
+        }
+
+        // Create student profile
+        try {
+          studentInfo = await studentsService.createStudent({
+            parent_name: parentName,
+            child_name: childName,
+            email: user.email!,
+            phone: phone || undefined,
+            address: address || undefined
+          })
+          console.log('Student profile created:', studentInfo.id)
+        } catch (createError: any) {
+          console.error('Error creating student profile:', createError)
+          setPaymentError('Failed to create student profile. Please try again.')
+          setPaymentLoading(false)
+          return
+        }
+      } else {
+        console.log('Student info found:', studentInfo.id)
       }
 
-      console.log('Student info found:', studentInfo.id)
-
-      // Create booking record with payment on HOLD (verified)
+      // Create booking record
       console.log('Creating booking record...')
       const bookingsService = new BookingsClientService()
+      const discountNote = appliedCoupon
+        ? ` Coupon ${appliedCoupon.code} applied (${appliedCoupon.discount}% off, saved $${getDiscountAmount().toFixed(2)}).`
+        : ''
+
       const newBooking = await bookingsService.createBooking({
         user_id: user.id!,
         class_id: selectedClassData.id,
         student_id: studentInfo.id,
-        payment_amount: selectedClassData.price,
-        payment_method: 'stripe',
-        payment_status: 'held',
-        booking_status: 'pending',
-        stripe_payment_intent_id: paymentIntentId,
-        notes: `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.`
+        payment_amount: finalPrice,
+        payment_method: isFreeBooking ? 'coupon' : 'stripe',
+        payment_status: isFreeBooking ? 'paid' : 'held',
+        booking_status: isFreeBooking ? 'confirmed' : 'pending',
+        stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
+        notes: isFreeBooking
+          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}`
+          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}`
       })
 
       console.log('Booking created:', newBooking.id)
+
+      // Mark coupon as used if one was applied
+      if (appliedCoupon && user.id) {
+        try {
+          const couponsService = new CouponsClientService()
+          const couponData = await couponsService.getCouponByCode(appliedCoupon.code)
+          if (couponData) {
+            await couponsService.markCouponAsUsed(couponData.id, user.id)
+            console.log('Coupon marked as used:', appliedCoupon.code)
+          }
+        } catch (couponError) {
+          console.error('Error marking coupon as used:', couponError)
+          // Don't fail the booking if coupon update fails
+        }
+      }
 
       // Update enrolled count in the class
       console.log('Updating class enrollment...')
@@ -468,6 +619,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       // Payment successful, clear pending booking and show confirmation
       console.log('Booking completed successfully, showing confirmation...')
       sessionStorage.removeItem('pendingBooking')
+
+      // Clear payment states to prevent reuse on future bookings
+      setClientSecret('')
+      setPaymentIntentId('')
+
       setAuthStep('confirmation')
       setPaymentLoading(false)
       console.log('Payment loading set to false')
@@ -486,7 +642,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const handleCompleteBooking = () => {
     // Clear any pending booking data
     sessionStorage.removeItem('pendingBooking')
-    
+
+    // Clear payment states
+    setClientSecret('')
+    setPaymentIntentId('')
+    setPaymentError('')
+
     const selectedClass = classes.find(c => c.id === selectedClassId)
     if (selectedClass) {
       alert(`Booking confirmed! ${selectedClass.title} for ${formatDate(selectedClass.date)} at ${formatTime(selectedClass.time)}`)
@@ -1075,10 +1236,26 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                     </div>
                   </div>
                   
-                  <div className="border-t border-slate-200 pt-4 mt-auto">
+                  <div className="border-t border-slate-200 pt-4 mt-auto space-y-3">
+                    {appliedCoupon && (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-slate-600">Original Price</span>
+                          <span className="text-slate-800">${selectedClassData.price.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-green-600 font-medium flex items-center gap-1">
+                            <Ticket className="h-3 w-3" />
+                            Discount ({appliedCoupon.discount}%)
+                          </span>
+                          <span className="text-green-600 font-medium">-${getDiscountAmount().toFixed(2)}</span>
+                        </div>
+                        <div className="border-t border-slate-200 pt-2"></div>
+                      </>
+                    )}
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-semibold text-slate-700">Total Amount</span>
-                      <span className="text-3xl font-bold text-cocinarte-navy">${selectedClassData.price}</span>
+                      <span className="text-3xl font-bold text-cocinarte-navy">${calculateFinalPrice().toFixed(2)}</span>
                     </div>
                   </div>
                 </>
@@ -1102,52 +1279,158 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col flex-1">
-              {/* Payment Hold Notice */}
-              <Alert className="mb-6 border-blue-200 bg-blue-50">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
+              {/* Coupon Section */}
+              <div className="mb-6 space-y-3">
+                {!appliedCoupon ? (
+                  <>
+                    <Label htmlFor="coupon">Have a Discount Coupon?</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="coupon"
+                        placeholder="Enter coupon code"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                        onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                        disabled={couponValidating}
+                        className="uppercase"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleApplyCoupon}
+                        disabled={!couponCode.trim() || couponValidating}
+                      >
+                        {couponValidating ? 'Validating...' : 'Apply'}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Ticket className="h-4 w-4 text-green-600" />
+                      <span className="font-semibold text-green-800">{appliedCoupon.code}</span>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        {appliedCoupon.discount}% OFF
+                      </Badge>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveCoupon}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-blue-800 mb-1">
-                      Payment Authorization (Not a Charge)
-                    </h4>
-                    <div className="text-sm text-blue-700 space-y-1">
-                      <p className="font-medium">
-                        Your card will be <strong>authorized</strong> but <strong>NOT charged</strong> immediately.
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
-                        <li>We'll place a <strong>temporary hold</strong> on your card for ${selectedClassData?.price}</li>
-                        <li><strong>You'll only be charged</strong> if the class reaches minimum enrollment 24 hours before start time</li>
-                        <li><strong>If the class doesn't fill up</strong>, the hold will be released and you <strong>won't be charged</strong></li>
-                        <li>The hold may appear as "pending" on your card statement</li>
-                      </ul>
+                )}
+                {couponError && (
+                  <Alert variant="destructive" className="py-2">
+                    <AlertDescription className="text-sm">{couponError}</AlertDescription>
+                  </Alert>
+                )}
+                {couponSuccess && (
+                  <Alert className="py-2 border-green-200 bg-green-50">
+                    <AlertDescription className="text-sm text-green-800">{couponSuccess}</AlertDescription>
+                  </Alert>
+                )}
+              </div>
+
+              {/* Payment Hold Notice or Free Booking Notice */}
+              {calculateFinalPrice() > 0 ? (
+                <Alert className="mb-6 border-blue-200 bg-blue-50">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0">
+                      <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-blue-800 mb-1">
+                        Payment Authorization (Not a Charge)
+                      </h4>
+                      <div className="text-sm text-blue-700 space-y-1">
+                        <p className="font-medium">
+                          Your card will be <strong>authorized</strong> but <strong>NOT charged</strong> immediately.
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
+                          <li>We'll place a <strong>temporary hold</strong> on your card for ${calculateFinalPrice().toFixed(2)}</li>
+                          <li><strong>You'll only be charged</strong> if the class reaches minimum enrollment 24 hours before start time</li>
+                          <li><strong>If the class doesn't fill up</strong>, the hold will be released and you <strong>won't be charged</strong></li>
+                          <li>The hold may appear as "pending" on your card statement</li>
+                        </ul>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Alert>
+                </Alert>
+              ) : (
+                <Alert className="mb-6 border-green-200 bg-green-50">
+                  <div className="flex gap-3">
+                    <div className="flex-shrink-0">
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-semibold text-green-800 mb-1">
+                        Free Class - No Payment Required!
+                      </h4>
+                      <p className="text-sm text-green-700">
+                        Your coupon covers the full cost of this class. Click "Book Now" to confirm your spot!
+                      </p>
+                    </div>
+                  </div>
+                </Alert>
+              )}
 
-              {!clientSecret ? (
-                <div className="flex items-center justify-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cocinarte-navy"></div>
-                  <span className="ml-2 text-slate-600">Loading payment form...</span>
+              {calculateFinalPrice() === 0 ? (
+                // Free booking - just show Book Now button
+                <div className="space-y-4">
+                  <Button
+                    onClick={handlePaymentSuccess}
+                    disabled={paymentLoading}
+                    className="w-full bg-cocinarte-navy hover:bg-cocinarte-navy/90 text-white py-6 text-lg font-semibold rounded-xl"
+                  >
+                    {paymentLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-5 w-5 mr-2" />
+                        Book Now - FREE
+                      </>
+                    )}
+                  </Button>
+                  {paymentError && (
+                    <Alert variant="destructive">
+                      <AlertDescription>{paymentError}</AlertDescription>
+                    </Alert>
+                  )}
                 </div>
               ) : (
-                <Elements stripe={stripePromise} options={options}>
-                  <StripePaymentForm
-                    amount={selectedClassData?.price || 0}
-                    onSuccess={handlePaymentSuccess}
-                    onCancel={() => setAuthStep('class-selection')}
-                    loading={paymentLoading}
-                  />
-                </Elements>
-              )}
-              {paymentError && !clientSecret && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertDescription>{paymentError}</AlertDescription>
-                </Alert>
+                // Paid booking - show Stripe form
+                <>
+                  {!clientSecret ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cocinarte-navy"></div>
+                      <span className="ml-2 text-slate-600">Loading payment form...</span>
+                    </div>
+                  ) : (
+                    <Elements stripe={stripePromise} options={options}>
+                      <StripePaymentForm
+                        amount={calculateFinalPrice()}
+                        onSuccess={handlePaymentSuccess}
+                        onCancel={() => setAuthStep('class-selection')}
+                        loading={paymentLoading}
+                      />
+                    </Elements>
+                  )}
+                  {paymentError && !clientSecret && (
+                    <Alert variant="destructive" className="mt-4">
+                      <AlertDescription>{paymentError}</AlertDescription>
+                    </Alert>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -1155,6 +1438,120 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       </div>
     )
   }
+
+  const fetchStudentProfile = async () => {
+    if (!user?.email) return
+
+    setLoadingProfile(true)
+    try {
+      const studentsService = new StudentsClientService()
+      const profile = await studentsService.getStudentByEmail(user.email)
+      setStudentProfile(profile)
+    } catch (error) {
+      console.error('Error fetching student profile:', error)
+    } finally {
+      setLoadingProfile(false)
+    }
+  }
+
+  const renderAccount = () => (
+    <div className="space-y-6">
+      <Card className="border-blue-200 bg-blue-50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-bold text-blue-800 flex items-center gap-2">
+            <div className="bg-blue-100 p-2 rounded-lg">
+              <User className="h-5 w-5 text-blue-600" />
+            </div>
+            My Account
+          </CardTitle>
+          <CardDescription className="text-blue-600">
+            Your account and student information
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {loadingProfile ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-blue-600">Loading profile...</span>
+            </div>
+          ) : (
+            <>
+              {/* Account Information */}
+              <div>
+                <h3 className="text-lg font-semibold text-blue-800 mb-4">Account Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-semibold text-blue-700">Email Address</span>
+                    <p className="text-blue-900 font-medium">{user?.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-blue-700">Account Status</span>
+                    <p className="text-blue-900 font-medium">
+                      <Badge variant="default" className="bg-green-600">Active</Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-blue-700">Member Since</span>
+                    <p className="text-blue-900 font-medium">
+                      {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-blue-700">User ID</span>
+                    <p className="text-blue-900 font-medium text-xs">{user?.id?.substring(0, 8)}...</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-blue-200 pt-4"></div>
+
+              {/* Student Profile Information */}
+              {studentProfile ? (
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-800 mb-4">Student Profile</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm font-semibold text-blue-700">Parent Name</span>
+                      <p className="text-blue-900 font-medium">{studentProfile.parent_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-blue-700">Child Name</span>
+                      <p className="text-blue-900 font-medium">{studentProfile.child_name}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-blue-700">Phone</span>
+                      <p className="text-blue-900 font-medium">{studentProfile.phone || 'Not provided'}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-blue-700">Address</span>
+                      <p className="text-blue-900 font-medium">{studentProfile.address || 'Not provided'}</p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Alert className="border-yellow-200 bg-yellow-50">
+                  <AlertDescription className="text-yellow-800">
+                    No student profile found. A profile will be created when you make your first booking.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-between">
+        <Button
+          variant="outline"
+          onClick={() => setAuthStep('class-selection')}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Classes
+        </Button>
+      </div>
+    </div>
+  )
 
   const renderConfirmation = () => (
     <div className="space-y-6">
@@ -1304,6 +1701,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           renderLoginForm()
         ) : authStep === 'signup' ? (
           renderSignupForm()
+        ) : authStep === 'account' ? (
+          renderAccount()
         ) : authStep === 'payment' ? (
           renderPaymentForm()
         ) : authStep === 'confirmation' ? (
