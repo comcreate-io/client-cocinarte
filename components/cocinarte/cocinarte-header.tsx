@@ -23,6 +23,7 @@ export default function CocinarteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [isBookingOpen, setIsBookingOpen] = useState(false)
+  const [bookingInitialStep, setBookingInitialStep] = useState<'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'>('class-selection')
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [studentInfo, setStudentInfo] = useState<Student | null>(null)
@@ -407,7 +408,10 @@ export default function CocinarteHeader() {
 
               <Button
                 size="lg"
-                onClick={() => setIsBookingOpen(true)}
+                onClick={() => {
+                  setBookingInitialStep('class-selection')
+                  setIsBookingOpen(true)
+                }}
                 className="bg-cocinarte-red hover:bg-cocinarte-orange text-cocinarte-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 px-4 lg:px-6 py-2 lg:py-3 text-sm lg:text-base"
               >
                 Book Now
@@ -493,6 +497,7 @@ export default function CocinarteHeader() {
               </Button>
               <Button
                 onClick={() => {
+                  setBookingInitialStep('class-selection')
                   setIsBookingOpen(true);
                   setIsMenuOpen(false);
                 }}
@@ -523,9 +528,12 @@ export default function CocinarteHeader() {
       <div className="relative">
         <Button
           size="lg"
-          onClick={() => setIsBookingOpen(true)}
+          onClick={() => {
+            setBookingInitialStep('class-selection')
+            setIsBookingOpen(true)
+          }}
           className="bg-cocinarte-red hover:bg-golden text-white shadow-lg hover:shadow-xl transition-all duration-200 font-questa px-[60px] py-4 text-sm font-semibold  origin-center whitespace-nowrap rounded-none"
-          style={{ 
+          style={{
             writingMode: 'vertical-rl',
             textOrientation: 'mixed'
           }}
@@ -536,9 +544,10 @@ export default function CocinarteHeader() {
     </div>
     
     {/* Booking Popup */}
-    <CocinarteBookingPopup 
-      isOpen={isBookingOpen} 
-      onClose={() => setIsBookingOpen(false)} 
+    <CocinarteBookingPopup
+      isOpen={isBookingOpen}
+      onClose={() => setIsBookingOpen(false)}
+      initialStep={bookingInitialStep}
     />
     
     {/* Account Popup */}

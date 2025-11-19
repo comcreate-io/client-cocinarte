@@ -148,17 +148,12 @@ export default function CocinarteBirthday() {
           </p>
         </div>
 
-        {/* Available Themes Banner */}
-        <div className="mb-12 bg-cocinarte-orange rounded-2xl p-6 text-center shadow-lg">
-          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">Ask us about available party themes!</h3>
-          <p className="text-white text-lg">
-            We offer: <strong>Pastel • Rainbow • Jungle • Encanto • Coco • Princess • Baking Theme</strong> and more!
-          </p>
-        </div>
+        
+       
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
           {/* DIY Party */}
-          <div className="bg-cocinarte-orange rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
+          {/* <div className="bg-cocinarte-orange rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
             <Cake className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white mx-auto mb-2 sm:mb-3" />
             <h3 className="font-semibold text-white text-lg sm:text-xl lg:text-2xl mb-1 sm:mb-2">DIY Party</h3>
             <p className="text-sm sm:text-base lg:text-lg text-white mb-2 sm:mb-3">Do It Yourself</p>
@@ -171,7 +166,7 @@ export default function CocinarteBirthday() {
               <li>• Set-up time included</li>
               <li>• Up to 16 kids included</li>
             </ul>
-          </div>
+          </div> */}
 
           {/* Mini Fiesta */}
           <div className="bg-cocinarte-yellow rounded-xl p-4 sm:p-6 text-center hover:shadow-lg transition-all duration-300">
@@ -273,16 +268,11 @@ export default function CocinarteBirthday() {
             <div>
               <h4 className="text-xl font-bold text-cocinarte-navy mb-4">What's Included</h4>
               <ul className="space-y-2 text-slate-700">
-                <li>• 2 hours of party time (party + cleanup)</li>
-                <li>• 30 minutes of set-up time before event</li>
-                <li>• Use of TWO party rooms</li>
-                <li>• Up to 16 kids included (MAX 20 kids — $12 per additional child)</li>
-                <li>• Children under 10 months are free</li>
-                <li>• Space for up to 45 guests</li>
-                <li>• Exclusive party host</li>
-                <li>• Tables, chairs & café tables</li>
-                <li>• Cake cutter & lighter provided</li>
-                <li>• Bring your own food/drinks/snacks (nut-free)</li>
+                <li>• Room rental (both rooms)</li>
+                <li>• Adult & kids tables/chairs</li>
+                <li>• 2-hour party time</li>
+                <li>• Set-up time included</li>
+                <li>• Up to 16 kids included</li>
               </ul>
               <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <p className="text-sm font-semibold text-slate-800">⚠️ Important:</p>
@@ -353,15 +343,15 @@ export default function CocinarteBirthday() {
               <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-slate-700">
                 <div className="bg-white p-2 rounded border border-purple-200">Full Décor Package (includes plates & cups): <strong>$225+</strong></div>
                 <div className="bg-white p-2 rounded border border-purple-200">Small balloon garland: <strong>$250</strong></div>
-                <div className="bg-white p-2 rounded border border-purple-200">Metal arches: <strong>$50</strong></div>
-                <div className="bg-white p-2 rounded border border-purple-200">w/ white covers: <strong>$75</strong></div>
-                <div className="bg-white p-2 rounded border border-purple-200">Additional tables: <strong>$10</strong></div>
-                <div className="bg-white p-2 rounded border border-purple-200">Table covers: <strong>$5</strong></div>
+                {/* <div className="bg-white p-2 rounded border border-purple-200">Metal arches: <strong>$50</strong></div> */}
+                {/* <div className="bg-white p-2 rounded border border-purple-200">w/ white covers: <strong>$75</strong></div> */}
+                <div className="bg-white p-2 rounded border border-purple-200">Additional tables: <strong>$10 each</strong></div>
+                <div className="bg-white p-2 rounded border border-purple-200">Table covers ($5 each) : <strong>$5</strong></div>
                 <div className="bg-white p-2 rounded border border-purple-200">Cake stand: <strong>$10</strong></div>
                 <div className="bg-white p-2 rounded border border-purple-200">Cupcake stands (2): <strong>$15</strong></div>
                 <div className="bg-white p-2 rounded border border-purple-200">Candles: <strong>$2-$8</strong></div>
-                <div className="bg-white p-2 rounded border border-purple-200">Easel: <strong>$25</strong></div>
-                <div className="bg-white p-2 rounded border border-purple-200">Marquee Number: <strong>$30</strong></div>
+                {/* <div className="bg-white p-2 rounded border border-purple-200">Easel: <strong>$25</strong></div> */}
+                <div className="bg-white p-2 rounded border border-purple-200">Marquee Number (1 - 5): <strong>$30</strong></div>
               </div>
             </details>
           </div>
@@ -381,7 +371,7 @@ export default function CocinarteBirthday() {
             <div>
               <h4 className="text-lg font-bold text-cocinarte-navy mb-3">🎨 Decor Rules</h4>
               <ul className="space-y-2 text-sm text-slate-700">
-                <li>✓ Bring your own décor</li>
+                <li>✓ If you bring your own décor</li>
                 <li>✓ Command hooks only</li>
                 <li>✓ Banners with ribbon (7.6 ft max)</li>
               </ul>
@@ -393,6 +383,14 @@ export default function CocinarteBirthday() {
           </div>
           </div>
         </div>
+
+        <div className="my-12 bg-cocinarte-orange rounded-2xl p-6 text-center shadow-lg">
+          <h3 className="text-2xl md:text-3xl font-bold text-white mb-3">Ask us about available party themes!</h3>
+          <p className="text-white text-lg">
+            We offer: <strong>Pastel • Rainbow • Jungle • Encanto • Coco • Princess • Baking Theme</strong> and more!
+          </p>
+        </div>
+
 
         {/* Birthday Party Request Form */}
         <div className="mt-16 bg-cocinarte-white rounded-2xl shadow-lg p-6">
@@ -618,6 +616,8 @@ export default function CocinarteBirthday() {
           </div>
           </form>
         </div>
+
+        
       </div>
     </section>
   )
