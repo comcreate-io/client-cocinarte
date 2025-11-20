@@ -3,6 +3,7 @@ export interface Booking {
   user_id: string;
   class_id: string;
   student_id: string;
+  child_id?: string; // Reference to specific child from children table
   booking_date: string; // ISO date string
   payment_status: 'pending' | 'completed' | 'failed' | 'refunded' | 'held' | 'canceled';
   payment_amount: number;
@@ -18,9 +19,10 @@ export interface CreateBookingData {
   user_id: string;
   class_id: string;
   student_id: string;
+  child_id?: string; // Reference to specific child from children table
   payment_amount: number;
-  payment_method?: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'stripe';
-  payment_status?: 'pending' | 'completed' | 'failed' | 'refunded' | 'held' | 'canceled';
+  payment_method?: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'stripe' | 'coupon';
+  payment_status?: 'pending' | 'completed' | 'failed' | 'refunded' | 'held' | 'canceled' | 'paid';
   booking_status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   stripe_payment_intent_id?: string;
   notes?: string;

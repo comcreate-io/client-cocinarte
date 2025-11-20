@@ -9,6 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Mail, Lock, Eye, EyeOff, LogIn, UserPlus, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
+import SignupQuestionnaireMultiChild from '../auth/signup-questionnaire-multi-child'
+import { SignupFormData } from '@/types/student'
 
 interface AuthPopupProps {
   isOpen: boolean
@@ -30,7 +32,7 @@ export default function CocinarteAuthPopup({ isOpen, onClose }: AuthPopupProps) 
   const [authError, setAuthError] = useState('')
   const [authMessage, setAuthMessage] = useState('')
   
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, signUpWithStudentInfo } = useAuth()
 
   const resetAuthForm = () => {
     setEmail('')
@@ -92,7 +94,7 @@ export default function CocinarteAuthPopup({ isOpen, onClose }: AuthPopupProps) 
 
     try {
       const { error } = await signUp(email, password)
-      
+
       if (error) {
         setAuthError(error.message)
       } else {
@@ -105,8 +107,36 @@ export default function CocinarteAuthPopup({ isOpen, onClose }: AuthPopupProps) 
     } catch (error) {
       setAuthError('Error creating account. Please try again.')
     }
-    
+
     setAuthLoading(false)
+  }
+
+  const handleQuestionnaireComplete = async (formData: SignupFormData) => {
+    setAuthLoading(true)
+    setAuthError('')
+    setAuthMessage('')
+
+    try {
+      const { error } = await signUpWithStudentInfo(formData)
+
+      if (error) {
+        setAuthError(error.message || 'Failed to create account')
+        setAuthLoading(false)
+        return { error }
+      }
+
+      setAuthMessage('Account created successfully!')
+      setTimeout(() => {
+        onClose()
+        resetAuthForm()
+      }, 2000)
+
+      return { error: null }
+    } catch (err: any) {
+      setAuthError(err.message || 'An error occurred')
+      setAuthLoading(false)
+      return { error: err }
+    }
   }
 
   const renderLoginForm = () => (
@@ -220,185 +250,42 @@ export default function CocinarteAuthPopup({ isOpen, onClose }: AuthPopupProps) 
 
   const renderSignupForm = () => (
     <div className="space-y-6">
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <div className="bg-cocinarte-navy/10 p-2 rounded-lg">
-              <UserPlus className="h-5 w-5 text-cocinarte-navy" />
-            </div>
-            Create Account
-          </CardTitle>
-          <CardDescription className="text-slate-600">
-            Create a new account to book cooking classes
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignUp} className="space-y-6">
-            {/* Parent Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="parent-name" className="text-sm font-semibold text-slate-700">Parent Name *</Label>
-                <Input
-                  id="parent-name"
-                  type="text"
-                  placeholder="Enter parent's full name"
-                  value={parentName}
-                  onChange={(e) => setParentName(e.target.value)}
-                  className="h-12"
-                  required
-                />
-              </div>
+      {/* Back to Sign In Link */}
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setAuthStep('login')}
+          className="text-slate-600 hover:text-slate-800"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Sign In
+        </Button>
+      </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="child-name" className="text-sm font-semibold text-slate-700">Child Name *</Label>
-                <Input
-                  id="child-name"
-                  type="text"
-                  placeholder="Enter child's full name"
-                  value={childName}
-                  onChange={(e) => setChildName(e.target.value)}
-                  className="h-12"
-                  required
-                />
-              </div>
-            </div>
+      {/* Comprehensive Signup Questionnaire */}
+      <SignupQuestionnaireMultiChild
+        onComplete={handleQuestionnaireComplete}
+        loading={authLoading}
+      />
 
-            <div className="space-y-2">
-              <Label htmlFor="signup-email" className="text-sm font-semibold text-slate-700">Email Address *</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="signup-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-12"
-                  required
-                />
-              </div>
-            </div>
+      {authError && (
+        <Alert variant="destructive">
+          <AlertDescription>{authError}</AlertDescription>
+        </Alert>
+      )}
 
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="Enter phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="h-12"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address" className="text-sm font-semibold text-slate-700">Address *</Label>
-              <Input
-                id="address"
-                type="text"
-                placeholder="Enter full address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="h-12"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-password" className="text-sm font-semibold text-slate-700">Password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="signup-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-sm font-semibold text-slate-700">Confirm Password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="confirm-password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {authError && (
-              <Alert variant="destructive">
-                <AlertDescription>{authError}</AlertDescription>
-              </Alert>
-            )}
-
-            {authMessage && (
-              <Alert>
-                <AlertDescription>{authMessage}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex gap-3 pt-4 border-t border-slate-200">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setAuthStep('login')}
-                className="flex-1 h-12"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Sign In
-              </Button>
-              <Button
-                type="submit"
-                disabled={authLoading}
-                className="flex-1 h-12 bg-cocinarte-navy hover:bg-cocinarte-navy/90 text-white"
-              >
-                {authLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Creating Account...
-                  </div>
-                ) : (
-                  'Create Account'
-                )}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      {authMessage && (
+        <Alert className="bg-green-50 border-green-200">
+          <AlertDescription className="text-green-800">{authMessage}</AlertDescription>
+        </Alert>
+      )}
     </div>
   )
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         <div className="bg-cocinarte-navy text-white p-6 rounded-t-lg">
           <DialogHeader className="space-y-3">
             <DialogTitle className="text-3xl font-bold flex items-center gap-3">

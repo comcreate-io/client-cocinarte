@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { 
-      preferredDate, 
-      numberOfChildren, 
-      package: partyPackage, 
-      parentName, 
-      phone, 
-      email, 
+    const {
+      preferredDate,
+      numberOfChildren,
+      package: partyPackage,
+      parentName,
+      phone,
+      email,
       childNameAge,
-      specialRequests 
+      specialRequests
     } = body
 
     // Validate required fields
@@ -31,6 +32,31 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid email format' },
         { status: 400 }
       )
+    }
+
+    // Save to Supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: dbError } = await supabase
+      .from('party_requests')
+      .insert({
+        preferred_date: preferredDate,
+        number_of_children: numberOfChildren,
+        package: partyPackage,
+        parent_name: parentName,
+        phone,
+        email,
+        child_name_age: childNameAge,
+        special_requests: specialRequests,
+        status: 'pending'
+      })
+
+    if (dbError) {
+      console.error('Database error:', dbError)
+      // Continue with email even if database fails
     }
 
     // Create transporter

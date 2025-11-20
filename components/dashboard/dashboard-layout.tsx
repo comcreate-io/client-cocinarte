@@ -10,6 +10,7 @@ import {
   DollarSign,
   CalendarDays,
   Ticket,
+  Cake,
 } from "lucide-react"
 
 import {
@@ -43,6 +44,11 @@ const navigationItems = [
     title: "Bookings",
     url: "/dashboard/bookings",
     icon: CalendarDays,
+  },
+  {
+    title: "Party Requests",
+    url: "/dashboard/party-requests",
+    icon: Cake,
   },
   {
     title: "Payments",

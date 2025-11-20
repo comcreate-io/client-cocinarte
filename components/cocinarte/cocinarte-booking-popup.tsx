@@ -8,16 +8,19 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
 import { StudentsClientService } from "@/lib/supabase/students-client"
 import { BookingsClientService } from "@/lib/supabase/bookings-client"
 import { CouponsClientService } from "@/lib/supabase/coupons-client"
+import { ParentsClientService } from "@/lib/supabase/parents-client"
 import { useAuth } from "@/contexts/auth-context"
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import StripePaymentForm from './stripe-payment-form'
+import SignupQuestionnaireMultiChild from '../auth/signup-questionnaire-multi-child'
+import { SignupFormData, ParentWithChildren, Child } from '@/types/student'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -25,7 +28,7 @@ interface BookingPopupProps {
   isOpen: boolean
   onClose: () => void
   selectedClass?: Clase
-  initialStep?: 'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'
+  initialStep?: 'class-selection' | 'child-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'
   initialSelectedClassId?: string
 }
 
@@ -35,8 +38,10 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [selectedClassId, setSelectedClassId] = useState<string | null>(initialSelectedClassId || selectedClass?.id || null)
   
   // Authentication states
-  const [authStep, setAuthStep] = useState<'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'>(initialStep || 'class-selection')
+  const [authStep, setAuthStep] = useState<'class-selection' | 'child-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'>(initialStep || 'class-selection')
   const [studentProfile, setStudentProfile] = useState<any>(null)
+  const [parentWithChildren, setParentWithChildren] = useState<ParentWithChildren | null>(null)
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -68,7 +73,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [couponError, setCouponError] = useState('')
   const [couponSuccess, setCouponSuccess] = useState('')
 
-  const { user, signIn, signUp } = useAuth()
+  const { user, signIn, signUp, signUpWithStudentInfo, signOut } = useAuth()
 
   const selectedClassData = classes.find(c => c.id === selectedClassId)
 
@@ -253,11 +258,34 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     setSelectedClassId(classId)
   }
 
-  const handleBookClass = () => {
+  const handleBookClass = async () => {
     if (selectedClassId) {
       if (user) {
-        // User is logged in, proceed to payment
-        setAuthStep('payment')
+        // User is logged in, check if they have children to select
+        try {
+          const parentsService = new ParentsClientService()
+          const parentData = await parentsService.getParentWithChildrenByUserId(user.id)
+
+          if (parentData && parentData.children && parentData.children.length > 0) {
+            // Parent has children, show child selection
+            setParentWithChildren(parentData)
+            if (parentData.children.length === 1) {
+              // Only one child, auto-select and proceed to payment
+              setSelectedChildId(parentData.children[0].id)
+              setAuthStep('payment')
+            } else {
+              // Multiple children, show selection screen
+              setAuthStep('child-selection')
+            }
+          } else {
+            // No children found, proceed to payment (backward compatibility)
+            setAuthStep('payment')
+          }
+        } catch (error) {
+          console.error('Error fetching children:', error)
+          // If error, proceed to payment (backward compatibility)
+          setAuthStep('payment')
+        }
       } else {
         // User not logged in, show auth flow
         setAuthStep('login')
@@ -555,6 +583,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         user_id: user.id!,
         class_id: selectedClassData.id,
         student_id: studentInfo.id,
+        child_id: selectedChildId || undefined,
         payment_amount: finalPrice,
         payment_method: isFreeBooking ? 'coupon' : 'stripe',
         payment_status: isFreeBooking ? 'paid' : 'held',
@@ -954,7 +983,98 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     </div>
   )
 
+  const handleQuestionnaireComplete = async (formData: SignupFormData) => {
+    setAuthLoading(true)
+    setAuthError('')
+    setAuthMessage('')
+
+    try {
+      // Store booking intent in sessionStorage before signup
+      // Use the first child for booking purposes
+      const firstChild = formData.children && formData.children.length > 0 ? formData.children[0] : null
+
+      if (!firstChild) {
+        setAuthError('Please add at least one child')
+        setAuthLoading(false)
+        return { error: new Error('No child information provided') }
+      }
+
+      const bookingData = {
+        classId: selectedClassId,
+        parentName: formData.parentInfo.parent_guardian_names,
+        childName: firstChild.child_full_name,
+        phone: formData.parentInfo.parent_phone,
+        address: formData.parentInfo.address || '',
+        email: formData.parentInfo.parent_email
+      }
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData))
+
+      const { error } = await signUpWithStudentInfo(formData)
+
+      if (error) {
+        setAuthError(error.message || 'Failed to create account')
+        sessionStorage.removeItem('pendingBooking')
+        setAuthLoading(false)
+        return { error }
+      }
+
+      setAuthMessage('Account created successfully! Proceeding to payment...')
+      // The useEffect hook will handle the rest when user becomes available
+      return { error: null }
+    } catch (err: any) {
+      setAuthError(err.message || 'An error occurred')
+      sessionStorage.removeItem('pendingBooking')
+      setAuthLoading(false)
+      return { error: err }
+    }
+  }
+
   const renderSignupForm = () => (
+    <div className="space-y-6">
+      {/* Back Button */}
+      <div className="flex items-center gap-2 mb-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={goBackToClassSelection}
+          className="text-slate-600 hover:text-slate-800"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Classes
+        </Button>
+      </div>
+
+      {/* Selected Class Info */}
+      {selectedClassData && (
+        <Alert className="bg-cocinarte-orange/10 border-cocinarte-orange">
+          <ChefHat className="h-4 w-4 text-cocinarte-orange" />
+          <AlertDescription className="text-cocinarte-navy">
+            <strong>Booking:</strong> {selectedClassData.title} on {new Date(selectedClassData.date).toLocaleDateString()} at {selectedClassData.time}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Signup Questionnaire */}
+      <SignupQuestionnaireMultiChild
+        onComplete={handleQuestionnaireComplete}
+        loading={authLoading}
+      />
+
+      <div className="text-center pt-4">
+        <p className="text-sm text-slate-600">
+          Already have an account?{' '}
+          <button
+            onClick={() => setAuthStep('login')}
+            className="text-cocinarte-red hover:underline font-semibold"
+          >
+            Sign in here
+          </button>
+        </p>
+      </div>
+    </div>
+  )
+
+  const renderChildSelection = () => (
     <div className="space-y-6">
       {/* Back Button */}
       <div className="flex items-center gap-2">
@@ -969,201 +1089,114 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </Button>
       </div>
 
-      {/* Selected Class Summary */}
-      {/* {selectedClassData && (
-        <div className="bg-cocinarte-red/5 border border-cocinarte-red/20 rounded-lg p-4">
-          <h4 className="font-semibold text-cocinarte-red mb-2">Booking:</h4>
-          <div className="space-y-1 text-sm">
-            <p><strong>Class:</strong> {selectedClassData.title}</p>
-            <p><strong>Date:</strong> {formatDate(selectedClassData.date)}</p>
-            <p><strong>Time:</strong> {formatTime(selectedClassData.time)}</p>
-            <p><strong>Price:</strong> ${selectedClassData.price}</p>
+      {/* Header */}
+      <Card className="border-cocinarte-navy/20">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-cocinarte-navy/10 p-2 rounded-lg">
+              <Baby className="h-6 w-6 text-cocinarte-navy" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-800">
+              Select a Child for This Class
+            </CardTitle>
           </div>
-        </div>
-      )} */}
-
-      {/* Signup Form */}
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl font-bold text-slate-800">Create Account</CardTitle>
-          <CardDescription className="text-slate-600">Sign up to book your cooking class</CardDescription>
+          <CardDescription className="text-slate-600">
+            Which of your children will be attending this cooking class?
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+      </Card>
 
-          <form onSubmit={handleSignUp} className="space-y-6">
-            {/* Parent Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="parent-name" className="text-sm font-semibold text-slate-700">Parent Name *</Label>
-                <Input
-                  id="parent-name"
-                  type="text"
-                  placeholder="Enter parent's full name"
-                  value={parentName}
-                  onChange={(e) => setParentName(e.target.value)}
-                  className="h-12"
-                  required
-                />
-              </div>
+      {/* Selected Class Info */}
+      {selectedClassData && (
+        <Alert className="bg-cocinarte-orange/10 border-cocinarte-orange">
+          <ChefHat className="h-4 w-4 text-cocinarte-orange" />
+          <AlertDescription className="text-cocinarte-navy">
+            <strong>Booking:</strong> {selectedClassData.title} on {formatDate(selectedClassData.date)} at {formatTime(selectedClassData.time)}
+          </AlertDescription>
+        </Alert>
+      )}
 
-              <div className="space-y-2">
-                <Label htmlFor="child-name" className="text-sm font-semibold text-slate-700">Child Name *</Label>
-                <Input
-                  id="child-name"
-                  type="text"
-                  placeholder="Enter child's full name"
-                  value={childName}
-                  onChange={(e) => setChildName(e.target.value)}
-                  className="h-12"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="signup-email" className="text-sm font-semibold text-slate-700">Email Address *</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  id="signup-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 h-12"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-sm font-semibold text-slate-700">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="Enter phone number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="h-12"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address" className="text-sm font-semibold text-slate-700">Address *</Label>
-              <Input
-                id="address"
-                type="text"
-                placeholder="Enter full address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                className="h-12"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-password" className="text-sm font-semibold text-slate-700">Password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="signup-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Create a password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password" className="text-sm font-semibold text-slate-700">Confirm Password *</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="confirm-password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Confirm your password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {authError && (
-              <Alert variant="destructive">
-                <AlertDescription>{authError}</AlertDescription>
-              </Alert>
-            )}
-
-            {authMessage && (
-              <Alert>
-                <AlertDescription>{authMessage}</AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={goBackToClassSelection}
-                className="flex-1 h-12"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={authLoading}
-                className="flex-1 h-12 bg-cocinarte-red hover:bg-cocinarte-red/90 text-white"
-              >
-                {authLoading ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Creating Account...
+      {/* Children Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {parentWithChildren?.children.map((child: Child) => (
+          <Card
+            key={child.id}
+            className={`cursor-pointer transition-all duration-300 border-2 ${
+              selectedChildId === child.id
+                ? 'border-cocinarte-navy shadow-lg bg-cocinarte-navy/5'
+                : 'border-slate-200 hover:border-cocinarte-navy/50 hover:shadow-md'
+            }`}
+            onClick={() => setSelectedChildId(child.id)}
+          >
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="text-lg font-bold text-slate-800">{child.child_full_name}</h4>
+                    {child.child_preferred_name && (
+                      <p className="text-sm text-slate-600">Goes by: {child.child_preferred_name}</p>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    Sign Up
+                  {selectedChildId === child.id && (
+                    <Badge className="bg-cocinarte-navy">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Selected
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="bg-slate-50">
+                    Age {child.child_age}
+                  </Badge>
+                  {child.has_cooking_experience && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <ChefHat className="h-3 w-3 mr-1" />
+                      Cooking experience
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Health alerts if any */}
+                {(child.allergies || child.dietary_restrictions) && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs">
+                    <div className="flex items-center gap-1 text-yellow-800">
+                      <AlertCircle className="h-3 w-3" />
+                      <span className="font-medium">Health Note:</span>
+                    </div>
+                    {child.allergies && (
+                      <p className="text-yellow-700 mt-1">Allergies: {child.allergies}</p>
+                    )}
+                    {child.dietary_restrictions && (
+                      <p className="text-yellow-700 mt-1">Dietary: {child.dietary_restrictions}</p>
+                    )}
                   </div>
                 )}
-              </Button>
-            </div>
-          </form>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-          <div className="text-center pt-4 border-t border-slate-200">
-            <p className="text-sm text-slate-600">
-              Already have an account?{' '}
-              <button
-                onClick={() => setAuthStep('login')}
-                className="text-cocinarte-red hover:underline font-semibold"
-              >
-                Sign in here
-              </button>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Action Buttons */}
+      <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
+        <Button
+          variant="outline"
+          onClick={goBackToClassSelection}
+          size="lg"
+          className="px-8"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={() => setAuthStep('payment')}
+          disabled={!selectedChildId}
+          size="lg"
+          className="px-8 bg-cocinarte-red hover:bg-cocinarte-red/90 text-white"
+        >
+          Continue to Payment
+        </Button>
+      </div>
     </div>
   )
 
@@ -1447,6 +1480,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       const studentsService = new StudentsClientService()
       const profile = await studentsService.getStudentByEmail(user.email)
       setStudentProfile(profile)
+
+      // Also fetch parent with children data
+      const parentsService = new ParentsClientService()
+      const parentData = await parentsService.getParentWithChildrenByUserId(user.id)
+      setParentWithChildren(parentData)
     } catch (error) {
       console.error('Error fetching student profile:', error)
     } finally {
@@ -1465,7 +1503,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             My Account
           </CardTitle>
           <CardDescription className="text-blue-600">
-            Your account and student information
+            Your account and family information
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -1505,33 +1543,187 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
               <div className="border-t border-blue-200 pt-4"></div>
 
-              {/* Student Profile Information */}
-              {studentProfile ? (
+              {/* Parent Information */}
+              {parentWithChildren ? (
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-800 mb-4">Student Profile</h3>
+                  <h3 className="text-lg font-semibold text-blue-800 mb-4">Parent Information</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <span className="text-sm font-semibold text-blue-700">Parent Name</span>
-                      <p className="text-blue-900 font-medium">{studentProfile.parent_name}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-semibold text-blue-700">Child Name</span>
-                      <p className="text-blue-900 font-medium">{studentProfile.child_name}</p>
+                      <span className="text-sm font-semibold text-blue-700">Name</span>
+                      <p className="text-blue-900 font-medium">{parentWithChildren.parent_guardian_names}</p>
                     </div>
                     <div>
                       <span className="text-sm font-semibold text-blue-700">Phone</span>
-                      <p className="text-blue-900 font-medium">{studentProfile.phone || 'Not provided'}</p>
+                      <p className="text-blue-900 font-medium">{parentWithChildren.parent_phone}</p>
                     </div>
                     <div>
-                      <span className="text-sm font-semibold text-blue-700">Address</span>
-                      <p className="text-blue-900 font-medium">{studentProfile.address || 'Not provided'}</p>
+                      <span className="text-sm font-semibold text-blue-700">Preferred Contact</span>
+                      <p className="text-blue-900 font-medium capitalize">{parentWithChildren.preferred_communication_method}</p>
                     </div>
+                    {parentWithChildren.address && (
+                      <div>
+                        <span className="text-sm font-semibold text-blue-700">Address</span>
+                        <p className="text-blue-900 font-medium">{parentWithChildren.address}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Emergency Contact */}
+                  {parentWithChildren.emergency_contact_name && (
+                    <div className="mt-4 p-3 bg-blue-100 rounded-lg">
+                      <h4 className="text-sm font-semibold text-blue-800 mb-2">Emergency Contact</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                        <div>
+                          <span className="text-blue-600 font-medium">Name: </span>
+                          <span className="text-blue-900">{parentWithChildren.emergency_contact_name}</span>
+                        </div>
+                        {parentWithChildren.emergency_contact_phone && (
+                          <div>
+                            <span className="text-blue-600 font-medium">Phone: </span>
+                            <span className="text-blue-900">{parentWithChildren.emergency_contact_phone}</span>
+                          </div>
+                        )}
+                        {parentWithChildren.emergency_contact_relationship && (
+                          <div>
+                            <span className="text-blue-600 font-medium">Relationship: </span>
+                            <span className="text-blue-900">{parentWithChildren.emergency_contact_relationship}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              <div className="border-t border-blue-200 pt-4"></div>
+
+              {/* Children Information */}
+              {parentWithChildren && parentWithChildren.children && parentWithChildren.children.length > 0 ? (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
+                      <Baby className="h-5 w-5" />
+                      My Children ({parentWithChildren.children.length})
+                    </h3>
+                  </div>
+                  <div className="space-y-4">
+                    {parentWithChildren.children.map((child: Child) => (
+                      <Card key={child.id} className="border-blue-200">
+                        <CardContent className="pt-6">
+                          <div className="space-y-4">
+                            {/* Child Basic Info */}
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="font-semibold text-blue-900 text-lg">{child.child_full_name}</h4>
+                                {child.child_preferred_name && (
+                                  <p className="text-sm text-blue-600">Preferred name: {child.child_preferred_name}</p>
+                                )}
+                                <div className="flex gap-4 mt-2">
+                                  <Badge variant="outline" className="bg-blue-50">
+                                    Age: {child.child_age}
+                                  </Badge>
+                                  {child.has_cooking_experience && (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                      <ChefHat className="h-3 w-3 mr-1" />
+                                      Has cooking experience
+                                    </Badge>
+                                  )}
+                                  {child.media_permission ? (
+                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                                      <Camera className="h-3 w-3 mr-1" />
+                                      Media OK
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
+                                      <Camera className="h-3 w-3 mr-1" />
+                                      No media
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Cooking Experience Details */}
+                            {child.has_cooking_experience && child.cooking_experience_details && (
+                              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <p className="text-sm text-green-900">
+                                  <span className="font-medium">Cooking Experience: </span>
+                                  {child.cooking_experience_details}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Health & Safety Information */}
+                            {(child.allergies || child.dietary_restrictions || child.medical_conditions || child.emergency_medications) && (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 space-y-2">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <AlertCircle className="h-4 w-4 text-yellow-700" />
+                                  <h5 className="text-sm font-semibold text-yellow-900">Health & Safety Information</h5>
+                                </div>
+                                {child.allergies && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-yellow-900">Allergies: </span>
+                                    <span className="text-yellow-800">{child.allergies}</span>
+                                  </div>
+                                )}
+                                {child.dietary_restrictions && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-yellow-900">Dietary Restrictions: </span>
+                                    <span className="text-yellow-800">{child.dietary_restrictions}</span>
+                                  </div>
+                                )}
+                                {child.medical_conditions && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-yellow-900">Medical Conditions: </span>
+                                    <span className="text-yellow-800">{child.medical_conditions}</span>
+                                  </div>
+                                )}
+                                {child.emergency_medications && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-yellow-900">Emergency Medications: </span>
+                                    <span className="text-yellow-800">{child.emergency_medications}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Pick-up Information */}
+                            {(child.authorized_pickup_persons || child.custody_restrictions) && (
+                              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                                {child.authorized_pickup_persons && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-blue-900">Authorized Pick-up: </span>
+                                    <span className="text-blue-800">{child.authorized_pickup_persons}</span>
+                                  </div>
+                                )}
+                                {child.custody_restrictions && (
+                                  <div className="text-sm">
+                                    <span className="font-medium text-blue-900">Custody Restrictions: </span>
+                                    <span className="text-blue-800">{child.custody_restrictions}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Additional Notes */}
+                            {child.additional_notes && (
+                              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                                <p className="text-sm text-gray-800">
+                                  <span className="font-medium">Additional Notes: </span>
+                                  {child.additional_notes}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
                 </div>
               ) : (
                 <Alert className="border-yellow-200 bg-yellow-50">
                   <AlertDescription className="text-yellow-800">
-                    No student profile found. A profile will be created when you make your first booking.
+                    No children found. Please add children information to your account.
                   </AlertDescription>
                 </Alert>
               )}
@@ -1548,6 +1740,19 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Classes
+        </Button>
+        <Button
+          variant="destructive"
+          onClick={async () => {
+            await signOut()
+            setStudentProfile(null)
+            setParentWithChildren(null)
+            onClose()
+          }}
+          className="gap-2 bg-cocinarte-red hover:bg-cocinarte-red/90"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign Out
         </Button>
       </div>
     </div>
@@ -1697,6 +1902,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           </div>
         ) : authStep === 'class-selection' ? (
           renderClassSelection()
+        ) : authStep === 'child-selection' ? (
+          renderChildSelection()
         ) : authStep === 'login' ? (
           renderLoginForm()
         ) : authStep === 'signup' ? (

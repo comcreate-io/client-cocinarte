@@ -217,26 +217,6 @@ export default function CocinarteBirthday() {
           </div>
         </div>
 
-        {/* VIP Package - Full Width */}
-        <div className="mb-8 bg-cocinarte-yellow rounded-2xl p-6 md:p-8 text-center shadow-xl">
-          <div className="inline-block bg-white px-6 py-2 rounded-full mb-4">
-            <p className="text-cocinarte-navy font-bold text-sm uppercase tracking-wider">⭐ VIP Experience ⭐</p>
-          </div>
-          <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">VIP Party Package</h3>
-          <p className="text-5xl font-bold text-white mb-6">$1,078</p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-white max-w-4xl mx-auto">
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Full décor package</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Small balloon garland</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Pizzas included</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Veggie tray</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Sodas & kids juices</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Goodie bags</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Character visit</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Tables & chairs</div>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Both party rooms</div>
-          </div>
-        </div>
-
         {/* Weekend Party Room Rentals Section */}
         <div className="mt-20">
           {/* Header */}
@@ -381,6 +361,26 @@ export default function CocinarteBirthday() {
               <p className="text-xs text-slate-500 mt-2 italic">Piñatas available as add-on only</p>
             </div>
           </div>
+          </div>
+        </div>
+
+        {/* VIP Package - Full Width */}
+        <div className="my-12 bg-cocinarte-yellow rounded-2xl p-6 md:p-8 text-center shadow-xl">
+          <div className="inline-block bg-white px-6 py-2 rounded-full mb-4">
+            <p className="text-cocinarte-navy font-bold text-sm uppercase tracking-wider">⭐ VIP Experience ⭐</p>
+          </div>
+          <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">VIP Party Package</h3>
+          <p className="text-5xl font-bold text-white mb-6">$1,078</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 text-sm text-white max-w-4xl mx-auto">
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Full décor package</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Small balloon garland</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Pizzas included</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Veggie tray</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Sodas & kids juices</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Goodie bags</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Character visit</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Tables & chairs</div>
+            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-lg">✓ Both party rooms</div>
           </div>
         </div>
 
