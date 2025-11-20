@@ -1207,10 +1207,9 @@ export default function CocinarteMonthlyCalendar() {
       )}
       
       {/* Booking Popup */}
-      <CocinarteBookingPopup 
-        isOpen={isBookingOpen} 
-        onClose={() => setIsBookingOpen(false)} 
-        initialStep={user ? "payment" : "login"}
+      <CocinarteBookingPopup
+        isOpen={isBookingOpen}
+        onClose={() => setIsBookingOpen(false)}
         initialSelectedClassId={selectedClass ? selectedClass.id : undefined}
       />
     </div>

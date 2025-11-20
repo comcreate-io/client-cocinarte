@@ -121,6 +121,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     }
   }, [isOpen, initialSelectedClassId, initialStep, user])
 
+  // Auto-trigger booking flow when class is pre-selected from calendar
+  useEffect(() => {
+    const autoStartBooking = async () => {
+      if (isOpen && initialSelectedClassId && selectedClassId && !initialStep && authStep === 'class-selection') {
+        // A class was pre-selected (from calendar), auto-start the booking flow
+        await handleBookClass()
+      }
+    }
+    autoStartBooking()
+  }, [isOpen, initialSelectedClassId, selectedClassId, initialStep])
+
   // Fetch student profile when viewing account page
   useEffect(() => {
     if (authStep === 'account' && user) {
