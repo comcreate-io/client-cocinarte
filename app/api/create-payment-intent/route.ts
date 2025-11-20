@@ -71,13 +71,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log the email being used for receipt
+    console.log('Creating payment intent with receipt_email:', userEmail);
+
     // Create a PaymentIntent with MANUAL CAPTURE (holds funds, doesn't charge)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Stripe expects amount in cents
       currency: 'usd',
       description: `${classTitle}${userName ? ` - ${userName}` : ''}`,
       capture_method: 'manual', // ← KEY: This holds the payment instead of charging immediately
-      receipt_email: userEmail, // Send receipt to customer email
+      receipt_email: userEmail || undefined, // Send receipt to customer email (undefined if not provided)
       metadata: {
         className: classTitle,
         customerName: userName || 'Guest',
@@ -90,6 +93,8 @@ export async function POST(request: NextRequest) {
       // Show only credit/debit card in PaymentElement
       payment_method_types: ['card'],
     });
+
+    console.log('Payment intent created successfully with ID:', paymentIntent.id);
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,

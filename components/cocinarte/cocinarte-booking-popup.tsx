@@ -73,6 +73,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [couponError, setCouponError] = useState('')
   const [couponSuccess, setCouponSuccess] = useState('')
 
+  // Child management states
+  const [editingChildId, setEditingChildId] = useState<string | null>(null)
+  const [isAddingChild, setIsAddingChild] = useState(false)
+  const [childFormData, setChildFormData] = useState<Partial<Child>>({})
+
   const { user, signIn, signUp, signUpWithStudentInfo, signOut } = useAuth()
 
   const selectedClassData = classes.find(c => c.id === selectedClassId)
@@ -540,37 +545,56 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       const studentsService = new StudentsClientService()
       let studentInfo = await studentsService.getStudentByEmail(user.email!)
 
-      if (!studentInfo) {
-        console.log('Student profile not found, creating one...')
+      // If using new parent/children structure, get child info
+      let childInfo = null
+      if (selectedChildId && parentWithChildren) {
+        childInfo = parentWithChildren.children.find((c: Child) => c.id === selectedChildId)
+        console.log('Using selected child:', childInfo?.child_full_name)
+      }
 
-        // Check if we have the required data from signup or session
-        if (!parentName || !childName) {
-          // Try to get from sessionStorage
-          const pendingBooking = sessionStorage.getItem('pendingBooking')
-          if (pendingBooking) {
-            const bookingData = JSON.parse(pendingBooking)
-            setParentName(bookingData.parentName || '')
-            setChildName(bookingData.childName || '')
-            setPhone(bookingData.phone || '')
-            setAddress(bookingData.address || '')
+      if (!studentInfo) {
+        console.log('Student profile not found, creating one for backward compatibility...')
+
+        // Determine parent and child names
+        let parentNameForStudent = parentName
+        let childNameForStudent = childName
+
+        // If we have parent/child data from new structure, use it
+        if (parentWithChildren && childInfo) {
+          parentNameForStudent = parentWithChildren.parent_guardian_names
+          childNameForStudent = childInfo.child_full_name
+        } else {
+          // Check if we have the required data from signup or session
+          if (!parentName || !childName) {
+            // Try to get from sessionStorage
+            const pendingBooking = sessionStorage.getItem('pendingBooking')
+            if (pendingBooking) {
+              const bookingData = JSON.parse(pendingBooking)
+              setParentName(bookingData.parentName || '')
+              setChildName(bookingData.childName || '')
+              setPhone(bookingData.phone || '')
+              setAddress(bookingData.address || '')
+              parentNameForStudent = bookingData.parentName || ''
+              childNameForStudent = bookingData.childName || ''
+            }
           }
         }
 
         // If still missing required data, show error
-        if (!parentName || !childName) {
-          setPaymentError('Missing required information. Please go back and fill in parent and child names.')
+        if (!parentNameForStudent || !childNameForStudent) {
+          setPaymentError('Missing required information. Please ensure you have completed your profile.')
           setPaymentLoading(false)
           return
         }
 
-        // Create student profile
+        // Create student profile (backward compatibility)
         try {
           studentInfo = await studentsService.createStudent({
-            parent_name: parentName,
-            child_name: childName,
+            parent_name: parentNameForStudent,
+            child_name: childNameForStudent,
             email: user.email!,
-            phone: phone || undefined,
-            address: address || undefined
+            phone: parentWithChildren?.parent_phone || phone || undefined,
+            address: parentWithChildren?.address || address || undefined
           })
           console.log('Student profile created:', studentInfo.id)
         } catch (createError: any) {
@@ -1503,6 +1527,93 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     }
   }
 
+  const handleAddChild = () => {
+    setIsAddingChild(true)
+    setEditingChildId(null)
+    setChildFormData({
+      child_full_name: '',
+      child_preferred_name: '',
+      child_age: 0,
+      allergies: '',
+      dietary_restrictions: '',
+      has_cooking_experience: false,
+      cooking_experience_details: '',
+      medical_conditions: '',
+      emergency_medications: '',
+      media_permission: false,
+      authorized_pickup_persons: '',
+      custody_restrictions: '',
+      additional_notes: ''
+    })
+  }
+
+  const handleEditChild = (child: Child) => {
+    setEditingChildId(child.id)
+    setIsAddingChild(false)
+    setChildFormData(child)
+  }
+
+  const handleDeleteChild = async (childId: string) => {
+    if (!confirm('Are you sure you want to delete this child? This action cannot be undone.')) {
+      return
+    }
+
+    try {
+      const parentsService = new ParentsClientService()
+      await parentsService.deleteChild(childId)
+      await fetchStudentProfile() // Refresh data
+      setAuthMessage('Child deleted successfully')
+      setTimeout(() => setAuthMessage(''), 3000)
+    } catch (error) {
+      console.error('Error deleting child:', error)
+      setAuthError('Failed to delete child')
+      setTimeout(() => setAuthError(''), 3000)
+    }
+  }
+
+  const handleSaveChild = async () => {
+    if (!childFormData.child_full_name || !childFormData.child_age) {
+      setAuthError('Please fill in all required fields')
+      setTimeout(() => setAuthError(''), 3000)
+      return
+    }
+
+    try {
+      const parentsService = new ParentsClientService()
+
+      if (editingChildId) {
+        // Update existing child
+        await parentsService.updateChild(editingChildId, childFormData)
+        setAuthMessage('Child updated successfully')
+      } else {
+        // Add new child
+        if (!parentWithChildren?.id) {
+          setAuthError('Parent information not found')
+          return
+        }
+        await parentsService.addChild(parentWithChildren.id, childFormData as Child)
+        setAuthMessage('Child added successfully')
+      }
+
+      // Reset form and refresh data
+      setIsAddingChild(false)
+      setEditingChildId(null)
+      setChildFormData({})
+      await fetchStudentProfile()
+      setTimeout(() => setAuthMessage(''), 3000)
+    } catch (error) {
+      console.error('Error saving child:', error)
+      setAuthError('Failed to save child')
+      setTimeout(() => setAuthError(''), 3000)
+    }
+  }
+
+  const handleCancelChildEdit = () => {
+    setIsAddingChild(false)
+    setEditingChildId(null)
+    setChildFormData({})
+  }
+
   const renderAccount = () => (
     <div className="space-y-6">
       <Card className="border-blue-200 bg-blue-50">
@@ -1616,6 +1727,14 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                       <Baby className="h-5 w-5" />
                       My Children ({parentWithChildren.children.length})
                     </h3>
+                    <Button
+                      onClick={handleAddChild}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Child
+                    </Button>
                   </div>
                   <div className="space-y-4">
                     {parentWithChildren.children.map((child: Child) => (
@@ -1651,6 +1770,24 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                                     </Badge>
                                   )}
                                 </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditChild(child)}
+                                  className="border-blue-300 hover:bg-blue-50"
+                                >
+                                  <span className="text-sm">Edit</span>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleDeleteChild(child.id)}
+                                  className="border-red-300 hover:bg-red-50 text-red-600"
+                                >
+                                  <span className="text-sm">Delete</span>
+                                </Button>
                               </div>
                             </div>
 
@@ -1732,11 +1869,139 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                   </div>
                 </div>
               ) : (
-                <Alert className="border-yellow-200 bg-yellow-50">
-                  <AlertDescription className="text-yellow-800">
-                    No children found. Please add children information to your account.
-                  </AlertDescription>
-                </Alert>
+                <div className="space-y-4">
+                  <Alert className="border-yellow-200 bg-yellow-50">
+                    <AlertDescription className="text-yellow-800">
+                      No children found. Please add children information to your account.
+                    </AlertDescription>
+                  </Alert>
+                  <Button
+                    onClick={handleAddChild}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Your First Child
+                  </Button>
+                </div>
+              )}
+
+              {/* Child Form for Add/Edit */}
+              {(isAddingChild || editingChildId) && (
+                <Card className="border-green-200 bg-green-50 mt-4">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold text-green-900">
+                      {editingChildId ? 'Edit Child Information' : 'Add New Child'}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="child_full_name">Full Name *</Label>
+                        <Input
+                          id="child_full_name"
+                          value={childFormData.child_full_name || ''}
+                          onChange={(e) => setChildFormData({ ...childFormData, child_full_name: e.target.value })}
+                          placeholder="Child's full name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="child_preferred_name">Preferred Name</Label>
+                        <Input
+                          id="child_preferred_name"
+                          value={childFormData.child_preferred_name || ''}
+                          onChange={(e) => setChildFormData({ ...childFormData, child_preferred_name: e.target.value })}
+                          placeholder="Nickname or preferred name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="child_age">Age *</Label>
+                        <Input
+                          id="child_age"
+                          type="number"
+                          value={childFormData.child_age || ''}
+                          onChange={(e) => setChildFormData({ ...childFormData, child_age: parseInt(e.target.value) || 0 })}
+                          placeholder="Child's age"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="allergies">Allergies</Label>
+                        <Input
+                          id="allergies"
+                          value={childFormData.allergies || ''}
+                          onChange={(e) => setChildFormData({ ...childFormData, allergies: e.target.value })}
+                          placeholder="Any allergies"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="dietary_restrictions">Dietary Restrictions</Label>
+                        <Input
+                          id="dietary_restrictions"
+                          value={childFormData.dietary_restrictions || ''}
+                          onChange={(e) => setChildFormData({ ...childFormData, dietary_restrictions: e.target.value })}
+                          placeholder="Dietary restrictions"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="medical_conditions">Medical Conditions</Label>
+                        <Input
+                          id="medical_conditions"
+                          value={childFormData.medical_conditions || ''}
+                          onChange={(e) => setChildFormData({ ...childFormData, medical_conditions: e.target.value })}
+                          placeholder="Medical conditions"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="checkbox"
+                        id="has_cooking_experience"
+                        checked={childFormData.has_cooking_experience || false}
+                        onChange={(e) => setChildFormData({ ...childFormData, has_cooking_experience: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="has_cooking_experience">Has cooking experience</Label>
+                    </div>
+
+                    {childFormData.has_cooking_experience && (
+                      <div>
+                        <Label htmlFor="cooking_experience_details">Cooking Experience Details</Label>
+                        <Input
+                          id="cooking_experience_details"
+                          value={childFormData.cooking_experience_details || ''}
+                          onChange={(e) => setChildFormData({ ...childFormData, cooking_experience_details: e.target.value })}
+                          placeholder="Describe cooking experience"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 items-center">
+                      <input
+                        type="checkbox"
+                        id="media_permission"
+                        checked={childFormData.media_permission || false}
+                        onChange={(e) => setChildFormData({ ...childFormData, media_permission: e.target.checked })}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor="media_permission">Media permission (photos/videos)</Label>
+                    </div>
+
+                    <div className="flex gap-3 justify-end">
+                      <Button
+                        variant="outline"
+                        onClick={handleCancelChildEdit}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleSaveChild}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        {editingChildId ? 'Update Child' : 'Add Child'}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </>
           )}
@@ -1847,6 +2112,79 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </Card>
       )}
 
+      {/* Child Information */}
+      {selectedChildId && parentWithChildren && (
+        <Card className="border-purple-200 bg-purple-50">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold text-purple-800 flex items-center gap-2">
+              <div className="bg-purple-100 p-2 rounded-lg">
+                <Baby className="h-5 w-5 text-purple-600" />
+              </div>
+              Child Attending
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const child = parentWithChildren.children.find((c: Child) => c.id === selectedChildId)
+              if (!child) return null
+
+              return (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm font-semibold text-purple-700">Child Name</span>
+                      <p className="text-purple-800 font-medium text-lg">{child.child_full_name}</p>
+                      {child.child_preferred_name && (
+                        <p className="text-sm text-purple-600">Goes by: {child.child_preferred_name}</p>
+                      )}
+                    </div>
+                    <div>
+                      <span className="text-sm font-semibold text-purple-700">Age</span>
+                      <p className="text-purple-800 font-medium text-lg">{child.child_age} years old</p>
+                    </div>
+                  </div>
+
+                  {/* Cooking Experience */}
+                  {child.has_cooking_experience && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <ChefHat className="h-4 w-4 text-green-700" />
+                        <span className="text-sm font-semibold text-green-800">Has Cooking Experience</span>
+                      </div>
+                      {child.cooking_experience_details && (
+                        <p className="text-sm text-green-700 ml-6">{child.cooking_experience_details}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Health & Safety Information */}
+                  {(child.allergies || child.dietary_restrictions) && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-yellow-700" />
+                        <span className="text-sm font-semibold text-yellow-800">Health & Safety Notes</span>
+                      </div>
+                      <div className="space-y-1 ml-6">
+                        {child.allergies && (
+                          <p className="text-sm text-yellow-800">
+                            <span className="font-medium">Allergies:</span> {child.allergies}
+                          </p>
+                        )}
+                        {child.dietary_restrictions && (
+                          <p className="text-sm text-yellow-800">
+                            <span className="font-medium">Dietary Restrictions:</span> {child.dietary_restrictions}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Booking Details */}
       {selectedClassData && (
         <Card className="border-green-200 bg-green-50">
@@ -1895,12 +2233,19 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           <DialogHeader className="space-y-3">
             <DialogTitle className="text-3xl font-bold flex items-center gap-3">
               <div className="bg-white/20 p-2 rounded-lg">
-                <ChefHat className="h-8 w-8" />
+                {authStep === 'account' ? (
+                  <User className="h-8 w-8" />
+                ) : (
+                  <ChefHat className="h-8 w-8" />
+                )}
               </div>
-              Book Your Cooking Class
+              {authStep === 'account' ? 'My Account' : 'Book Your Cooking Class'}
             </DialogTitle>
             <DialogDescription className="text-white/90 text-lg">
-              Choose from our available cooking classes and reserve your spot today!
+              {authStep === 'account'
+                ? 'Manage your account and family information'
+                : 'Choose from our available cooking classes and reserve your spot today!'
+              }
             </DialogDescription>
           </DialogHeader>
         </div>

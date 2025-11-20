@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CouponsClient } from '@/components/dashboard/coupons-client'
 import { isAdminUser } from '@/lib/supabase/admin'
@@ -43,8 +42,7 @@ export default async function CouponsPage() {
   const sentCoupons = safeCoupons.filter((c: any) => c.sent_at !== null).length
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -112,6 +110,5 @@ export default async function CouponsPage() {
         </Card>
 
       </div>
-    </DashboardLayout>
   )
 }

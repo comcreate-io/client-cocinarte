@@ -91,12 +91,6 @@ export default function LandingNav() {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden lg:flex items-center space-x-4">
-            <Button variant="outline" size="sm" className="border-slate-300 text-slate-700 hover:bg-slate-50">
-              <Link href="#spanish-horizons" className="flex items-center scroll-smooth">
-                <BookOpen className="w-4 h-4 mr-2" />
-                Learn More
-              </Link>
-            </Button>
             <Button size="sm" className="bg-slate hover:bg-slate-800 text-white">
               <Link href="#contact" className="flex items-center scroll-smooth">
                 <Phone className="w-4 h-4 mr-2" />
@@ -156,12 +150,6 @@ export default function LandingNav() {
 
               {/* Mobile CTA Buttons */}
               <div className="flex flex-col space-y-3 pt-6 border-t border-slate-200">
-                <Button variant="outline" className="w-full border-slate-300 text-slate-700 hover:bg-slate-50">
-                  <Link href="#spanish-horizons" className="flex items-center justify-center scroll-smooth">
-                    <BookOpen className="w-4 h-4 mr-2" />
-                    Learn More
-                  </Link>
-                </Button>
                 <Button className="w-full bg-slate hover:bg-slate-800 text-white">
                   <Link href="#contact" className="flex items-center justify-center scroll-smooth">
                     <Phone className="w-4 h-4 mr-2" />

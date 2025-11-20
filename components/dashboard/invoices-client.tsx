@@ -24,8 +24,11 @@ export default function InvoicesClient() {
   const [loading, setLoading] = useState(true)
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [showViewDialog, setShowViewDialog] = useState(false)
+  const [showSendDialog, setShowSendDialog] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   const [sendingInvoice, setSendingInvoice] = useState<string | null>(null)
+  const [customEmail, setCustomEmail] = useState("")
+  const [useCustomEmail, setUseCustomEmail] = useState(false)
 
   // Form state
   const [recipientName, setRecipientName] = useState("")
@@ -167,14 +170,28 @@ export default function InvoicesClient() {
     }
   }
 
-  const handleSendInvoice = async (invoiceId: string) => {
+  const handleOpenSendDialog = (invoice: Invoice) => {
+    setSelectedInvoice(invoice)
+    setCustomEmail("")
+    setUseCustomEmail(false)
+    setShowSendDialog(true)
+  }
+
+  const handleSendInvoice = async () => {
+    if (!selectedInvoice) return
+
     try {
-      setSendingInvoice(invoiceId)
+      setSendingInvoice(selectedInvoice.id)
+
+      const emailToSend = useCustomEmail && customEmail ? customEmail : selectedInvoice.recipient_email
 
       const response = await fetch("/api/invoice/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ invoice_id: invoiceId })
+        body: JSON.stringify({
+          invoice_id: selectedInvoice.id,
+          custom_email: useCustomEmail ? emailToSend : undefined
+        })
       })
 
       if (!response.ok) {
@@ -183,12 +200,13 @@ export default function InvoicesClient() {
 
       // Update local state
       setInvoices(invoices.map(inv =>
-        inv.id === invoiceId
+        inv.id === selectedInvoice.id
           ? { ...inv, email_sent: true, email_sent_at: new Date().toISOString() }
           : inv
       ))
 
-      alert("Invoice sent successfully!")
+      alert(`Invoice sent successfully to ${emailToSend}!`)
+      setShowSendDialog(false)
     } catch (error) {
       console.error("Error sending invoice:", error)
       alert("Failed to send invoice. Please try again.")
@@ -333,20 +351,18 @@ export default function InvoicesClient() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    {!invoice.email_sent && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSendInvoice(invoice.id)}
-                        disabled={sendingInvoice === invoice.id}
-                      >
-                        {sendingInvoice === invoice.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cocinarte-red"></div>
-                        ) : (
-                          <Send className="h-4 w-4" />
-                        )}
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenSendDialog(invoice)}
+                      disabled={sendingInvoice === invoice.id}
+                    >
+                      {sendingInvoice === invoice.id ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cocinarte-red"></div>
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
                     {invoice.payment_status === 'pending' && (
                       <Button
                         variant="outline"
@@ -736,6 +752,111 @@ export default function InvoicesClient() {
                 )}
               </div>
             </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Send Invoice Dialog */}
+      <Dialog open={showSendDialog} onOpenChange={setShowSendDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Send Invoice</DialogTitle>
+            <DialogDescription>
+              Send invoice {selectedInvoice?.invoice_number} via email
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedInvoice && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Invoice:</span>
+                  <span className="font-semibold">{selectedInvoice.invoice_number}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Amount:</span>
+                  <span className="font-semibold">{formatCurrency(selectedInvoice.total_amount)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Original Recipient:</span>
+                  <span className="font-semibold">{selectedInvoice.recipient_name}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="useCustomEmail"
+                    checked={useCustomEmail}
+                    onChange={(e) => setUseCustomEmail(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  <Label htmlFor="useCustomEmail" className="text-sm font-normal cursor-pointer">
+                    Send to a different email address
+                  </Label>
+                </div>
+
+                {!useCustomEmail ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Mail className="h-4 w-4 text-blue-600 mt-0.5" />
+                      <div className="text-sm">
+                        <p className="font-medium text-blue-900">Sending to:</p>
+                        <p className="text-blue-700">{selectedInvoice.recipient_email}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label htmlFor="customEmail">Custom Email Address</Label>
+                    <Input
+                      id="customEmail"
+                      type="email"
+                      placeholder="email@example.com"
+                      value={customEmail}
+                      onChange={(e) => setCustomEmail(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {selectedInvoice.email_sent && (
+                <Alert className="bg-yellow-50 border-yellow-200">
+                  <AlertDescription className="text-yellow-800 text-sm">
+                    <strong>Note:</strong> This invoice has already been sent to {selectedInvoice.recipient_email} on {formatDate(selectedInvoice.email_sent_at || '')}.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSendDialog(false)}
+                  disabled={sendingInvoice === selectedInvoice.id}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendInvoice}
+                  disabled={sendingInvoice === selectedInvoice.id || (useCustomEmail && !customEmail)}
+                  className="bg-cocinarte-red hover:bg-cocinarte-red/90"
+                >
+                  {sendingInvoice === selectedInvoice.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Invoice
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           )}
         </DialogContent>
       </Dialog>

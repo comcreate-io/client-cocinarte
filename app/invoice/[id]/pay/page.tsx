@@ -15,6 +15,8 @@ import { InvoicesClientService } from "@/lib/supabase/invoices-client"
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import InvoicePaymentForm from "@/components/invoice/invoice-payment-form"
+import CocinarteHeader from "@/components/cocinarte/cocinarte-header"
+import CocinarteFooter from "@/components/cocinarte/cocinarte-footer"
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -103,9 +105,9 @@ export default function InvoicePaymentPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { color: "bg-yellow-100 text-yellow-800", icon: Clock, label: "Pending" },
-      paid: { color: "bg-green-100 text-green-800", icon: CheckCircle, label: "Paid" },
-      overdue: { color: "bg-red-100 text-red-800", icon: AlertCircle, label: "Overdue" },
+      pending: { color: "bg-[#fbbf24]/20 text-[#000638]", icon: Clock, label: "Pending" },
+      paid: { color: "bg-[#00ADEE]/20 text-[#000638]", icon: CheckCircle, label: "Paid" },
+      overdue: { color: "bg-[#f97316]/20 text-[#000638]", icon: AlertCircle, label: "Overdue" },
       cancelled: { color: "bg-gray-100 text-gray-800", icon: AlertCircle, label: "Cancelled" },
     }
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending
@@ -121,64 +123,76 @@ export default function InvoicePaymentPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex items-center gap-3">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cocinarte-red"></div>
-          <span className="text-gray-600">Loading invoice...</span>
+      <>
+        <CocinarteHeader />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-32">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00ADEE]"></div>
+            <span className="text-gray-600">Loading invoice...</span>
+          </div>
         </div>
-      </div>
+        <CocinarteFooter />
+      </>
     )
   }
 
   if (error || !invoice) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="py-12 text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-gray-900 mb-2">Invoice Not Found</h2>
-            <p className="text-gray-600">{error || "The invoice you're looking for doesn't exist or has been removed."}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <>
+        <CocinarteHeader />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-32 pb-12 px-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="py-12 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Invoice Not Found</h2>
+              <p className="text-gray-600">{error || "The invoice you're looking for doesn't exist or has been removed."}</p>
+            </CardContent>
+          </Card>
+        </div>
+        <CocinarteFooter />
+      </>
     )
   }
 
   if (paymentSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="max-w-2xl w-full">
-          <CardContent className="py-12 text-center">
-            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="h-10 w-10 text-green-600" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Payment Successful!</h2>
-            <p className="text-gray-600 mb-6">
-              Thank you for your payment. Invoice {invoice.invoice_number} has been marked as paid.
-            </p>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-              <p className="text-sm text-green-800">
-                A payment confirmation has been sent to <strong>{invoice.recipient_email}</strong>
+      <>
+        <CocinarteHeader />
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 pt-32 pb-12 px-4">
+          <Card className="max-w-2xl w-full">
+            <CardContent className="py-12 text-center">
+              <div className="w-20 h-20 bg-[#00ADEE]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle className="h-10 w-10 text-[#00ADEE]" />
+              </div>
+              <h2 className="text-2xl font-bold text-[#000638] mb-3">Payment Successful!</h2>
+              <p className="text-gray-600 mb-6">
+                Thank you for your payment. Invoice {invoice.invoice_number} has been marked as paid.
               </p>
-            </div>
-            <div className="text-left max-w-md mx-auto bg-gray-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600 mb-2">Payment Details:</p>
-              <div className="flex justify-between mb-1">
-                <span className="text-gray-700">Invoice:</span>
-                <span className="font-semibold">{invoice.invoice_number}</span>
+              <div className="bg-[#00ADEE]/10 border border-[#00ADEE]/30 rounded-lg p-4 mb-6">
+                <p className="text-sm text-[#000638]">
+                  A payment confirmation has been sent to <strong>{invoice.recipient_email}</strong>
+                </p>
               </div>
-              <div className="flex justify-between mb-1">
-                <span className="text-gray-700">Amount Paid:</span>
-                <span className="font-semibold text-green-600">{formatCurrency(invoice.total_amount)}</span>
+              <div className="text-left max-w-md mx-auto bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600 mb-2">Payment Details:</p>
+                <div className="flex justify-between mb-1">
+                  <span className="text-gray-700">Invoice:</span>
+                  <span className="font-semibold">{invoice.invoice_number}</span>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-gray-700">Amount Paid:</span>
+                  <span className="font-semibold text-[#00ADEE]">{formatCurrency(invoice.total_amount)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-700">Payment Date:</span>
+                  <span className="font-semibold">{formatDate(invoice.paid_at || new Date().toISOString())}</span>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-700">Payment Date:</span>
-                <span className="font-semibold">{formatDate(invoice.paid_at || new Date().toISOString())}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+        <CocinarteFooter />
+      </>
     )
   }
 
@@ -187,19 +201,16 @@ export default function InvoicePaymentPage() {
     appearance: {
       theme: 'stripe' as const,
       variables: {
-        colorPrimary: '#dc2626',
+        colorPrimary: '#00ADEE',
       },
     },
   } : null
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cocinarte</h1>
-          <p className="text-gray-600">Invoice Payment</p>
-        </div>
+    <>
+      <CocinarteHeader />
+      <div className="min-h-screen bg-gray-50 pt-32 pb-12 px-4">
+        <div className="max-w-4xl mx-auto">
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Invoice Details */}
@@ -209,7 +220,7 @@ export default function InvoicePaymentPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-xl flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-cocinarte-red" />
+                    <FileText className="h-5 w-5 text-[#00ADEE]" />
                     {invoice.invoice_number}
                   </CardTitle>
                   {getStatusBadge(invoice.payment_status)}
@@ -229,7 +240,7 @@ export default function InvoicePaymentPage() {
                       <Calendar className="h-4 w-4" />
                       Due Date
                     </p>
-                    <p className="font-semibold text-red-600">{formatDate(invoice.due_date)}</p>
+                    <p className="font-semibold text-[#f97316]">{formatDate(invoice.due_date)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -311,7 +322,7 @@ export default function InvoicePaymentPage() {
                   )}
                   <div className="flex justify-between text-xl font-bold pt-2 border-t">
                     <span>Total:</span>
-                    <span className="text-cocinarte-red">{formatCurrency(invoice.total_amount)}</span>
+                    <span className="text-[#00ADEE]">{formatCurrency(invoice.total_amount)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -319,8 +330,8 @@ export default function InvoicePaymentPage() {
 
             {/* Notes */}
             {invoice.notes && (
-              <Alert className="bg-blue-50 border-blue-200">
-                <AlertDescription className="text-blue-900">
+              <Alert className="bg-[#00ADEE]/10 border-[#00ADEE]/30">
+                <AlertDescription className="text-[#000638]">
                   <strong>Notes:</strong> {invoice.notes}
                 </AlertDescription>
               </Alert>
@@ -341,7 +352,7 @@ export default function InvoicePaymentPage() {
             <Card className="sticky top-6">
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-cocinarte-red" />
+                  <DollarSign className="h-5 w-5 text-[#00ADEE]" />
                   Payment
                 </CardTitle>
               </CardHeader>
@@ -350,18 +361,18 @@ export default function InvoicePaymentPage() {
                   <div className="space-y-4">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-sm text-gray-600 mb-2">Amount Due</p>
-                      <p className="text-3xl font-bold text-cocinarte-red">{formatCurrency(invoice.total_amount)}</p>
+                      <p className="text-3xl font-bold text-[#00ADEE]">{formatCurrency(invoice.total_amount)}</p>
                     </div>
 
-                    <Alert className="bg-blue-50 border-blue-200">
-                      <AlertDescription className="text-blue-900 text-sm">
+                    <Alert className="bg-[#00ADEE]/10 border-[#00ADEE]/30">
+                      <AlertDescription className="text-[#000638] text-sm">
                         Click below to securely pay this invoice using Stripe. Your payment information is encrypted and secure.
                       </AlertDescription>
                     </Alert>
 
                     <Button
                       onClick={handleInitiatePayment}
-                      className="w-full bg-cocinarte-red hover:bg-cocinarte-red/90 py-6 text-lg"
+                      className="w-full bg-[#f97316] hover:bg-[#f97316]/90 py-6 text-lg"
                     >
                       <DollarSign className="h-5 w-5 mr-2" />
                       Pay {formatCurrency(invoice.total_amount)}
@@ -371,7 +382,7 @@ export default function InvoicePaymentPage() {
                   <div>
                     <div className="bg-gray-50 p-4 rounded-lg mb-6">
                       <p className="text-sm text-gray-600 mb-2">Amount Due</p>
-                      <p className="text-3xl font-bold text-cocinarte-red">{formatCurrency(invoice.total_amount)}</p>
+                      <p className="text-3xl font-bold text-[#00ADEE]">{formatCurrency(invoice.total_amount)}</p>
                     </div>
 
                     {options && (
@@ -390,6 +401,8 @@ export default function InvoicePaymentPage() {
           </div>
         </div>
       </div>
-    </div>
+      </div>
+      <CocinarteFooter />
+    </>
   )
 }

@@ -91,11 +91,11 @@ export default function LandingFooter() {
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="w-5 h-5 text-slate-400 flex-shrink-0" />
-                <a 
-                  href="mailto:info@spanishhorizons.org" 
+                <a
+                  href="mailto:info@cocinartepdx.com"
                   className="text-sm text-slate-300 hover:text-white transition-colors duration-200"
                 >
-                  info@spanishhorizons.org
+                  info@cocinartepdx.com
                 </a>
               </div>
             </div>

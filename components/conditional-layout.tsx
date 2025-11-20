@@ -25,12 +25,15 @@ export default function ConditionalLayout({ children, showHeader = true }: Condi
   
   // Check if we're on the dashboard page
   const isDashboardPage = pathname?.startsWith('/dashboard')
-  
+
   // Check if we're on the login page
   const isLoginPage = pathname?.startsWith('/login')
-  
-  if (isRootPage || isCocinartePage || isLandingPage || isDashboardPage || isLoginPage || !showHeader) {
-    // For root page, Cocinarte pages, landing page, dashboard, login, or when showHeader is false, only render the children (no header/footer)
+
+  // Check if we're on an invoice payment page
+  const isInvoicePage = pathname?.startsWith('/invoice')
+
+  if (isRootPage || isCocinartePage || isLandingPage || isDashboardPage || isLoginPage || isInvoicePage || !showHeader) {
+    // For root page, Cocinarte pages, landing page, dashboard, login, invoice pages, or when showHeader is false, only render the children (no header/footer)
     return <>{children}</>
   }
   

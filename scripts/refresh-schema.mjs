@@ -11,7 +11,7 @@ const connectionConfig = {
   port: 6543,
   database: 'postgres',
   user: 'postgres.mwipqlvteowoyipbozyu',
-  password: 'xwW1e714uxcNuZWk',
+  password: 'Comcreate2025?',
   ssl: {
     rejectUnauthorized: false
   }

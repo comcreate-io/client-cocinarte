@@ -3,132 +3,67 @@
 import { useMemo, useState, type JSX } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { Users, Plus, Edit, Trash2, Mail, Phone, BookOpen, Search } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { Users, Mail, Phone, Search, Baby, AlertCircle, ChefHat } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 
-type Student = {
+type Child = {
   id: string
-  parent_name: string
-  child_name: string
-  email: string
-  phone?: string | null
+  child_full_name: string
+  child_preferred_name?: string | null
+  child_age: number
+  allergies?: string | null
+  dietary_restrictions?: string | null
+  has_cooking_experience?: boolean
+  cooking_experience_details?: string | null
+  medical_conditions?: string | null
+  emergency_medications?: string | null
+}
+
+type Parent = {
+  id: string
+  user_id: string
+  parent_guardian_names: string
+  parent_email: string
+  parent_phone?: string | null
   address?: string | null
   created_at?: string
+  children?: Child[]
 }
 
 interface StudentsClientProps {
-  initialStudents: Student[]
+  initialParents: Parent[]
 }
 
-export function StudentsClient({ initialStudents }: StudentsClientProps): JSX.Element {
-  const supabase = createClient()
-  const [students, setStudents] = useState<Student[]>(initialStudents)
+export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Element {
+  const [parents, setParents] = useState<Parent[]>(initialParents)
   const [query, setQuery] = useState('')
-
-  const [isOpen, setIsOpen] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [editing, setEditing] = useState<Student | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
-  const [selected, setSelected] = useState<Student | null>(null)
-
-  const [form, setForm] = useState<Omit<Student, 'id'>>({
-    parent_name: '',
-    child_name: '',
-    email: '',
-    phone: '',
-    address: '',
-  } as any)
+  const [selectedParent, setSelectedParent] = useState<Parent | null>(null)
 
   const filtered = useMemo(() => {
-    if (!query) return students
+    if (!query) return parents
     const q = query.toLowerCase()
-    return students.filter((s) =>
-      [s.child_name, s.parent_name, s.email, s.phone || '', s.address || '']
-        .join(' ')
-        .toLowerCase()
-        .includes(q)
-    )
-  }, [students, query])
+    return parents.filter((p) => {
+      const parentMatch = [
+        p.parent_guardian_names,
+        p.parent_email,
+        p.parent_phone || '',
+        p.address || ''
+      ].join(' ').toLowerCase().includes(q)
 
-  const openCreate = () => {
-    setEditing(null)
-    setForm({ parent_name: '', child_name: '', email: '', phone: '', address: '' } as any)
-    setIsOpen(true)
-  }
+      const childMatch = p.children?.some(c =>
+        [c.child_full_name, c.child_preferred_name || ''].join(' ').toLowerCase().includes(q)
+      )
 
-  const openEdit = (student: Student) => {
-    setEditing(student)
-    setForm({
-      parent_name: student.parent_name,
-      child_name: student.child_name,
-      email: student.email,
-      phone: student.phone || '',
-      address: student.address || '',
-    } as any)
-    setIsOpen(true)
-  }
+      return parentMatch || childMatch
+    })
+  }, [parents, query])
 
-  const openDetails = (student: Student) => {
-    setSelected(student)
+  const openDetails = (parent: Parent) => {
+    setSelectedParent(parent)
     setIsDetailsOpen(true)
-  }
-
-  const handleSave = async () => {
-    setIsSaving(true)
-    try {
-      if (editing) {
-        const { data, error } = await supabase
-          .from('students')
-          .update({
-            parent_name: form.parent_name,
-            child_name: form.child_name,
-            email: form.email,
-            phone: form.phone || null,
-            address: form.address || null,
-          })
-          .eq('id', editing.id)
-          .select()
-          .single()
-        if (error) throw error
-        setStudents((prev) => prev.map((s) => (s.id === editing.id ? (data as Student) : s)))
-      } else {
-        const { data, error } = await supabase
-          .from('students')
-          .insert([
-            {
-              parent_name: form.parent_name,
-              child_name: form.child_name,
-              email: form.email,
-              phone: form.phone || null,
-              address: form.address || null,
-            },
-          ])
-          .select()
-          .single()
-        if (error) throw error
-        setStudents((prev) => [data as Student, ...prev])
-      }
-      setIsOpen(false)
-    } catch (e) {
-      console.error(e)
-      alert('There was a problem saving the student.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
-  const handleDelete = async (id: string) => {
-    try {
-      const { error } = await supabase.from('students').delete().eq('id', id)
-      if (error) throw error
-      setStudents((prev) => prev.filter((s) => s.id !== id))
-    } catch (e) {
-      console.error(e)
-      alert('Failed to delete student.')
-    }
   }
 
   return (
@@ -140,118 +75,216 @@ export function StudentsClient({ initialStudents }: StudentsClientProps): JSX.El
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search students..."
+              placeholder="Search families and children..."
               className="pl-8 w-64"
             />
           </div>
         </div>
+        <div className="text-sm text-muted-foreground">
+          {filtered.length} {filtered.length === 1 ? 'family' : 'families'} • {filtered.reduce((sum, p) => sum + (p.children?.length || 0), 0)} children
+        </div>
       </div>
 
-      <div className="grid gap-4 w-full grid-cols-[repeat(auto-fill,minmax(300px,1fr))]">
-        {filtered.map((s) => (
-          <div
-            key={s.id}
-            className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-muted/30 w-full"
-            onClick={() => openDetails(s)}
+      <div className="grid gap-4 w-full grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
+        {filtered.map((parent) => (
+          <Card
+            key={parent.id}
+            className="cursor-pointer hover:bg-muted/30 transition-colors"
+            onClick={() => openDetails(parent)}
           >
-            <div className="flex items-center space-x-4">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                <Users className="h-5 w-5" />
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                {/* Parent Info */}
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-lg">{parent.parent_guardian_names}</p>
+                    <p className="text-sm text-muted-foreground truncate">{parent.parent_email}</p>
+                    {parent.parent_phone && (
+                      <p className="text-sm text-muted-foreground">{parent.parent_phone}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Children Info */}
+                {parent.children && parent.children.length > 0 && (
+                  <div className="border-t pt-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                      <Baby className="h-4 w-4" />
+                      Children ({parent.children.length})
+                    </div>
+                    <div className="space-y-2">
+                      {parent.children.map((child) => (
+                        <div key={child.id} className="flex items-center justify-between text-sm bg-muted/50 p-2 rounded">
+                          <div className="flex-1">
+                            <span className="font-medium">{child.child_full_name}</span>
+                            {child.child_preferred_name && (
+                              <span className="text-muted-foreground ml-1">({child.child_preferred_name})</span>
+                            )}
+                            <span className="text-muted-foreground ml-2">• Age {child.child_age}</span>
+                          </div>
+                          <div className="flex gap-1">
+                            {child.has_cooking_experience && (
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                                <ChefHat className="h-3 w-3 mr-1" />
+                                Experience
+                              </Badge>
+                            )}
+                            {(child.allergies || child.dietary_restrictions) && (
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                                <AlertCircle className="h-3 w-3" />
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="font-medium">{s.child_name}</p>
-                <div className="text-sm text-muted-foreground">Parent: {s.parent_name}</div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  openEdit(s)
-                }}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete student?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => handleDelete(s.id)}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
+      {filtered.length === 0 && (
+        <div className="text-center py-12 text-muted-foreground">
+          <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p>No families found matching your search.</p>
+        </div>
+      )}
+
       {/* Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Student Details</DialogTitle>
+            <DialogTitle>Family Details</DialogTitle>
           </DialogHeader>
-          {selected && (
-            <div className="space-y-3">
-              <div>
-                <div className="text-sm text-muted-foreground">Child</div>
-                <div className="font-medium">{selected.child_name}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Parent</div>
-                <div className="font-medium">{selected.parent_name}</div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Email</div>
-                <div className="font-medium">{selected.email}</div>
-              </div>
-              {selected.phone && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Phone</div>
-                  <div className="font-medium">{selected.phone}</div>
+          {selectedParent && (
+            <div className="space-y-6">
+              {/* Parent Information */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-lg flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Parent/Guardian Information
+                </h3>
+                <div className="grid gap-3 bg-muted/50 p-4 rounded-lg">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Name</div>
+                    <div className="font-medium">{selectedParent.parent_guardian_names}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Email</div>
+                    <div className="font-medium">{selectedParent.parent_email}</div>
+                  </div>
+                  {selectedParent.parent_phone && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Phone</div>
+                      <div className="font-medium">{selectedParent.parent_phone}</div>
+                    </div>
+                  )}
+                  {selectedParent.address && (
+                    <div>
+                      <div className="text-sm text-muted-foreground">Address</div>
+                      <div className="font-medium">{selectedParent.address}</div>
+                    </div>
+                  )}
                 </div>
-              )}
-              {selected.address && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Address</div>
-                  <div className="font-medium">{selected.address}</div>
-                </div>
-              )}
 
-              <div className="pt-2 flex flex-wrap gap-2">
-                <Button asChild variant="outline">
-                  <a href={`tel:${selected.phone ?? ''}`} aria-label="Call">
-                    <Phone className="h-4 w-4 mr-2" /> Call
-                  </a>
-                </Button>
-                <Button asChild variant="outline">
-                  <a href={`sms:${selected.phone ?? ''}`} aria-label="SMS">
-                    <Phone className="h-4 w-4 mr-2" /> SMS
-                  </a>
-                </Button>
-                <Button asChild>
-                  <a href={`mailto:${selected.email}`} aria-label="Email">
-                    <Mail className="h-4 w-4 mr-2" /> Email
-                  </a>
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                  {selectedParent.parent_phone && (
+                    <>
+                      <Button asChild variant="outline" size="sm">
+                        <a href={`tel:${selectedParent.parent_phone}`} aria-label="Call">
+                          <Phone className="h-4 w-4 mr-2" /> Call
+                        </a>
+                      </Button>
+                      <Button asChild variant="outline" size="sm">
+                        <a href={`sms:${selectedParent.parent_phone}`} aria-label="SMS">
+                          <Phone className="h-4 w-4 mr-2" /> SMS
+                        </a>
+                      </Button>
+                    </>
+                  )}
+                  <Button asChild size="sm">
+                    <a href={`mailto:${selectedParent.parent_email}`} aria-label="Email">
+                      <Mail className="h-4 w-4 mr-2" /> Email
+                    </a>
+                  </Button>
+                </div>
               </div>
+
+              {/* Children Information */}
+              {selectedParent.children && selectedParent.children.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <Baby className="h-5 w-5" />
+                    Children ({selectedParent.children.length})
+                  </h3>
+                  <div className="space-y-4">
+                    {selectedParent.children.map((child) => (
+                      <Card key={child.id} className="border-2">
+                        <CardContent className="pt-6 space-y-3">
+                          <div>
+                            <h4 className="font-semibold text-lg">{child.child_full_name}</h4>
+                            {child.child_preferred_name && (
+                              <p className="text-sm text-muted-foreground">Preferred name: {child.child_preferred_name}</p>
+                            )}
+                            <p className="text-sm text-muted-foreground">Age: {child.child_age} years old</p>
+                          </div>
+
+                          {/* Cooking Experience */}
+                          {child.has_cooking_experience && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <ChefHat className="h-4 w-4 text-green-700" />
+                                <span className="text-sm font-semibold text-green-800">Has Cooking Experience</span>
+                              </div>
+                              {child.cooking_experience_details && (
+                                <p className="text-sm text-green-700 ml-6">{child.cooking_experience_details}</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Health & Safety Information */}
+                          {(child.allergies || child.dietary_restrictions || child.medical_conditions || child.emergency_medications) && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <AlertCircle className="h-4 w-4 text-yellow-700" />
+                                <span className="text-sm font-semibold text-yellow-800">Health & Safety Information</span>
+                              </div>
+                              <div className="space-y-1 ml-6">
+                                {child.allergies && (
+                                  <p className="text-sm text-yellow-800">
+                                    <span className="font-medium">Allergies:</span> {child.allergies}
+                                  </p>
+                                )}
+                                {child.dietary_restrictions && (
+                                  <p className="text-sm text-yellow-800">
+                                    <span className="font-medium">Dietary Restrictions:</span> {child.dietary_restrictions}
+                                  </p>
+                                )}
+                                {child.medical_conditions && (
+                                  <p className="text-sm text-yellow-800">
+                                    <span className="font-medium">Medical Conditions:</span> {child.medical_conditions}
+                                  </p>
+                                )}
+                                {child.emergency_medications && (
+                                  <p className="text-sm text-yellow-800">
+                                    <span className="font-medium">Emergency Medications:</span> {child.emergency_medications}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -259,44 +292,6 @@ export function StudentsClient({ initialStudents }: StudentsClientProps): JSX.El
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing ? 'Edit Student' : 'Add Student'}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="child_name">Child name</Label>
-              <Input id="child_name" value={form.child_name} onChange={(e) => setForm({ ...form, child_name: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="parent_name">Parent name</Label>
-              <Input id="parent_name" value={form.parent_name} onChange={(e) => setForm({ ...form, parent_name: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" value={form.phone || ''} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" value={form.address || ''} onChange={(e) => setForm({ ...form, address: e.target.value })} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
-
-

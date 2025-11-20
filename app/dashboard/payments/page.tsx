@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DollarSign, CreditCard, TrendingUp, RefreshCw } from 'lucide-react'
 import StripePaymentsClient from '@/components/dashboard/stripe-payments-client'
@@ -67,8 +66,7 @@ export default async function PaymentsPage() {
   const currency = (value: number) => `$${value.toFixed(2)}`
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
@@ -141,6 +139,5 @@ export default async function PaymentsPage() {
         {/* Stripe Payments List with Refund Capability */}
         <StripePaymentsClient />
       </div>
-    </DashboardLayout>
   )
 }

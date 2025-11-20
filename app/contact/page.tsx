@@ -181,8 +181,7 @@ export default function ContactPage() {
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-ivry font-bold text-white mb-6">Contact Us</h1>
             <p className="text-lg md:text-xl text-white max-w-3xl mx-auto font-questa px-4">
-              We're here to answer your questions and help you learn more about our K-5 Spanish immersion program. Reach
-              out to schedule a tour or discuss enrollment.
+              We're here to answer your questions about our programs and services.
             </p>
           </div>
         </div>
@@ -239,10 +238,10 @@ export default function ContactPage() {
                         <h3 className="font-ivry font-semibold text-slate mb-1 text-sm md:text-base">Email</h3>
                         <p className="text-slate-medium font-questa text-sm md:text-base break-all">
                           <a
-                            href="mailto:infospanishhorizons@casitaazulpdx.org"
+                            href="mailto:info@cocinartepdx.com"
                             className="hover:text-amber transition-colors"
                           >
-                            infospanishhorizons@casitaazulpdx.org
+                            info@cocinartepdx.com
                           </a>
                         </p>
                       </div>
@@ -274,10 +273,10 @@ export default function ContactPage() {
                         <h3 className="font-ivry font-semibold text-slate mb-1 text-sm md:text-base">Follow Us</h3>
                         <p className="text-slate-medium font-questa text-sm md:text-base">
                           <a
-                            href="https://instagram.com/spanishhorizonsacademy"
+                            href="https://instagram.com/cocinartepdx"
                             className="hover:text-golden transition-colors"
                           >
-                            @spanishhorizonsacademy
+                            @cocinartepdx
                           </a>
                         </p>
                       </div>
@@ -546,10 +545,9 @@ export default function ContactPage() {
       {/* Call to Action */}
       <section className="py-12 md:py-16 bg-slate text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl md:text-3xl font-ivry font-bold mb-3 md:mb-4">Ready to Join Our Community?</h2>
+          <h2 className="text-2xl md:text-3xl font-ivry font-bold mb-3 md:mb-4">Ready to Get Started?</h2>
           <p className="text-lg md:text-xl text-white mb-6 md:mb-8 max-w-2xl mx-auto font-questa px-4">
-            Take the next step in your child's educational journey. We're excited to meet your family and share more
-            about our Spanish immersion program.
+            Contact us today to learn more about our programs and how we can help your family.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
             <Button size="lg" className="bg-amber hover:bg-golden hover:text-slate text-white font-questa text-sm md:text-base">

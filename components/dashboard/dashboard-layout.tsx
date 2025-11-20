@@ -11,6 +11,7 @@ import {
   CalendarDays,
   Ticket,
   Cake,
+  FileText,
 } from "lucide-react"
 
 import {
@@ -56,6 +57,11 @@ const navigationItems = [
     icon: DollarSign,
   },
   {
+    title: "Invoices",
+    url: "/dashboard/invoices",
+    icon: FileText,
+  },
+  {
     title: "Students",
     url: "/dashboard/students",
     icon: Users,
@@ -67,7 +73,7 @@ const navigationItems = [
   },
 ]
 
-export function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
 
   return (

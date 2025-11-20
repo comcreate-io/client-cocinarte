@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { ClasesService } from '@/lib/supabase/clases'
 import { Clase } from '@/lib/types/clases'
 import { ClassesClient } from '@/components/dashboard/classes-client'
@@ -19,7 +18,7 @@ export default async function ClassesPage() {
 
   // Verify user is an admin
   const isAdmin = await isAdminUser(supabase, user.email)
-  
+
   if (!isAdmin) {
     redirect('/?error=admin_only')
   }
@@ -27,7 +26,7 @@ export default async function ClassesPage() {
   // Fetch classes from the database
   const clasesService = new ClasesService()
   let clases: Clase[] = []
-  
+
   try {
     clases = await clasesService.getAllClases()
     console.log('=== Classes fetched from database ===')
@@ -40,10 +39,8 @@ export default async function ClassesPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <ClassesClient initialClases={clases} />
-      </div>
-    </DashboardLayout>
+    <div className="space-y-6">
+      <ClassesClient initialClases={clases} />
+    </div>
   )
 }

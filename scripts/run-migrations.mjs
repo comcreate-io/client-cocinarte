@@ -18,7 +18,7 @@ const connectionConfig = {
   port: 6543,
   database: 'postgres',
   user: 'postgres.mwipqlvteowoyipbozyu',
-  password: 'xwW1e714uxcNuZWk',
+  password: 'Comcreate2025?',
   ssl: {
     rejectUnauthorized: false
   }
@@ -70,6 +70,14 @@ async function main() {
       {
         file: '20251120151859_create_party_requests_table.sql',
         name: 'Create party requests table'
+      },
+      {
+        file: '20251120170000_add_child_id_to_bookings.sql',
+        name: 'Add child_id to bookings table'
+      },
+      {
+        file: '20251120180000_create_invoices_table.sql',
+        name: 'Create invoices table'
       }
     ];
 

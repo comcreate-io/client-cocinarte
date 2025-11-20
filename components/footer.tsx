@@ -28,13 +28,13 @@ export default function Footer() {
             </div>
             <h2 className="text-3xl font-ivry font-bold mb-2">Our Programs</h2>
             <p className="text-slate-200 text-base max-w-md font-questa mb-4">
-              Engaging Spanish immersion experiences for children and families through bilingual education, cooking adventures, and cultural exploration.
+              Engaging cooking experiences for children and families through hands-on culinary adventures and cultural exploration.
             </p>
                          <div className="flex gap-4">
-               <a href="https://instagram.com/spanishhorizonsacademy" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-slate-light transition-colors">
+               <a href="https://instagram.com/cocinartepdx" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-slate-light transition-colors">
                  <FiInstagram className="h-6 w-6" />
                </a>
-               <a href="https://casitaazulpdx.com" target="_blank" rel="noopener noreferrer" aria-label="Casita Azul" className="hover:text-slate-light transition-colors">
+               <a href="https://casitaazuleducation.com" target="_blank" rel="noopener noreferrer" aria-label="Casita Azul Education" className="hover:text-slate-light transition-colors">
                  <FiExternalLink className="h-6 w-6" />
                </a>
              </div>
@@ -52,7 +52,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2 text-slate-200 text-sm">
                 <Mail className="h-4 w-4" />
-                infospanishhorizons@casitaazulpdx.org
+                info@cocinartepdx.com
               </div>
               <div className="flex items-center gap-2 text-slate-200 text-sm">
                 <Clock className="h-4 w-4" />
@@ -75,19 +75,19 @@ export default function Footer() {
                      <div className="text-center md:text-left">
              <h3 className="text-lg font-bold mb-3 text-slate-light">Our Mission</h3>
              <p className="text-slate-300 text-sm font-questa">
-               To provide exceptional Spanish immersion education that fosters bilingualism, cultural appreciation, and academic excellence in a nurturing environment.
+               To inspire children and families through engaging cooking experiences that celebrate Latin flavors and hands-on culinary adventures.
              </p>
            </div>
           <div className="text-center md:text-left">
             <h3 className="text-lg font-bold mb-3 text-amber-400">Programs</h3>
             <p className="text-slate-300 text-sm font-questa">
-              K-5 Spanish immersion curriculum with hands-on learning, cultural activities, and personalized attention to each child's development.
+              Cooking classes, birthday parties, and private events designed to spark creativity and build confidence in the kitchen.
             </p>
           </div>
           <div className="text-center md:text-left">
             <h3 className="text-lg font-bold mb-3 text-green-400">Community</h3>
             <p className="text-slate-300 text-sm font-questa">
-              Part of the Casita Azul family, serving the Hillsboro community with authentic Spanish language and cultural education since our founding.
+              Part of the Casita Azul Education family, bringing culinary adventures to the Hillsboro community.
             </p>
           </div>
         </div>
@@ -95,9 +95,9 @@ export default function Footer() {
         {/* Bottom Section */}
         <div className="border-t border-slate-700 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
                      <div className="flex items-center gap-4 text-slate-300 text-xs font-questa mb-2 md:mb-0">
-             <span>Spanish Immersion</span>
+             <span>Cooking Classes</span>
              <span className="h-1 w-1 bg-slate-light rounded-full inline-block"></span>
-             <span>K-5 Education</span>
+             <span>All Ages</span>
              <span className="h-1 w-1 bg-amber-400 rounded-full inline-block"></span>
              <span>Hillsboro, OR</span>
            </div>

@@ -82,8 +82,8 @@ export default function ModernHeader() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center">
                 <Star className="h-4 w-4 mr-1 text-golden" />
-                <span className="text-xs hidden sm:inline">K-5 Spanish Immersion Excellence</span>
-                <span className="text-xs sm:hidden">K-5 Excellence</span>
+                <span className="text-xs hidden sm:inline">Culinary Excellence for All Ages</span>
+                <span className="text-xs sm:hidden">Culinary Excellence</span>
               </div>
             </div>
           </div>
