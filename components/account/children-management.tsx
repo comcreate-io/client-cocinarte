@@ -20,7 +20,8 @@ import {
   Camera,
   ChefHat,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  Calendar
 } from 'lucide-react'
 import { Child, ChildData } from '@/types/student'
 import { ParentsClientService } from '@/lib/supabase/parents-client'
@@ -32,6 +33,7 @@ interface ChildrenManagementProps {
 
 export default function ChildrenManagement({ parentId, onUpdate }: ChildrenManagementProps) {
   const [children, setChildren] = useState<Child[]>([])
+  const [childrenBookings, setChildrenBookings] = useState<{ [key: string]: any[] }>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -69,11 +71,62 @@ export default function ChildrenManagement({ parentId, onUpdate }: ChildrenManag
       setLoading(true)
       const childrenData = await parentsService.getChildren(parentId)
       setChildren(childrenData)
+
+      // Fetch bookings for each child
+      await loadBookingsForChildren(childrenData)
     } catch (err: any) {
       setError('Failed to load children')
       console.error(err)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadBookingsForChildren = async (childrenData: Child[]) => {
+    console.log('=== LOADING BOOKINGS FOR CHILDREN ===')
+    console.log('Number of children:', childrenData.length)
+    console.log('Children:', childrenData.map(c => ({ id: c.id, name: c.child_full_name })))
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const bookingsMap: { [key: string]: any[] } = {}
+
+      for (const child of childrenData) {
+        console.log(`Fetching bookings for child ID: ${child.id}, Name: ${child.child_full_name}`)
+
+        const { data: bookings, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            clases:class_id (
+              id,
+              title,
+              date,
+              time,
+              price
+            )
+          `)
+          .eq('child_id', child.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (error) {
+          console.error(`❌ Error loading bookings for child ${child.child_full_name}:`, error)
+        } else {
+          console.log(`✅ Bookings for ${child.child_full_name}:`, bookings?.length || 0, 'bookings found')
+          console.log('Booking details:', bookings)
+        }
+
+        bookingsMap[child.id] = bookings || []
+      }
+
+      console.log('📊 Final bookings map:', bookingsMap)
+      console.log('📊 Bookings map keys:', Object.keys(bookingsMap))
+      setChildrenBookings(bookingsMap)
+    } catch (err) {
+      console.error('❌ Failed to load bookings:', err)
     }
   }
 
@@ -179,34 +232,67 @@ export default function ChildrenManagement({ parentId, onUpdate }: ChildrenManag
   const renderChildCard = (child: Child) => (
     <Card key={child.id} className="relative">
       <CardHeader className="pb-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-cocinarte-orange/10 p-3 rounded-full">
-              <User className="h-6 w-6 text-cocinarte-orange" />
+        <div className="space-y-3">
+          {/* Top row with name and buttons (buttons on right for desktop only) */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
+              <div className="bg-cocinarte-orange/10 p-2 sm:p-3 rounded-full flex-shrink-0">
+                <User className="h-5 w-5 sm:h-6 sm:w-6 text-cocinarte-orange" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <CardTitle className="text-base sm:text-lg truncate">{child.child_full_name}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  {child.child_preferred_name && (
+                    <span className="block sm:inline">
+                      Preferred name: {child.child_preferred_name}
+                      <span className="hidden sm:inline"> • </span>
+                    </span>
+                  )}
+                  <span className="block sm:inline">Age: {child.child_age}</span>
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg">{child.child_full_name}</CardTitle>
-              <CardDescription>
-                Age: {child.child_age}
-                {child.child_preferred_name && ` • Prefers: ${child.child_preferred_name}`}
-              </CardDescription>
+            {/* Desktop buttons - hidden on mobile */}
+            <div className="hidden sm:flex gap-2 flex-shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleEditChild(child)}
+              >
+                <Edit className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleDeleteChild(child.id, child.child_full_name)}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
             </div>
           </div>
-          <div className="flex gap-2">
+
+          {/* Mobile buttons - shown below name on mobile only */}
+          <div className="flex gap-2 sm:hidden">
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleEditChild(child)}
+              className="flex-1"
             >
-              <Edit className="h-4 w-4" />
+              <Edit className="h-4 w-4 mr-1" />
+              Edit
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => handleDeleteChild(child.id, child.child_full_name)}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              className="text-red-600 hover:text-red-700 hover:bg-red-50 flex-1"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
             </Button>
           </div>
         </div>
@@ -268,6 +354,46 @@ export default function ChildrenManagement({ parentId, onUpdate }: ChildrenManag
             {child.media_permission ? 'Media permission granted' : 'No media permission'}
           </span>
         </div>
+
+        {/* Bookings Section */}
+        {childrenBookings[child.id] && childrenBookings[child.id].length > 0 && (
+          <div className="border-t pt-4 mt-4">
+            <div className="flex items-center gap-2 font-semibold mb-3 text-sm sm:text-base">
+              <Calendar className="h-4 w-4 text-cocinarte-orange" />
+              <span>Recent Bookings ({childrenBookings[child.id].length})</span>
+            </div>
+            <div className="space-y-2 sm:space-y-3">
+              {childrenBookings[child.id].map((booking: any) => (
+                <div key={booking.id} className="text-sm p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="font-semibold text-cocinarte-navy text-sm sm:text-base">
+                      {booking.clases?.title || 'Class'}
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs whitespace-nowrap flex-shrink-0 ${
+                        booking.status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' :
+                        booking.status === 'pending' ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                        booking.status === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200' :
+                        'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}
+                    >
+                      {booking.status || 'booked'}
+                    </Badge>
+                  </div>
+                  <div className="text-gray-600 text-xs">
+                    {booking.clases?.date && new Date(booking.clases.date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                    {booking.clases?.time && ` • ${booking.clases.time}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

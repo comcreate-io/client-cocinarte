@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
 import { StudentsClientService } from "@/lib/supabase/students-client"
@@ -77,6 +77,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [editingChildId, setEditingChildId] = useState<string | null>(null)
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [childFormData, setChildFormData] = useState<Partial<Child>>({})
+  const [childrenBookings, setChildrenBookings] = useState<{ [key: string]: any[] }>({})
 
   const { user, signIn, signUp, signUpWithStudentInfo, signOut } = useAuth()
 
@@ -143,6 +144,13 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       fetchStudentProfile()
     }
   }, [authStep, user])
+
+  // Reload bookings when entering child-selection to check for existing bookings
+  useEffect(() => {
+    if (authStep === 'child-selection' && parentWithChildren?.children) {
+      loadBookingsForChildren(parentWithChildren.children)
+    }
+  }, [authStep, parentWithChildren])
 
   // Handle post-signup flow - restore booking and proceed to payment
   useEffect(() => {
@@ -1153,32 +1161,47 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
       {/* Children Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {parentWithChildren?.children.map((child: Child) => (
-          <Card
-            key={child.id}
-            className={`cursor-pointer transition-all duration-300 border-2 ${
-              selectedChildId === child.id
-                ? 'border-cocinarte-navy shadow-lg bg-cocinarte-navy/5'
-                : 'border-slate-200 hover:border-cocinarte-navy/50 hover:shadow-md'
-            }`}
-            onClick={() => setSelectedChildId(child.id)}
-          >
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-lg font-bold text-slate-800">{child.child_full_name}</h4>
-                    {child.child_preferred_name && (
-                      <p className="text-sm text-slate-600">Goes by: {child.child_preferred_name}</p>
-                    )}
+        {parentWithChildren?.children.map((child: Child) => {
+          // Check if this child is already booked for the selected class
+          const existingBooking = childrenBookings[child.id]?.find(
+            (booking: any) => booking.class_id === selectedClassId &&
+            (booking.status === 'confirmed' || booking.status === 'pending' || !booking.status)
+          )
+          const isAlreadyBooked = !!existingBooking
+
+          return (
+            <Card
+              key={child.id}
+              className={`transition-all duration-300 border-2 ${
+                isAlreadyBooked
+                  ? 'border-orange-300 bg-orange-50/50 opacity-75 cursor-not-allowed'
+                  : selectedChildId === child.id
+                    ? 'border-cocinarte-navy shadow-lg bg-cocinarte-navy/5 cursor-pointer'
+                    : 'border-slate-200 hover:border-cocinarte-navy/50 hover:shadow-md cursor-pointer'
+              }`}
+              onClick={() => !isAlreadyBooked && setSelectedChildId(child.id)}
+            >
+              <CardContent className="pt-6">
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="text-lg font-bold text-slate-800">{child.child_full_name}</h4>
+                      {child.child_preferred_name && (
+                        <p className="text-sm text-slate-600">Goes by: {child.child_preferred_name}</p>
+                      )}
+                    </div>
+                    {isAlreadyBooked ? (
+                      <Badge className="bg-orange-500">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Already Booked
+                      </Badge>
+                    ) : selectedChildId === child.id ? (
+                      <Badge className="bg-cocinarte-navy">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Selected
+                      </Badge>
+                    ) : null}
                   </div>
-                  {selectedChildId === child.id && (
-                    <Badge className="bg-cocinarte-navy">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Selected
-                    </Badge>
-                  )}
-                </div>
 
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="outline" className="bg-slate-50">
@@ -1210,7 +1233,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               </div>
             </CardContent>
           </Card>
-        ))}
+          )
+        })}
       </div>
 
       {/* Action Buttons */}
@@ -1520,10 +1544,52 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       const parentsService = new ParentsClientService()
       const parentData = await parentsService.getParentWithChildrenByUserId(user.id)
       setParentWithChildren(parentData)
+
+      // Fetch bookings for each child
+      if (parentData && parentData.children) {
+        await loadBookingsForChildren(parentData.children)
+      }
     } catch (error) {
       console.error('Error fetching student profile:', error)
     } finally {
       setLoadingProfile(false)
+    }
+  }
+
+  const loadBookingsForChildren = async (children: Child[]) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const bookingsMap: { [key: string]: any[] } = {}
+
+      for (const child of children) {
+        const { data: bookings, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            clases:class_id (
+              id,
+              title,
+              date,
+              time,
+              price
+            )
+          `)
+          .eq('child_id', child.id)
+          .order('created_at', { ascending: false })
+          .limit(5)
+
+        if (error) {
+          console.error(`Error loading bookings for child ${child.id}:`, error)
+        }
+
+        bookingsMap[child.id] = bookings || []
+      }
+
+      setChildrenBookings(bookingsMap)
+    } catch (error) {
+      console.error('Failed to load bookings:', error)
     }
   }
 
@@ -1742,41 +1808,66 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                         <CardContent className="pt-6">
                           <div className="space-y-4">
                             {/* Child Basic Info */}
-                            <div className="flex items-start justify-between">
-                              <div>
-                                <h4 className="font-semibold text-blue-900 text-lg">{child.child_full_name}</h4>
-                                {child.child_preferred_name && (
-                                  <p className="text-sm text-blue-600">Preferred name: {child.child_preferred_name}</p>
-                                )}
-                                <div className="flex gap-4 mt-2">
-                                  <Badge variant="outline" className="bg-blue-50">
-                                    Age: {child.child_age}
-                                  </Badge>
-                                  {child.has_cooking_experience && (
-                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                      <ChefHat className="h-3 w-3 mr-1" />
-                                      Has cooking experience
-                                    </Badge>
-                                  )}
-                                  {child.media_permission ? (
-                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                      <Camera className="h-3 w-3 mr-1" />
-                                      Media OK
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-                                      <Camera className="h-3 w-3 mr-1" />
-                                      No media
-                                    </Badge>
+                            <div className="space-y-3">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <h4 className="font-semibold text-blue-900 text-lg">{child.child_full_name}</h4>
+                                  {child.child_preferred_name && (
+                                    <p className="text-sm text-blue-600">Preferred name: {child.child_preferred_name}</p>
                                   )}
                                 </div>
+                                {/* Desktop Edit/Delete Buttons */}
+                                <div className="hidden sm:flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleEditChild(child)}
+                                    className="border-blue-300 hover:bg-blue-50"
+                                  >
+                                    <span className="text-sm">Edit</span>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDeleteChild(child.id)}
+                                    className="border-red-300 hover:bg-red-50 text-red-600"
+                                  >
+                                    <span className="text-sm">Delete</span>
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="flex gap-2">
+
+                              {/* Badges - stacked on mobile, horizontal on desktop */}
+                              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                                <Badge variant="outline" className="bg-blue-50 w-fit">
+                                  Age: {child.child_age}
+                                </Badge>
+                                {child.has_cooking_experience && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">
+                                    <ChefHat className="h-3 w-3 mr-1" />
+                                    Has cooking experience
+                                  </Badge>
+                                )}
+                                {child.media_permission ? (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">
+                                    <Camera className="h-3 w-3 mr-1" />
+                                    Media OK
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 w-fit">
+                                    <Camera className="h-3 w-3 mr-1" />
+                                    No media
+                                  </Badge>
+                                )}
+                              </div>
+
+                              {/* Mobile Edit/Delete Buttons */}
+                              <div className="flex gap-2 sm:hidden">
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleEditChild(child)}
-                                  className="border-blue-300 hover:bg-blue-50"
+                                  className="border-blue-300 hover:bg-blue-50 flex-1"
                                 >
                                   <span className="text-sm">Edit</span>
                                 </Button>
@@ -1784,7 +1875,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleDeleteChild(child.id)}
-                                  className="border-red-300 hover:bg-red-50 text-red-600"
+                                  className="border-red-300 hover:bg-red-50 text-red-600 flex-1"
                                 >
                                   <span className="text-sm">Delete</span>
                                 </Button>
@@ -1860,6 +1951,46 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                                   <span className="font-medium">Additional Notes: </span>
                                   {child.additional_notes}
                                 </p>
+                              </div>
+                            )}
+
+                            {/* Bookings Section */}
+                            {childrenBookings[child.id] && childrenBookings[child.id].length > 0 && (
+                              <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <CalendarDays className="h-4 w-4 text-orange-700" />
+                                  <h5 className="text-sm font-semibold text-orange-900">
+                                    Recent Bookings ({childrenBookings[child.id].length})
+                                  </h5>
+                                </div>
+                                <div className="space-y-2">
+                                  {childrenBookings[child.id].map((booking: any) => (
+                                    <div key={booking.id} className="bg-white border border-orange-100 rounded p-2">
+                                      <div className="font-medium text-sm text-orange-900">
+                                        {booking.clases?.title || 'Class'}
+                                      </div>
+                                      <div className="text-xs text-orange-700 mt-1">
+                                        {booking.clases?.date && new Date(booking.clases.date).toLocaleDateString('en-US', {
+                                          month: 'short',
+                                          day: 'numeric',
+                                          year: 'numeric'
+                                        })}
+                                        {booking.clases?.time && ` • ${booking.clases.time}`}
+                                      </div>
+                                      <Badge
+                                        variant="outline"
+                                        className={`mt-1 text-xs ${
+                                          booking.status === 'confirmed' ? 'bg-green-50 text-green-800 border-green-200' :
+                                          booking.status === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                                          booking.status === 'cancelled' ? 'bg-red-50 text-red-800 border-red-200' :
+                                          'bg-blue-50 text-blue-800 border-blue-200'
+                                        }`}
+                                      >
+                                        {booking.status || 'booked'}
+                                      </Badge>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             )}
                           </div>
