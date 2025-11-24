@@ -1029,57 +1029,66 @@ export default function CocinarteMonthlyCalendar() {
 
       {/* Class Cards View */}
       {viewMode === 'cards' && (
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {currentClasses.map((classItem) => (
             <Card
               key={classItem.id}
-              className="group cursor-pointer hover:scale-105 hover:shadow-xl transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 border-l-4 border-cocinarte-yellow"
+              className="group cursor-pointer hover:scale-[1.02] sm:hover:scale-105 hover:shadow-xl transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 border-l-4 border-cocinarte-yellow"
               onClick={() => handleClassClick(classItem)}
             >
-              <CardHeader>
-                  <div className="flex items-center justify-between">
+              <CardHeader className="pb-3 sm:pb-4">
+                  <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       {classItem.class_type && (
-                        <Badge className="bg-cocinarte-navy text-cocinarte-white font-bold text-xs">
+                        <Badge className="bg-cocinarte-navy text-cocinarte-white font-bold text-xs sm:text-sm px-2 py-0.5">
                           {classItem.class_type}
                         </Badge>
                       )}
                     </div>
                   </div>
-                <CardTitle className="text-xl text-slate">{classItem.title}</CardTitle>
-                <CardDescription className="text-slate-medium">
-                  {classItem.date.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    month: 'long', 
-                    day: 'numeric' 
+                <CardTitle className="text-lg sm:text-xl text-slate leading-tight">{classItem.title}</CardTitle>
+                <CardDescription className="text-slate-medium text-sm sm:text-base mt-1.5">
+                  {classItem.date.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric'
                   })} • {classItem.time}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {classItem.description && (
-                  <div className="space-y-2 mb-4">
-                    <p className="text-sm text-slate-medium line-clamp-3">
+                  <div className="space-y-2 mb-3 sm:mb-4">
+                    <p className="text-xs sm:text-sm text-slate-medium line-clamp-2 sm:line-clamp-3">
                       {classItem.description}
                     </p>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2 mb-4">
-                  <div className="text-xs">
-                    <span className="text-slate-medium">Duration:</span>
-                    <span className="font-semibold text-slate ml-1">{classItem.classDuration}min</span>
+                <div className="grid grid-cols-2 gap-2 mb-3 sm:mb-4">
+                  <div className="text-xs sm:text-sm bg-white/60 rounded-lg p-2">
+                    <span className="text-slate-medium block mb-0.5">Duration</span>
+                    <span className="font-semibold text-slate">{classItem.classDuration}min</span>
                   </div>
-                  <div className="text-xs">
-                    <span className="text-slate-medium">Spots:</span>
-                    <span className="font-semibold text-slate ml-1">{classItem.maxStudents - classItem.enrolled}/{classItem.maxStudents}</span>
+                  <div className="text-xs sm:text-sm bg-white/60 rounded-lg p-2">
+                    <span className="text-slate-medium block mb-0.5">Spots Left</span>
+                    <span className="font-semibold text-slate">{classItem.maxStudents - classItem.enrolled}/{classItem.maxStudents}</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-2xl font-bold text-amber">${classItem.price}</span>
-                  <Button 
-                    onClick={() => setIsBookingOpen(true)}
-                    className="bg-amber hover:bg-golden text-cocinarte-white font-bold rounded-xl"
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xl sm:text-2xl font-bold text-amber">${classItem.price}</span>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedClass(classItem)
+                      setIsBookingOpen(true)
+                    }}
+                    disabled={classItem.enrolled >= classItem.maxStudents}
+                    className={`${
+                      classItem.enrolled >= classItem.maxStudents
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-amber hover:bg-golden text-cocinarte-white'
+                    } font-bold rounded-xl px-4 sm:px-6 py-2 text-sm sm:text-base`}
                   >
-                    Book Now
+                    {classItem.enrolled >= classItem.maxStudents ? 'Full' : 'Book Now'}
                   </Button>
                 </div>
               </CardContent>
