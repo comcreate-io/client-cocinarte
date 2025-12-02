@@ -62,60 +62,60 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Arial, sans-serif; background-color: #f5f5f5;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <body style="margin: 0; padding: 0; font-family: 'Poppins', 'Segoe UI', Arial, sans-serif; background-color: #CDECF9;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #FEFEFE;">
         <!-- Header -->
-        <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 40px 30px; text-align: center;">
-          <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">
+        <div style="background-color: #00ADEE; padding: 40px 30px; text-align: center;">
+          <h1 style="color: #FEFEFE; margin: 0; font-size: 28px; font-weight: 600;">
             You've Received a Gift Card!
           </h1>
-          <p style="color: #e0e0e0; margin: 10px 0 0 0; font-size: 16px;">
+          <p style="color: #FEFEFE; opacity: 0.9; margin: 10px 0 0 0; font-size: 16px;">
             From Cocinarte Cooking School
           </p>
         </div>
 
         <!-- Main Content -->
         <div style="padding: 40px 30px;">
-          <p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">
+          <p style="font-size: 18px; color: #000000; margin: 0 0 20px 0;">
             Hi ${metadata.recipient_name}!
           </p>
 
-          <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 0 0 30px 0;">
+          <p style="font-size: 16px; color: #333333; line-height: 1.6; margin: 0 0 30px 0;">
             <strong>${metadata.purchaser_name}</strong> has sent you a Cocinarte gift card!
             Use it to book cooking classes for you or your little chefs.
           </p>
 
           ${metadata.message ? `
-          <div style="background-color: #fff8e1; border-left: 4px solid #ffc107; padding: 15px 20px; margin: 0 0 30px 0; border-radius: 0 8px 8px 0;">
-            <p style="font-size: 14px; color: #666; margin: 0 0 5px 0; font-weight: 600;">Personal Message:</p>
-            <p style="font-size: 16px; color: #333; margin: 0; font-style: italic;">"${metadata.message}"</p>
+          <div style="background-color: #FFF8E1; border-left: 4px solid #FCB414; padding: 15px 20px; margin: 0 0 30px 0; border-radius: 0 8px 8px 0;">
+            <p style="font-size: 14px; color: #666666; margin: 0 0 5px 0; font-weight: 600;">Personal Message:</p>
+            <p style="font-size: 16px; color: #333333; margin: 0; font-style: italic;">"${metadata.message}"</p>
           </div>
           ` : ''}
 
           <!-- Gift Card Display -->
-          <div style="background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 0 0 30px 0; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);">
-            <p style="color: #ffffff; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">
+          <div style="background: linear-gradient(135deg, #F0614F 0%, #F48E77 100%); border-radius: 16px; padding: 30px; text-align: center; margin: 0 0 30px 0; box-shadow: 0 4px 15px rgba(240, 97, 79, 0.3);">
+            <p style="color: #FEFEFE; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">
               Gift Card Value
             </p>
-            <p style="color: #ffffff; font-size: 48px; font-weight: 700; margin: 0 0 20px 0;">
+            <p style="color: #FEFEFE; font-size: 48px; font-weight: 700; margin: 0 0 20px 0;">
               $${giftCard.initial_balance.toFixed(2)}
             </p>
             <div style="background-color: rgba(255,255,255,0.95); border-radius: 8px; padding: 15px; display: inline-block;">
-              <p style="color: #666; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">
+              <p style="color: #666666; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">
                 Your Gift Card Code
               </p>
-              <p style="color: #1e3a5f; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Courier New', monospace; letter-spacing: 3px;">
+              <p style="color: #F0614F; font-size: 28px; font-weight: 700; margin: 0; font-family: 'Courier New', monospace; letter-spacing: 3px;">
                 ${giftCard.code}
               </p>
             </div>
           </div>
 
           <!-- How to Use -->
-          <div style="background-color: #f8fafc; border-radius: 12px; padding: 25px; margin: 0 0 30px 0;">
-            <h3 style="color: #1e3a5f; font-size: 18px; margin: 0 0 15px 0;">
+          <div style="background-color: #CDECF9; border-radius: 12px; padding: 25px; margin: 0 0 30px 0;">
+            <h3 style="color: #00ADEE; font-size: 18px; margin: 0 0 15px 0;">
               How to Redeem Your Gift Card
             </h3>
-            <ol style="color: #555; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
+            <ol style="color: #333333; font-size: 14px; line-height: 1.8; margin: 0; padding-left: 20px;">
               <li>Create an account or log in at Cocinarte</li>
               <li>Go to "My Account" and click "Add Gift Card"</li>
               <li>Enter your gift card code: <strong>${giftCard.code}</strong></li>
@@ -125,25 +125,25 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
 
           <!-- CTA Button -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${appUrl}" style="display: inline-block; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 15px rgba(30, 58, 95, 0.3);">
+            <a href="${appUrl}" style="display: inline-block; background-color: #FCB414; color: #000000; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 15px rgba(252, 180, 20, 0.3);">
               Browse Classes
             </a>
           </div>
 
-          <p style="font-size: 14px; color: #888; text-align: center; margin: 30px 0 0 0;">
+          <p style="font-size: 14px; color: #888888; text-align: center; margin: 30px 0 0 0;">
             This gift card is valid for 1 year from the date of purchase.
           </p>
         </div>
 
         <!-- Footer -->
-        <div style="background-color: #1e3a5f; padding: 30px; text-align: center;">
-          <p style="color: #ffffff; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;">
+        <div style="background-color: #00ADEE; padding: 30px; text-align: center;">
+          <p style="color: #FEFEFE; font-size: 16px; font-weight: 600; margin: 0 0 10px 0;">
             Cocinarte Cooking School
           </p>
-          <p style="color: #a0aec0; font-size: 14px; margin: 0 0 5px 0;">
-            info@cocinartepdx.com
+          <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0 0 5px 0;">
+            info@cocinartepdx.org
           </p>
-          <p style="color: #a0aec0; font-size: 14px; margin: 0;">
+          <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0;">
             +1 (503) 916-9758
           </p>
         </div>
@@ -177,7 +177,7 @@ This gift card is valid for 1 year from the date of purchase.
 
 ---
 Cocinarte Cooking School
-Email: info@cocinartepdx.com
+Email: info@cocinartepdx.org
 Phone: +1 (503) 916-9758
   `
 
