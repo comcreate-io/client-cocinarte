@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle, Gift } from "lucide-react"
+import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle, Gift, ChevronDown } from "lucide-react"
 import { useState, useEffect } from "react"
 import CocinarteBookingPopup from "./cocinarte-booking-popup"
 import CocinarteAuthPopup from "./cocinarte-auth-popup"
@@ -18,14 +18,17 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import GiftCardPurchase from "@/components/gift-cards/gift-card-purchase"
 
 export default function CocinarteHeader() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
   const [isBookingOpen, setIsBookingOpen] = useState(false)
   const [bookingInitialStep, setBookingInitialStep] = useState<'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'>('class-selection')
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
+  const [isGiftCardOpen, setIsGiftCardOpen] = useState(false)
   const [studentInfo, setStudentInfo] = useState<Student | null>(null)
   const [loadingStudent, setLoadingStudent] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
@@ -172,6 +175,28 @@ export default function CocinarteHeader() {
     try {
       const bookingsService = new BookingsClientService()
 
+      // Refund gift card balance if any was used
+      if (booking.gift_card_amount_used && booking.gift_card_amount_used > 0 && booking.parent_id) {
+        try {
+          const refundResponse = await fetch('/api/gift-cards/refund', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              parentId: booking.parent_id,
+              amount: booking.gift_card_amount_used,
+              bookingId: booking.id,
+              description: `Refund for cancelled class: ${booking.class.title}`
+            })
+          })
+
+          if (!refundResponse.ok) {
+            console.error('Failed to refund gift card balance')
+          }
+        } catch (refundError) {
+          console.error('Error refunding gift card balance:', refundError)
+        }
+      }
+
       // Update booking status to cancelled
       await bookingsService.updateBooking({
         id: booking.id,
@@ -252,23 +277,19 @@ export default function CocinarteHeader() {
                 Classes
               </Link>
               <Link
-                href="#birthday-parties"
-                className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
-              >
-                Birthday Parties
-              </Link>
-              <Link
-                href="#private-events"
-                className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
-              >
-                Private Events
-              </Link>
-              <Link
                 href="#faq"
                 className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
               >
                 FAQ
               </Link>
+              <div className="relative">
+                <button
+                  className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
+                >
+                  More
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
             </nav>
 
             {/* CTA Buttons */}
@@ -355,30 +376,50 @@ export default function CocinarteHeader() {
               Classes
             </Link>
             <Link
-              href="#birthday-parties"
-              className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
-            >
-              Birthday Parties
-            </Link>
-            <Link
-              href="#private-events"
-              className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
-            >
-              Private Events
-            </Link>
-            <Link
               href="#faq"
               className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
             >
               FAQ
             </Link>
-            <Link
-              href="/gift-cards"
-              className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
+            {/* More Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setIsMoreDropdownOpen(true)}
+              onMouseLeave={() => setIsMoreDropdownOpen(false)}
             >
-              <Gift className="h-4 w-4" />
-              Gift Cards
-            </Link>
+              <button
+                className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
+              >
+                More
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMoreDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isMoreDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-cocinarte-navy rounded-xl shadow-xl border border-cocinarte-orange/20 overflow-hidden min-w-[180px] z-50">
+                  <Link
+                    href="#birthday-parties"
+                    className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
+                  >
+                    Birthday Parties
+                  </Link>
+                  <Link
+                    href="#private-events"
+                    className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
+                  >
+                    Private Events
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setIsGiftCardOpen(true)
+                      setIsMoreDropdownOpen(false)
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200 flex items-center gap-2"
+                  >
+                    <Gift className="h-4 w-4" />
+                    Gift Cards
+                  </button>
+                </div>
+              )}
+            </div>
           </nav>
 
             {/* CTA Buttons */}
@@ -479,14 +520,16 @@ export default function CocinarteHeader() {
             >
               FAQ
             </Link>
-            <Link
-              href="/gift-cards"
-              className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
-              onClick={() => setIsMenuOpen(false)}
+            <button
+              className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black w-full text-left"
+              onClick={() => {
+                setIsGiftCardOpen(true)
+                setIsMenuOpen(false)
+              }}
             >
               <Gift className="h-4 w-4" />
               Gift Cards
-            </Link>
+            </button>
             <div className="space-y-2 pt-2">
               <Link
                 href="https://www.casitaazuleducation.com/"
@@ -936,10 +979,30 @@ export default function CocinarteHeader() {
     </Dialog>
     
     {/* Auth Popup */}
-    <CocinarteAuthPopup 
-      isOpen={isAuthOpen} 
-      onClose={() => setIsAuthOpen(false)} 
+    <CocinarteAuthPopup
+      isOpen={isAuthOpen}
+      onClose={() => setIsAuthOpen(false)}
     />
+
+    {/* Gift Card Purchase Popup */}
+    <Dialog open={isGiftCardOpen} onOpenChange={setIsGiftCardOpen}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-2xl">
+            <Gift className="h-6 w-6 text-cocinarte-orange" />
+            Purchase a Gift Card
+          </DialogTitle>
+          <DialogDescription>
+            Give the gift of cooking! Send a Cocinarte gift card to someone special.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-4">
+          <GiftCardPurchase onSuccess={() => {
+            setTimeout(() => setIsGiftCardOpen(false), 3000)
+          }} />
+        </div>
+      </DialogContent>
+    </Dialog>
     </header>
   )
 }

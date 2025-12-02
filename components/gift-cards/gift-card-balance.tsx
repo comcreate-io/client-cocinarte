@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Gift, Plus, CreditCard, CheckCircle, Loader2, Clock, DollarSign } from 'lucide-react'
+import { Gift, Plus, CheckCircle, Loader2 } from 'lucide-react'
 
 interface GiftCardData {
   id: string
@@ -23,13 +21,14 @@ interface GiftCardData {
 
 interface GiftCardBalanceProps {
   parentId: string
+  initialBalance?: number
   onBalanceChange?: (balance: number) => void
 }
 
-export default function GiftCardBalance({ parentId, onBalanceChange }: GiftCardBalanceProps) {
+export default function GiftCardBalance({ parentId, initialBalance, onBalanceChange }: GiftCardBalanceProps) {
   const [giftCards, setGiftCards] = useState<GiftCardData[]>([])
-  const [totalBalance, setTotalBalance] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [totalBalance, setTotalBalance] = useState(initialBalance ?? 0)
+  const [loading, setLoading] = useState(initialBalance === undefined)
   const [redeemLoading, setRedeemLoading] = useState(false)
   const [redeemCode, setRedeemCode] = useState('')
   const [redeemError, setRedeemError] = useState('')
@@ -37,8 +36,11 @@ export default function GiftCardBalance({ parentId, onBalanceChange }: GiftCardB
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
   useEffect(() => {
-    loadGiftCards()
-  }, [parentId])
+    // Only fetch if no initial balance was provided
+    if (initialBalance === undefined) {
+      loadGiftCards()
+    }
+  }, [parentId, initialBalance])
 
   const loadGiftCards = async () => {
     try {
@@ -99,171 +101,85 @@ export default function GiftCardBalance({ parentId, onBalanceChange }: GiftCardB
     }
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2">
+        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+        <span className="text-sm text-blue-600">Loading...</span>
+      </div>
+    )
   }
 
-  const activeCards = giftCards.filter(gc => gc.is_active && gc.current_balance > 0)
-
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <Gift className="h-5 w-5 text-cocinarte-orange" />
-              Gift Card Balance
-            </CardTitle>
-            <CardDescription className="text-sm">
-              Manage your gift cards and view your balance
-            </CardDescription>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-cocinarte-orange hover:bg-cocinarte-orange/90">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Gift Card
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Redeem Gift Card</DialogTitle>
-                <DialogDescription>
-                  Enter your gift card code to add it to your account
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                {redeemError && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{redeemError}</AlertDescription>
-                  </Alert>
-                )}
-                {redeemSuccess && (
-                  <Alert className="border-green-200 bg-green-50">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-700">{redeemSuccess}</AlertDescription>
-                  </Alert>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="giftCardCode">Gift Card Code</Label>
-                  <Input
-                    id="giftCardCode"
-                    placeholder="GC-XXXXXXXX"
-                    value={redeemCode}
-                    onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
-                    className="font-mono text-center text-lg"
-                  />
-                </div>
-                <Button
-                  className="w-full bg-cocinarte-orange hover:bg-cocinarte-orange/90"
-                  onClick={handleRedeem}
-                  disabled={redeemLoading}
-                >
-                  {redeemLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Redeeming...
-                    </>
-                  ) : (
-                    <>
-                      <Gift className="mr-2 h-4 w-4" />
-                      Redeem Gift Card
-                    </>
-                  )}
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-cocinarte-orange" />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Total Balance Display */}
-            <div className="bg-gradient-to-r from-cocinarte-orange/10 to-cocinarte-yellow/10 rounded-xl p-6 text-center">
-              <p className="text-sm text-gray-600 mb-1">Available Balance</p>
-              <p className="text-4xl font-bold text-cocinarte-orange">
-                ${totalBalance.toFixed(2)}
-              </p>
-              {activeCards.length > 0 && (
-                <p className="text-xs text-gray-500 mt-2">
-                  From {activeCards.length} gift card{activeCards.length !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
+    <div className="flex items-center justify-between">
+      <div>
+        <span className="text-sm font-semibold text-blue-700">Gift Card Balance</span>
+        <p className={`font-medium ${totalBalance > 0 ? 'text-green-600' : 'text-blue-900'}`}>
+          ${totalBalance.toFixed(2)}
+          {totalBalance > 0 && giftCards.length > 0 && (
+            <span className="text-sm text-blue-600 ml-2">
+              ({giftCards.filter(gc => gc.current_balance > 0).length} card{giftCards.filter(gc => gc.current_balance > 0).length !== 1 ? 's' : ''})
+            </span>
+          )}
+        </p>
+      </div>
 
-            {/* Gift Cards List */}
-            {giftCards.length > 0 ? (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold text-gray-700">Your Gift Cards</h4>
-                <div className="space-y-3">
-                  {giftCards.map((card) => (
-                    <div
-                      key={card.id}
-                      className={`border rounded-lg p-4 ${
-                        card.is_active && card.current_balance > 0
-                          ? 'border-green-200 bg-green-50/50'
-                          : 'border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono text-sm font-semibold">{card.code}</span>
-                            {card.is_active && card.current_balance > 0 ? (
-                              <Badge className="bg-green-100 text-green-700 text-xs">Active</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">Used</Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-500 mt-1">
-                            From: {card.purchaser_name}
-                          </p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Added: {formatDate(card.created_at)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-lg font-bold ${
-                            card.current_balance > 0 ? 'text-green-600' : 'text-gray-400'
-                          }`}>
-                            ${card.current_balance.toFixed(2)}
-                          </p>
-                          {card.initial_balance !== card.current_balance && (
-                            <p className="text-xs text-gray-400">
-                              of ${card.initial_balance.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      {card.expires_at && (
-                        <div className="flex items-center gap-1 mt-2 text-xs text-gray-500">
-                          <Clock className="h-3 w-3" />
-                          Expires: {formatDate(card.expires_at)}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <Gift className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p className="text-sm">No gift cards added yet</p>
-                <p className="text-xs mt-1">Click "Add Gift Card" to redeem a code</p>
-              </div>
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm" className="text-sm border-blue-300 hover:bg-blue-50">
+            <Plus className="h-4 w-4 mr-1" />
+            Add Code
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redeem Gift Card</DialogTitle>
+            <DialogDescription>
+              Enter your gift card code to add it to your account
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {redeemError && (
+              <Alert variant="destructive">
+                <AlertDescription>{redeemError}</AlertDescription>
+              </Alert>
             )}
+            {redeemSuccess && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-700">{redeemSuccess}</AlertDescription>
+              </Alert>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="giftCardCode">Gift Card Code</Label>
+              <Input
+                id="giftCardCode"
+                placeholder="GC-XXXXXXXX"
+                value={redeemCode}
+                onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
+                className="font-mono text-center text-lg"
+              />
+            </div>
+            <Button
+              className="w-full bg-cocinarte-orange hover:bg-cocinarte-orange/90"
+              onClick={handleRedeem}
+              disabled={redeemLoading}
+            >
+              {redeemLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Redeeming...
+                </>
+              ) : (
+                <>
+                  <Gift className="mr-2 h-4 w-4" />
+                  Redeem Gift Card
+                </>
+              )}
+            </Button>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

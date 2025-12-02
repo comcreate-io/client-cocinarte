@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
 import { StudentsClientService } from "@/lib/supabase/students-client"
@@ -21,6 +21,7 @@ import { Elements } from '@stripe/react-stripe-js'
 import StripePaymentForm from './stripe-payment-form'
 import SignupQuestionnaireMultiChild from '../auth/signup-questionnaire-multi-child'
 import { SignupFormData, ParentWithChildren, Child } from '@/types/student'
+import GiftCardBalance from '@/components/gift-cards/gift-card-balance'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -72,6 +73,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [couponValidating, setCouponValidating] = useState(false)
   const [couponError, setCouponError] = useState('')
   const [couponSuccess, setCouponSuccess] = useState('')
+
+  // Gift card states
+  const [giftCardBalance, setGiftCardBalance] = useState<number | null>(null)
+  const [useGiftCard, setUseGiftCard] = useState(false)
+  const [giftCardAmountToUse, setGiftCardAmountToUse] = useState(0)
 
   // Child management states
   const [editingChildId, setEditingChildId] = useState<string | null>(null)
@@ -293,6 +299,19 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           if (parentData && parentData.children && parentData.children.length > 0) {
             // Parent has children, show child selection
             setParentWithChildren(parentData)
+
+            // Fetch gift card balance
+            try {
+              const giftCardResponse = await fetch(`/api/gift-cards/balance?parentId=${parentData.id}`)
+              const giftCardData = await giftCardResponse.json()
+              if (giftCardResponse.ok) {
+                setGiftCardBalance(giftCardData.totalBalance || 0)
+              }
+            } catch (err) {
+              console.error('Error fetching gift card balance:', err)
+              setGiftCardBalance(0)
+            }
+
             if (parentData.children.length === 1) {
               // Only one child, auto-select and proceed to payment
               setSelectedChildId(parentData.children[0].id)
@@ -363,11 +382,29 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     setCouponSuccess('')
   }
 
-  // Calculate final price with coupon discount
+  // Calculate final price with coupon discount and gift card
   const calculateFinalPrice = () => {
     if (!selectedClassData) return 0
-    if (!appliedCoupon) return selectedClassData.price
+    let price = selectedClassData.price
 
+    // Apply coupon discount first
+    if (appliedCoupon) {
+      const discount = (price * appliedCoupon.discount) / 100
+      price = price - discount
+    }
+
+    // Then apply gift card if enabled
+    if (useGiftCard && giftCardAmountToUse > 0) {
+      price = Math.max(0, price - giftCardAmountToUse)
+    }
+
+    return price
+  }
+
+  // Calculate price after coupon but before gift card
+  const getPriceAfterCoupon = () => {
+    if (!selectedClassData) return 0
+    if (!appliedCoupon) return selectedClassData.price
     const discount = (selectedClassData.price * appliedCoupon.discount) / 100
     return selectedClassData.price - discount
   }
@@ -621,6 +658,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       const discountNote = appliedCoupon
         ? ` Coupon ${appliedCoupon.code} applied (${appliedCoupon.discount}% off, saved $${getDiscountAmount().toFixed(2)}).`
         : ''
+      const giftCardNote = useGiftCard && giftCardAmountToUse > 0
+        ? ` Gift card used: $${giftCardAmountToUse.toFixed(2)}.`
+        : ''
 
       const newBooking = await bookingsService.createBooking({
         user_id: user.id!,
@@ -629,12 +669,14 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         child_id: selectedChildId || undefined,
         payment_amount: finalPrice,
         payment_method: isFreeBooking ? 'coupon' : 'stripe',
-        payment_status: isFreeBooking ? 'paid' : 'held',
+        payment_status: isFreeBooking ? 'completed' : 'held',
         booking_status: isFreeBooking ? 'confirmed' : 'pending',
         stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
+        gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
+        parent_id: parentWithChildren?.id || undefined,
         notes: isFreeBooking
-          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}`
-          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}`
+          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}`
+          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}`
       })
 
       console.log('Booking created:', newBooking.id)
@@ -651,6 +693,30 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         } catch (couponError) {
           console.error('Error marking coupon as used:', couponError)
           // Don't fail the booking if coupon update fails
+        }
+      }
+
+      // Deduct gift card balance if used
+      if (useGiftCard && giftCardAmountToUse > 0 && parentWithChildren?.id) {
+        try {
+          const giftCardResponse = await fetch('/api/gift-cards/use', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              parentId: parentWithChildren.id,
+              amount: giftCardAmountToUse,
+              bookingId: newBooking.id,
+              description: `Payment for ${selectedClassData.title} on ${formatDate(selectedClassData.date)}`
+            })
+          })
+          if (giftCardResponse.ok) {
+            console.log('Gift card balance deducted:', giftCardAmountToUse)
+          } else {
+            console.error('Error deducting gift card balance')
+          }
+        } catch (giftCardError) {
+          console.error('Error deducting gift card balance:', giftCardError)
+          // Don't fail the booking if gift card deduction fails
         }
       }
 
@@ -1329,19 +1395,30 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                   </div>
                   
                   <div className="border-t border-slate-200 pt-4 mt-auto space-y-3">
-                    {appliedCoupon && (
+                    {(appliedCoupon || (useGiftCard && giftCardAmountToUse > 0)) && (
                       <>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-slate-600">Original Price</span>
                           <span className="text-slate-800">${selectedClassData.price.toFixed(2)}</span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-green-600 font-medium flex items-center gap-1">
-                            <Ticket className="h-3 w-3" />
-                            Discount ({appliedCoupon.discount}%)
-                          </span>
-                          <span className="text-green-600 font-medium">-${getDiscountAmount().toFixed(2)}</span>
-                        </div>
+                        {appliedCoupon && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-green-600 font-medium flex items-center gap-1">
+                              <Ticket className="h-3 w-3" />
+                              Discount ({appliedCoupon.discount}%)
+                            </span>
+                            <span className="text-green-600 font-medium">-${getDiscountAmount().toFixed(2)}</span>
+                          </div>
+                        )}
+                        {useGiftCard && giftCardAmountToUse > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-amber-600 font-medium flex items-center gap-1">
+                              <Gift className="h-3 w-3" />
+                              Gift Card
+                            </span>
+                            <span className="text-amber-600 font-medium">-${giftCardAmountToUse.toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="border-t border-slate-200 pt-2"></div>
                       </>
                     )}
@@ -1427,6 +1504,43 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                   </Alert>
                 )}
               </div>
+
+              {/* Gift Card Section */}
+              {giftCardBalance !== null && giftCardBalance > 0 && (
+                <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Gift className="h-4 w-4 text-amber-600" />
+                      <span className="text-sm font-medium text-amber-800">
+                        Gift Card Balance: ${giftCardBalance.toFixed(2)}
+                      </span>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={useGiftCard}
+                        onChange={(e) => {
+                          setUseGiftCard(e.target.checked)
+                          if (e.target.checked) {
+                            // Use the minimum of gift card balance or price after coupon
+                            const priceAfterCoupon = getPriceAfterCoupon()
+                            setGiftCardAmountToUse(Math.min(giftCardBalance!, priceAfterCoupon))
+                          } else {
+                            setGiftCardAmountToUse(0)
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                      />
+                      <span className="text-sm text-amber-700">Use gift card</span>
+                    </label>
+                  </div>
+                  {useGiftCard && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      Applying ${giftCardAmountToUse.toFixed(2)} from your gift card balance
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Payment Hold Notice or Free Booking Notice */}
               {calculateFinalPrice() > 0 ? (
@@ -1782,6 +1896,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                   )}
                 </div>
               ) : null}
+
+              <div className="border-t border-blue-200 pt-4"></div>
+
+              {/* Gift Card Balance */}
+              {parentWithChildren && (
+                <GiftCardBalance
+                  parentId={parentWithChildren.id}
+                  initialBalance={giftCardBalance ?? undefined}
+                  onBalanceChange={setGiftCardBalance}
+                />
+              )}
 
               <div className="border-t border-blue-200 pt-4"></div>
 

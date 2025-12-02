@@ -254,6 +254,125 @@ export class GiftCardsClientService {
     }
   }
 
+  // Apply gift card balance from parent's available cards for a booking
+  async applyGiftCardBalanceForParent(
+    parentId: string,
+    amount: number,
+    bookingId?: string,
+    description?: string
+  ): Promise<{ success: boolean; amountApplied: number; remainingBalance: number; error?: string }> {
+    try {
+      // Get all active gift cards for this parent
+      const giftCards = await this.getGiftCardsByParentId(parentId)
+      const activeCards = giftCards.filter(gc => gc.is_active && gc.current_balance > 0)
+
+      if (activeCards.length === 0) {
+        return { success: false, amountApplied: 0, remainingBalance: 0, error: 'No active gift cards found' }
+      }
+
+      let remainingAmount = amount
+      let totalApplied = 0
+
+      // Apply from each card until the amount is covered
+      for (const card of activeCards) {
+        if (remainingAmount <= 0) break
+
+        const amountFromThisCard = Math.min(remainingAmount, card.current_balance)
+        const newBalance = card.current_balance - amountFromThisCard
+
+        // Update the card balance
+        const { error } = await this.supabase
+          .from('gift_cards')
+          .update({
+            current_balance: newBalance,
+            is_active: newBalance > 0
+          })
+          .eq('id', card.id)
+
+        if (error) {
+          console.error('Error updating gift card balance:', error)
+          continue
+        }
+
+        // Record the transaction
+        await this.recordTransaction({
+          gift_card_id: card.id,
+          amount: -amountFromThisCard,
+          transaction_type: 'redemption',
+          booking_id: bookingId,
+          description: description || `Payment applied from gift card ${card.code}`
+        })
+
+        totalApplied += amountFromThisCard
+        remainingAmount -= amountFromThisCard
+      }
+
+      // Calculate remaining balance
+      const newTotalBalance = await this.getTotalBalanceByParentId(parentId)
+
+      return {
+        success: totalApplied > 0,
+        amountApplied: totalApplied,
+        remainingBalance: newTotalBalance
+      }
+    } catch (error) {
+      console.error('Error applying gift card balance:', error)
+      return { success: false, amountApplied: 0, remainingBalance: 0, error: 'Failed to apply gift card balance' }
+    }
+  }
+
+  // Refund gift card balance (for cancelled bookings)
+  async refundGiftCardBalance(
+    parentId: string,
+    amount: number,
+    bookingId?: string,
+    description?: string
+  ): Promise<{ success: boolean; newBalance: number; error?: string }> {
+    try {
+      // Get the first active gift card for this parent to add the refund
+      const giftCards = await this.getGiftCardsByParentId(parentId)
+
+      if (giftCards.length === 0) {
+        return { success: false, newBalance: 0, error: 'No gift cards found for this parent' }
+      }
+
+      // Find a card to add the refund to (prefer the most recently used one)
+      let targetCard = giftCards.find(gc => gc.is_active) || giftCards[0]
+
+      const newBalance = targetCard.current_balance + amount
+
+      // Update the card balance
+      const { error } = await this.supabase
+        .from('gift_cards')
+        .update({
+          current_balance: newBalance,
+          is_active: true
+        })
+        .eq('id', targetCard.id)
+
+      if (error) {
+        console.error('Error refunding gift card balance:', error)
+        return { success: false, newBalance: 0, error: 'Failed to refund gift card balance' }
+      }
+
+      // Record the refund transaction
+      await this.recordTransaction({
+        gift_card_id: targetCard.id,
+        amount: amount,
+        transaction_type: 'refund',
+        booking_id: bookingId,
+        description: description || `Refund for cancelled booking`
+      })
+
+      const totalBalance = await this.getTotalBalanceByParentId(parentId)
+
+      return { success: true, newBalance: totalBalance }
+    } catch (error) {
+      console.error('Error refunding gift card balance:', error)
+      return { success: false, newBalance: 0, error: 'Failed to refund gift card balance' }
+    }
+  }
+
   async getAllGiftCards(): Promise<GiftCard[]> {
     const { data, error } = await this.supabase
       .from('gift_cards')

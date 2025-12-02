@@ -97,7 +97,7 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); padding: 40px 30px; text-align: center;">
           <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">
-            🎁 You've Received a Gift Card!
+            You've Received a Gift Card!
           </h1>
           <p style="color: #e0e0e0; margin: 10px 0 0 0; font-size: 16px;">
             From Cocinarte Cooking School
@@ -107,7 +107,7 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
         <!-- Main Content -->
         <div style="padding: 40px 30px;">
           <p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">
-            Hi ${metadata.recipient_name}! 👋
+            Hi ${metadata.recipient_name}!
           </p>
 
           <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 0 0 30px 0;">
@@ -171,10 +171,10 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
             Cocinarte Cooking School
           </p>
           <p style="color: #a0aec0; font-size: 14px; margin: 0 0 5px 0;">
-            📧 info@cocinartepdx.com
+            info@cocinartepdx.com
           </p>
           <p style="color: #a0aec0; font-size: 14px; margin: 0;">
-            📞 +1 (503) 916-9758
+            +1 (503) 916-9758
           </p>
         </div>
       </div>
@@ -183,7 +183,7 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
   `
 
   const textContent = `
-🎁 You've Received a Gift Card from Cocinarte!
+You've Received a Gift Card from Cocinarte!
 
 Hi ${metadata.recipient_name}!
 
@@ -214,7 +214,7 @@ Phone: +1 (503) 916-9758
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: metadata.recipient_email,
-    subject: `🎁 ${metadata.purchaser_name} sent you a $${giftCard.initial_balance} Cocinarte Gift Card!`,
+    subject: `${metadata.purchaser_name} sent you a $${giftCard.initial_balance} Cocinarte Gift Card!`,
     html: emailHtml,
     text: textContent
   })
@@ -231,13 +231,13 @@ Phone: +1 (503) 916-9758
       <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
         <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 40px 30px; text-align: center;">
           <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 600;">
-            ✅ Gift Card Sent Successfully!
+            Gift Card Sent Successfully!
           </h1>
         </div>
 
         <div style="padding: 40px 30px;">
           <p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">
-            Hi ${metadata.purchaser_name}! 👋
+            Hi ${metadata.purchaser_name}!
           </p>
 
           <p style="font-size: 16px; color: #555; line-height: 1.6; margin: 0 0 30px 0;">
@@ -263,7 +263,7 @@ Phone: +1 (503) 916-9758
           </div>
 
           <p style="font-size: 14px; color: #666; margin: 0;">
-            Thank you for sharing the joy of cooking! 🍳
+            Thank you for sharing the joy of cooking!
           </p>
         </div>
 
@@ -272,7 +272,7 @@ Phone: +1 (503) 916-9758
             Cocinarte Cooking School
           </p>
           <p style="color: #a0aec0; font-size: 14px; margin: 0;">
-            📧 info@cocinartepdx.com | 📞 +1 (503) 916-9758
+            info@cocinartepdx.com | +1 (503) 916-9758
           </p>
         </div>
       </div>
@@ -283,7 +283,7 @@ Phone: +1 (503) 916-9758
   await transporter.sendMail({
     from: process.env.SMTP_FROM || process.env.SMTP_USER,
     to: metadata.purchaser_email,
-    subject: `✅ Your Cocinarte Gift Card has been sent to ${metadata.recipient_name}!`,
+    subject: `Your Cocinarte Gift Card has been sent to ${metadata.recipient_name}!`,
     html: purchaserEmailHtml,
     text: `Gift Card Sent Successfully!\n\nYour $${giftCard.initial_balance} gift card has been sent to ${metadata.recipient_name} (${metadata.recipient_email}).\n\nCode: ${giftCard.code}\n\nThank you for sharing the joy of cooking!\n\nCocinarte Cooking School`
   })

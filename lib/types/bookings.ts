@@ -10,6 +10,8 @@ export interface Booking {
   payment_method: 'credit_card' | 'debit_card' | 'paypal' | 'bank_transfer' | 'stripe';
   booking_status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   stripe_payment_intent_id?: string;
+  gift_card_amount_used?: number; // Amount paid using gift card balance
+  parent_id?: string; // Reference to parent for gift card refunds
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -25,6 +27,8 @@ export interface CreateBookingData {
   payment_status?: 'pending' | 'completed' | 'failed' | 'refunded' | 'held' | 'canceled' | 'paid';
   booking_status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   stripe_payment_intent_id?: string;
+  gift_card_amount_used?: number; // Amount paid using gift card balance
+  parent_id?: string; // Reference to parent for gift card refunds
   notes?: string;
 }
 
