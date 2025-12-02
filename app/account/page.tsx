@@ -9,7 +9,9 @@ import ChildrenManagement from '@/components/account/children-management'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { User, Mail, Phone, LogOut, Users } from 'lucide-react'
+import { User, Mail, Phone, LogOut, Users, Gift, ArrowLeft } from 'lucide-react'
+import GiftCardBalance from '@/components/gift-cards/gift-card-balance'
+import Link from 'next/link'
 
 export default function AccountPage() {
   const { user, signOut, loading: authLoading } = useAuth()
@@ -161,6 +163,9 @@ export default function AccountPage() {
             </CardContent>
           </Card>
 
+          {/* Gift Card Balance */}
+          <GiftCardBalance parentId={parentData.id} />
+
           {/* Children Management */}
           <ChildrenManagement
             parentId={parentData.id}
@@ -202,6 +207,16 @@ export default function AccountPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Back to Classes */}
+          <div className="text-center">
+            <Link href="/#upcoming-classes">
+              <Button variant="outline" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Back to Classes
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

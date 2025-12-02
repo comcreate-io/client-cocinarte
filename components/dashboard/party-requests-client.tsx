@@ -316,7 +316,7 @@ export function PartyRequestsClient() {
 
       {/* Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Party Request Details</DialogTitle>
             <DialogDescription>
