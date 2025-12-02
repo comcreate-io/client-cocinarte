@@ -12,6 +12,7 @@ import {
   Ticket,
   Cake,
   FileText,
+  Gift,
 } from "lucide-react"
 
 import {
@@ -70,6 +71,11 @@ const navigationItems = [
     title: "Coupons",
     url: "/dashboard/coupons",
     icon: Ticket,
+  },
+  {
+    title: "Gift Cards",
+    url: "/dashboard/gift-cards",
+    icon: Gift,
   },
 ]
 
