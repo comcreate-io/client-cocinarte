@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle } from "lucide-react"
+import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle, Gift } from "lucide-react"
 import { useState, useEffect } from "react"
 import CocinarteBookingPopup from "./cocinarte-booking-popup"
 import CocinarteAuthPopup from "./cocinarte-auth-popup"
@@ -372,6 +372,13 @@ export default function CocinarteHeader() {
             >
               FAQ
             </Link>
+            <Link
+              href="/gift-cards"
+              className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
+            >
+              <Gift className="h-4 w-4" />
+              Gift Cards
+            </Link>
           </nav>
 
             {/* CTA Buttons */}
@@ -471,6 +478,14 @@ export default function CocinarteHeader() {
               onClick={() => setIsMenuOpen(false)}
             >
               FAQ
+            </Link>
+            <Link
+              href="/gift-cards"
+              className="flex items-center gap-2 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <Gift className="h-4 w-4" />
+              Gift Cards
             </Link>
             <div className="space-y-2 pt-2">
               <Link
