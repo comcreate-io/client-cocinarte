@@ -8,6 +8,7 @@ import { BookOpen, Plus, Calendar, Users, Clock, DollarSign } from 'lucide-react
 import { Clase } from '@/lib/types/clases'
 import { ClassForm } from './class-form'
 import { ClassActions } from './class-actions'
+import { ClassStudentsPopup } from './class-students-popup'
 import { createClient } from '@/lib/supabase/client'
 
 interface ClassesClientProps {
@@ -21,6 +22,8 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
   const [enrolledCounts, setEnrolledCounts] = useState<Record<string, number>>({})
   const [cancelledClasses, setCancelledClasses] = useState<Set<string>>(new Set())
   const [chargedClasses, setChargedClasses] = useState<Set<string>>(new Set())
+  const [selectedClass, setSelectedClass] = useState<Clase | null>(null)
+  const [showStudentsPopup, setShowStudentsPopup] = useState(false)
 
   // Fetch enrolled counts from bookings and check for cancelled classes
   useEffect(() => {
@@ -160,6 +163,11 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
     window.location.reload()
   }
 
+  const handleClassClick = (clase: Clase) => {
+    setSelectedClass(clase)
+    setShowStudentsPopup(true)
+  }
+
   return (
     <>
       {/* Header */}
@@ -199,16 +207,8 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                   <p className="text-2xl font-bold text-green-900">
                     {(() => {
                       const today = new Date()
-                      const todayString = today.toISOString().split('T')[0] // Get today in YYYY-MM-DD format
-                      
-                      const upcomingClasses = clases.filter(clase => {
-                        const isUpcoming = clase.date >= todayString
-                        console.log(`Class: ${clase.title}, Date: ${clase.date}, Today: ${todayString}, IsUpcoming: ${isUpcoming}`)
-                        return isUpcoming
-                      })
-                      
-                      console.log(`Total classes: ${clases.length}, Upcoming: ${upcomingClasses.length}`)
-                      return upcomingClasses.length
+                      const todayString = today.toISOString().split('T')[0]
+                      return clases.filter(clase => clase.date >= todayString).length
                     })()}
                   </p>
                 </div>
@@ -270,7 +270,11 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
             const isToday = new Date().toDateString() === classDate.toDateString()
             
             return (
-              <Card key={clase.id}>
+              <Card
+                key={clase.id}
+                className="cursor-pointer hover:shadow-lg transition-shadow duration-200 hover:border-blue-300 min-h-[380px] flex flex-col"
+                onClick={() => handleClassClick(clase)}
+              >
                 <CardHeader>
                   <div className="flex flex-col space-y-2">
                     <div className="flex items-center space-x-2">
@@ -284,10 +288,10 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                     {formatDate(clase.date)} at {formatTime(clase.time)}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
+                <CardContent className="flex-1 flex flex-col">
+                  <div className="space-y-4 flex-1">
                     {clase.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 h-[50px]">
+                      <p className="text-sm text-muted-foreground line-clamp-4">
                         {clase.description}
                       </p>
                     )}
@@ -310,13 +314,15 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                     <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4" />
                       <span>
-                        {isToday ? 'Today' : 
-                         status.status === 'completed' ? 'Completed' : 
+                        {isToday ? 'Today' :
+                         status.status === 'completed' ? 'Completed' :
                          `In ${Math.ceil((classDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days`}
                       </span>
                     </div>
-                    
-                    <ClassActions 
+                  </div>
+
+                  <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4">
+                    <ClassActions
                       clase={clase}
                       onEdit={handleEditClass}
                       onDelete={handleDeleteSuccess}
@@ -335,6 +341,16 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
         onClose={() => setShowForm(false)}
         onSuccess={handleFormSuccess}
         editingClass={editingClass}
+      />
+
+      {/* Students Popup */}
+      <ClassStudentsPopup
+        clase={selectedClass}
+        isOpen={showStudentsPopup}
+        onClose={() => {
+          setShowStudentsPopup(false)
+          setSelectedClass(null)
+        }}
       />
     </>
   )

@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (amount < 10 || amount > 500) {
+    if (amount < 50 || amount > 500) {
       return NextResponse.json(
-        { error: 'Gift card amount must be between $10 and $500' },
+        { error: 'Gift card amount must be between $50 and $500' },
         { status: 400 }
       )
     }

@@ -23,15 +23,14 @@ export default async function ClassesPage() {
     redirect('/?error=admin_only')
   }
 
-  // Fetch classes from the database
+  // Fetch only today's and future classes from the database
   const clasesService = new ClasesService()
   let clases: Clase[] = []
 
   try {
-    clases = await clasesService.getAllClases()
-    console.log('=== Classes fetched from database ===')
-    console.log('Total classes:', clases.length)
-    console.log('All classes data:', JSON.stringify(clases, null, 2))
+    clases = await clasesService.getUpcomingClases()
+    console.log('=== Upcoming classes fetched from database ===')
+    console.log('Total classes (today and future):', clases.length)
     console.log('=====================================')
   } catch (error) {
     console.error('Error fetching classes:', error)
