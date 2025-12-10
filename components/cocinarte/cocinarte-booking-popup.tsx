@@ -267,7 +267,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   }, [authStep, selectedClassData, user, clientSecret])
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
+    // Parse date string as local time to avoid timezone shift
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day)
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
