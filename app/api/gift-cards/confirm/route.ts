@@ -39,9 +39,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the gift card in the database
+    // Christmas Promo: Add $20 bonus to all gift cards
+    const CHRISTMAS_BONUS = 20
+    const purchasedAmount = parseFloat(metadata.gift_card_amount)
+    const totalAmount = purchasedAmount + CHRISTMAS_BONUS
+
     const giftCardsService = new GiftCardsClientService()
     const giftCard = await giftCardsService.createGiftCard({
-      initial_balance: parseFloat(metadata.gift_card_amount),
+      initial_balance: totalAmount,
       purchaser_email: metadata.purchaser_email,
       purchaser_name: metadata.purchaser_name,
       recipient_email: metadata.recipient_email,
@@ -49,8 +54,8 @@ export async function POST(request: NextRequest) {
       message: metadata.message || undefined
     })
 
-    // Send gift card email to recipient
-    await sendGiftCardEmail(giftCard, metadata)
+    // Send gift card email to recipient (include bonus info)
+    await sendGiftCardEmail(giftCard, metadata, purchasedAmount, CHRISTMAS_BONUS)
 
     // Mark gift card as sent
     await giftCardsService.markGiftCardAsSent(giftCard.id)
@@ -72,7 +77,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function sendGiftCardEmail(giftCard: any, metadata: any) {
+async function sendGiftCardEmail(giftCard: any, metadata: any, purchasedAmount: number, bonus: number) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -127,9 +132,14 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
             <p style="color: #FEFEFE; font-size: 14px; margin: 0 0 10px 0; text-transform: uppercase; letter-spacing: 1px;">
               Gift Card Value
             </p>
-            <p style="color: #FEFEFE; font-size: 48px; font-weight: 700; margin: 0 0 20px 0;">
+            <p style="color: #FEFEFE; font-size: 48px; font-weight: 700; margin: 0 0 5px 0;">
               $${giftCard.initial_balance.toFixed(2)}
             </p>
+            ${bonus > 0 ? `
+            <p style="color: #FEFEFE; font-size: 14px; margin: 0 0 20px 0; opacity: 0.9;">
+              🎄 Includes $${bonus} Christmas Bonus! 🎄
+            </p>
+            ` : '<div style="margin-bottom: 20px;"></div>'}
             <div style="background-color: rgba(255,255,255,0.95); border-radius: 8px; padding: 15px; display: inline-block;">
               <p style="color: #666666; font-size: 12px; margin: 0 0 5px 0; text-transform: uppercase; letter-spacing: 1px;">
                 Your Gift Card Code
@@ -192,7 +202,7 @@ ${metadata.purchaser_name} has sent you a Cocinarte gift card!
 ${metadata.message ? `Personal Message: "${metadata.message}"` : ''}
 
 GIFT CARD DETAILS:
-Value: $${giftCard.initial_balance.toFixed(2)}
+Value: $${giftCard.initial_balance.toFixed(2)}${bonus > 0 ? ` (Includes $${bonus} Christmas Bonus!)` : ''}
 Code: ${giftCard.code}
 
 HOW TO REDEEM:
@@ -249,7 +259,7 @@ Phone: +1 (503) 916-9758
             <table style="width: 100%; font-size: 14px;">
               <tr>
                 <td style="padding: 8px 0; color: #666666;">Amount:</td>
-                <td style="padding: 8px 0; color: #000000; font-weight: 600;">$${giftCard.initial_balance.toFixed(2)}</td>
+                <td style="padding: 8px 0; color: #000000; font-weight: 600;">$${giftCard.initial_balance.toFixed(2)}${bonus > 0 ? ` (includes $${bonus} bonus!)` : ''}</td>
               </tr>
               <tr>
                 <td style="padding: 8px 0; color: #666666;">Code:</td>
