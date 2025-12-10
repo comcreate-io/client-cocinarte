@@ -14,7 +14,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
-const PRESET_AMOUNTS = [25, 50, 75, 100, 150, 200]
+const PRESET_AMOUNTS = [50, 75, 100, 150, 200, 250]
 
 interface GiftCardFormData {
   amount: number
@@ -58,8 +58,8 @@ function GiftCardForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   const validateForm = () => {
-    if (!selectedAmount || selectedAmount < 10 || selectedAmount > 500) {
-      setError('Please select an amount between $10 and $500')
+    if (!selectedAmount || selectedAmount < 50 || selectedAmount > 500) {
+      setError('Please select an amount between $50 and $500')
       return false
     }
     if (!formData.purchaserName.trim()) {
@@ -234,7 +234,7 @@ function GiftCardForm({ onSuccess }: { onSuccess: () => void }) {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                   <Input
                     type="number"
-                    min="10"
+                    min="50"
                     max="500"
                     placeholder="Custom"
                     className="pl-7"
@@ -243,7 +243,7 @@ function GiftCardForm({ onSuccess }: { onSuccess: () => void }) {
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-500">Amount must be between $10 and $500</p>
+              <p className="text-xs text-gray-500">Amount must be between $50 and $500</p>
             </div>
 
             {/* Your Information */}
@@ -467,8 +467,8 @@ function GiftCardFormStandalone({ onSuccess }: { onSuccess: () => void }) {
   }
 
   const validateForm = () => {
-    if (!selectedAmount || selectedAmount < 10 || selectedAmount > 500) {
-      setError('Please select an amount between $10 and $500')
+    if (!selectedAmount || selectedAmount < 50 || selectedAmount > 500) {
+      setError('Please select an amount between $50 and $500')
       return false
     }
     if (!formData.purchaserName.trim()) {
@@ -604,7 +604,7 @@ function GiftCardFormStandalone({ onSuccess }: { onSuccess: () => void }) {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
               <Input
                 type="number"
-                min="10"
+                min="50"
                 max="500"
                 placeholder="Custom"
                 className="pl-7"
@@ -613,7 +613,7 @@ function GiftCardFormStandalone({ onSuccess }: { onSuccess: () => void }) {
               />
             </div>
           </div>
-          <p className="text-xs text-gray-500">Amount must be between $10 and $500</p>
+          <p className="text-xs text-gray-500">Amount must be between $50 and $500</p>
         </div>
 
         {/* Your Information */}
