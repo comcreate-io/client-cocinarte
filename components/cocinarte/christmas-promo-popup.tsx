@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { X, Gift, Sparkles } from 'lucide-react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 export default function ChristmasPromoPopup() {
   const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     // Show popup after a short delay on every page load
@@ -15,6 +16,11 @@ export default function ChristmasPromoPopup() {
 
   const handleClose = () => {
     setIsOpen(false)
+  }
+
+  const handleGetGiftCard = () => {
+    setIsOpen(false)
+    router.push('?popup=giftcard', { scroll: false })
   }
 
   if (!isOpen) return null
@@ -76,15 +82,14 @@ export default function ChristmasPromoPopup() {
           </p>
 
           {/* CTA Button */}
-          <Link
-            href="/gift-cards"
-            onClick={handleClose}
+          <button
+            onClick={handleGetGiftCard}
             className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-red-600 font-bold py-2.5 px-5 sm:py-4 sm:px-8 rounded-full text-sm sm:text-lg transition-all hover:scale-105 shadow-lg"
             style={{ fontFamily: 'Coming Soon' }}
           >
             <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
             Get Your Gift Card Now!
-          </Link>
+          </button>
 
           {/* Limited time badge */}
           <div className="mt-3 sm:mt-6 inline-flex items-center gap-1 sm:gap-2 bg-white/20 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm">

@@ -2,6 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle, Gift, ChevronDown } from "lucide-react"
 import { useState, useEffect } from "react"
@@ -47,10 +48,21 @@ export default function CocinarteHeader() {
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null)
   
   const { user, signOut } = useAuth()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
+
+  // Handle URL-based popup opening
+  useEffect(() => {
+    const popup = searchParams.get('popup')
+    if (popup === 'giftcard') {
+      setIsGiftCardOpen(true)
+    }
+  }, [searchParams])
 
   const fetchStudentInfo = async () => {
     if (!user?.email) return
@@ -985,7 +997,13 @@ export default function CocinarteHeader() {
     />
 
     {/* Gift Card Purchase Popup */}
-    <Dialog open={isGiftCardOpen} onOpenChange={setIsGiftCardOpen}>
+    <Dialog open={isGiftCardOpen} onOpenChange={(open) => {
+      setIsGiftCardOpen(open)
+      // Remove popup param from URL when closing
+      if (!open && searchParams.get('popup') === 'giftcard') {
+        router.replace(pathname, { scroll: false })
+      }
+    }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
