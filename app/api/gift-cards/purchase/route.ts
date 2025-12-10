@@ -33,8 +33,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe payment intent for the gift card purchase
+    // TODO: TESTING MODE - Force $1 charge (remove for production)
+    const testAmount = 100 // $1 in cents
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // Convert to cents
+      amount: testAmount, // Math.round(amount * 100), // Convert to cents
       currency: 'usd',
       payment_method_types: ['card'],
       metadata: {
