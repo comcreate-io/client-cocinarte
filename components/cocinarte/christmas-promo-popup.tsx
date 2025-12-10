@@ -8,18 +8,13 @@ export default function ChristmasPromoPopup() {
   const [isOpen, setIsOpen] = useState(false)
 
   useEffect(() => {
-    // Check if user has already dismissed the popup
-    const dismissed = localStorage.getItem('christmas-promo-dismissed')
-    if (!dismissed) {
-      // Show popup after a short delay
-      const timer = setTimeout(() => setIsOpen(true), 1500)
-      return () => clearTimeout(timer)
-    }
+    // Show popup after a short delay on every page load
+    const timer = setTimeout(() => setIsOpen(true), 1500)
+    return () => clearTimeout(timer)
   }, [])
 
   const handleClose = () => {
     setIsOpen(false)
-    localStorage.setItem('christmas-promo-dismissed', 'true')
   }
 
   if (!isOpen) return null
