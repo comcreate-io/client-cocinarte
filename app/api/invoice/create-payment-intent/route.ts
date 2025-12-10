@@ -33,8 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert amount to cents for Stripe
-    // TODO: TESTING MODE - Force $1 charge (remove for production)
-    const amountInCents = 100 // Math.round(amount * 100)
+    const amountInCents = Math.round(amount * 100)
 
     // Create payment intent with customer email
     const paymentIntent = await stripe.paymentIntents.create({

@@ -75,10 +75,8 @@ export async function POST(request: NextRequest) {
     console.log('Creating payment intent with receipt_email:', userEmail);
 
     // Create a PaymentIntent with MANUAL CAPTURE (holds funds, doesn't charge)
-    // TODO: TESTING MODE - Force $1 charge (remove for production)
-    const testAmount = 100 // $1 in cents
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: testAmount, // Math.round(amount * 100), // Stripe expects amount in cents
+      amount: Math.round(amount * 100), // Stripe expects amount in cents
       currency: 'usd',
       description: `${classTitle}${userName ? ` - ${userName}` : ''}`,
       capture_method: 'manual', // ← KEY: This holds the payment instead of charging immediately
