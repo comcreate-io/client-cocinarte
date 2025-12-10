@@ -10,11 +10,13 @@ import CocinartePrivateEvents from "@/components/cocinarte/cocinarte-private-eve
 import CocinarteFAQ from "@/components/cocinarte/cocinarte-faq"
 import CocinarteContact from "@/components/cocinarte/cocinarte-contact"
 import CocinarteCTA from "@/components/cocinarte/cocinarte-cta"
+import ChristmasPromoPopup from "@/components/cocinarte/christmas-promo-popup"
 import Image from "next/image"
 
 export default function HomePage() {
   return (
     <>
+      <ChristmasPromoPopup />
       <div className="min-h-screen bg-white font-coming-soon relative overflow-hidden" style={{ fontFamily: 'Coming Soon' }} data-page="cocinarte">
         {/* Floating elements around the entire page - hidden on mobile for better performance */}
         <Image
