@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle, Gift, ChevronDown } from "lucide-react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import CocinarteBookingPopup from "./cocinarte-booking-popup"
 import CocinarteAuthPopup from "./cocinarte-auth-popup"
 import { useAuth } from "@/contexts/auth-context"
@@ -21,7 +21,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import GiftCardPurchase from "@/components/gift-cards/gift-card-purchase"
 
-export default function CocinarteHeader() {
+function CocinarteHeaderInner() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
@@ -1022,5 +1022,24 @@ export default function CocinarteHeader() {
       </DialogContent>
     </Dialog>
     </header>
+  )
+}
+
+// Wrap with Suspense to handle useSearchParams during static generation
+export default function CocinarteHeader() {
+  return (
+    <Suspense fallback={
+      <header className="bg-cocinarte-navy shadow-xl w-full fixed top-0 left-0 right-0 z-50">
+        <div className="max-w-[1600px] mx-auto pl-0 pr-4 sm:px-6 lg:px-8 relative">
+          <div className="flex items-center justify-between h-16 sm:h-20 lg:h-24">
+            <div className="flex items-center flex-shrink-0 justify-start">
+              <div className="h-12 sm:h-14 lg:h-20 w-[100px] sm:w-[120px] lg:w-[200px]" />
+            </div>
+          </div>
+        </div>
+      </header>
+    }>
+      <CocinarteHeaderInner />
+    </Suspense>
   )
 }
