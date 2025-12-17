@@ -12,6 +12,7 @@ export interface Booking {
   stripe_payment_intent_id?: string;
   gift_card_amount_used?: number; // Amount paid using gift card balance
   parent_id?: string; // Reference to parent for gift card refunds
+  extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
   notes?: string;
   created_at: string;
   updated_at: string;
@@ -29,6 +30,7 @@ export interface CreateBookingData {
   stripe_payment_intent_id?: string;
   gift_card_amount_used?: number; // Amount paid using gift card balance
   parent_id?: string; // Reference to parent for gift card refunds
+  extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
   notes?: string;
 }
 
@@ -46,6 +48,7 @@ export interface BookingWithDetails extends Booking {
     time: string;
     price: number;
     classDuration: number;
+    class_type?: string;
   };
   student: {
     id: string;

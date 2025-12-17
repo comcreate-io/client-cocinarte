@@ -34,33 +34,36 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
         
         if (classIds.length === 0) return
         
-        // Fetch bookings for all classes
+        // Fetch bookings for all classes (including extra_children for proper counting)
         const { data: bookings, error } = await supabase
           .from('bookings')
-          .select('class_id, booking_status, payment_status')
+          .select('class_id, booking_status, payment_status, extra_children')
           .in('class_id', classIds)
-        
+
         if (error) {
           console.error('Error fetching enrolled counts:', error)
           return
         }
-        
+
         // Count enrolled bookings per class (confirmed or pending)
+        // Include extra_children in the count for proper capacity tracking
         const counts: Record<string, number> = {}
         const classBookings: Record<string, any[]> = {}
-        
+
         bookings?.forEach((booking: any) => {
           const classId = booking.class_id
-          
+
           // Group bookings by class
           if (!classBookings[classId]) {
             classBookings[classId] = []
           }
           classBookings[classId].push(booking)
-          
+
           // Count only confirmed/pending as enrolled
+          // Include extra children in the count (1 booking + extra children = total children)
           if (booking.booking_status === 'confirmed' || booking.booking_status === 'pending') {
-            counts[classId] = (counts[classId] || 0) + 1
+            const childCount = 1 + (booking.extra_children || 0)
+            counts[classId] = (counts[classId] || 0) + childCount
           }
         })
         

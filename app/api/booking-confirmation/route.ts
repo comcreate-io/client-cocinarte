@@ -4,15 +4,19 @@ import nodemailer from 'nodemailer';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      userEmail, 
-      userName, 
+    const {
+      userEmail,
+      userName,
       studentName,
-      classTitle, 
-      classDate, 
-      classTime, 
+      classTitle,
+      classDate,
+      classTime,
       classPrice,
-      bookingId 
+      basePrice,
+      extraChildren,
+      extraChildrenCost,
+      selectedChildrenNames,
+      bookingId
     } = body;
 
     // Validate required fields
@@ -22,6 +26,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Calculate display values
+    const hasExtraChildren = extraChildren && extraChildren > 0;
+    const totalChildren = hasExtraChildren ? extraChildren + 1 : 1;
+    const childrenNamesList: string[] = selectedChildrenNames && selectedChildrenNames.length > 0
+      ? selectedChildrenNames
+      : [studentName];
 
     // Create transporter
     const transporter = nodemailer.createTransport({
@@ -64,7 +75,15 @@ export async function POST(request: NextRequest) {
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Class:</strong> ${classTitle}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Date:</strong> ${formattedDate}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Time:</strong> ${formattedTime}</p>
-            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Price:</strong> $${classPrice}</p>
+            ${hasExtraChildren ? `
+            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Children Attending (${totalChildren}):</strong></p>
+            <ul style="margin: 4px 0 8px 20px; color: #374151; font-size: 14px;">
+              ${childrenNamesList.map((name: string, i: number) => `<li>${name}${i === 0 ? ' (included)' : ' (+$70)'}</li>`).join('')}
+            </ul>
+            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Base Price:</strong> $${basePrice || classPrice}</p>
+            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Extra Children Cost:</strong> +$${extraChildrenCost}</p>
+            ` : ''}
+            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Total Price:</strong> $${classPrice}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Booking ID:</strong> ${bookingId}</p>
           </div>
 
@@ -72,7 +91,7 @@ export async function POST(request: NextRequest) {
             <h3 style="color: #F0614F; margin: 0 0 15px 0; font-size: 20px;">👨‍👩‍👧 Customer Information</h3>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #F0614F;">Parent/Guardian:</strong> ${userName}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #F0614F;">Email:</strong> <a href="mailto:${userEmail}" style="color: #F0614F; text-decoration: none;">${userEmail}</a></p>
-            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #F0614F;">Student Name:</strong> ${studentName}</p>
+            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #F0614F;">Student Name:</strong> ${hasExtraChildren ? childrenNamesList.join(', ') : studentName}</p>
           </div>
 
           <div style="background: #FCB414; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
@@ -106,7 +125,15 @@ export async function POST(request: NextRequest) {
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Class:</strong> ${classTitle}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Date:</strong> ${formattedDate}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Time:</strong> ${formattedTime}</p>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Price:</strong> $${classPrice}</p>
+            ${hasExtraChildren ? `
+            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Children Attending (${totalChildren}):</strong></p>
+            <ul style="margin: 4px 0 8px 20px; color: #374151; font-size: 15px;">
+              ${childrenNamesList.map((name: string, i: number) => `<li>${name}${i === 0 ? ' (included)' : ' (+$70)'}</li>`).join('')}
+            </ul>
+            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Base Price:</strong> $${basePrice || classPrice}</p>
+            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Extra Children (${extraChildren}):</strong> +$${extraChildrenCost}</p>
+            ` : ''}
+            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Total Price:</strong> $${classPrice}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Booking ID:</strong> ${bookingId}</p>
           </div>
 

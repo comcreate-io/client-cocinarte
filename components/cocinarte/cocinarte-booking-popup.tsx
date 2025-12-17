@@ -43,6 +43,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [studentProfile, setStudentProfile] = useState<any>(null)
   const [parentWithChildren, setParentWithChildren] = useState<ParentWithChildren | null>(null)
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null)
+  const [selectedChildIds, setSelectedChildIds] = useState<string[]>([])
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -85,9 +86,28 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [childFormData, setChildFormData] = useState<Partial<Child>>({})
   const [childrenBookings, setChildrenBookings] = useState<{ [key: string]: any[] }>({})
 
+  // Extra children pricing for Mommy & Me classes
+  const EXTRA_CHILD_COST = 70 // Cost per extra child
+
   const { user, signIn, signUp, signUpWithStudentInfo, signOut } = useAuth()
 
   const selectedClassData = classes.find(c => c.id === selectedClassId)
+
+  // Check if the selected class is a Mommy & Me / Chefcitos Together class
+  const isMommyAndMeClass = (clase: Clase | undefined): boolean => {
+    if (!clase) return false
+    // Check by class_type or title keywords
+    return clase.class_type === 'Chefcitos Together' ||
+           clase.title?.toLowerCase().includes('mommy') ||
+           clase.title?.toLowerCase().includes('mom') ||
+           clase.title?.toLowerCase().includes('family') ||
+           clase.title?.toLowerCase().includes('chefcitos together')
+  }
+
+  const isCurrentClassMommyAndMe = isMommyAndMeClass(selectedClassData)
+
+  // Calculate extra children from selected children (first child is included, rest are extra)
+  const extraChildren = isCurrentClassMommyAndMe ? Math.max(0, selectedChildIds.length - 1) : 0
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -222,7 +242,30 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             ? selectedClassData.date.toISOString().split('T')[0]
             : selectedClassData.date
 
-          const finalAmount = calculateFinalPrice()
+          // Calculate the amount directly here to avoid any closure issues
+          const numExtraChildren = selectedChildIds.length > 1 ? selectedChildIds.length - 1 : 0
+          const extraChildrenCost = numExtraChildren * EXTRA_CHILD_COST
+          let finalAmount = selectedClassData.price + extraChildrenCost
+
+          // Apply coupon if any
+          if (appliedCoupon) {
+            const discount = (finalAmount * appliedCoupon.discount) / 100
+            finalAmount = finalAmount - discount
+          }
+
+          // Apply gift card if enabled
+          if (useGiftCard && giftCardAmountToUse > 0) {
+            finalAmount = Math.max(0, finalAmount - giftCardAmountToUse)
+          }
+
+          console.log('Payment calculation:', {
+            basePrice: selectedClassData.price,
+            selectedChildIds: selectedChildIds,
+            numExtraChildren,
+            extraChildrenCost,
+            finalAmount,
+            isMommyAndMe: isCurrentClassMommyAndMe
+          })
 
           const requestBody = {
             amount: finalAmount,
@@ -233,6 +276,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             classId: selectedClassData.id,
             classDate: classDate,
             classTime: selectedClassData.time,
+            extraChildren: numExtraChildren,
           }
 
           console.log('Creating payment intent with data:', requestBody)
@@ -264,7 +308,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     }
 
     createPaymentIntent()
-  }, [authStep, selectedClassData, user, clientSecret])
+  }, [authStep, selectedClassData, user, clientSecret, selectedChildIds, isCurrentClassMommyAndMe, appliedCoupon, useGiftCard, giftCardAmountToUse])
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -312,12 +356,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               setGiftCardBalance(0)
             }
 
-            if (parentData.children.length === 1) {
-              // Only one child, auto-select and proceed to payment
+            // Check if this is a Mommy & Me class
+            const isMomMeClass = isMommyAndMeClass(classes.find(c => c.id === selectedClassId))
+
+            if (parentData.children.length === 1 && !isMomMeClass) {
+              // Only one child and NOT a Mommy & Me class, auto-select and proceed to payment
               setSelectedChildId(parentData.children[0].id)
+              setSelectedChildIds([parentData.children[0].id])
               setAuthStep('payment')
             } else {
-              // Multiple children, show selection screen
+              // Multiple children OR Mommy & Me class, show selection screen
+              // For Mommy & Me, they need to select which children are attending (up to 3)
               setAuthStep('child-selection')
             }
           } else {
@@ -382,10 +431,20 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     setCouponSuccess('')
   }
 
-  // Calculate final price with coupon discount and gift card
+  // Calculate extra children cost
+  const getExtraChildrenCost = () => {
+    return extraChildren * EXTRA_CHILD_COST
+  }
+
+  // Calculate final price with coupon discount, gift card, and extra children
   const calculateFinalPrice = () => {
     if (!selectedClassData) return 0
     let price = selectedClassData.price
+
+    // Add extra children cost for Mommy & Me classes
+    if (isCurrentClassMommyAndMe && extraChildren > 0) {
+      price += getExtraChildrenCost()
+    }
 
     // Apply coupon discount first
     if (appliedCoupon) {
@@ -404,14 +463,36 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   // Calculate price after coupon but before gift card
   const getPriceAfterCoupon = () => {
     if (!selectedClassData) return 0
-    if (!appliedCoupon) return selectedClassData.price
-    const discount = (selectedClassData.price * appliedCoupon.discount) / 100
-    return selectedClassData.price - discount
+    let basePrice = selectedClassData.price
+
+    // Add extra children cost for Mommy & Me classes
+    if (isCurrentClassMommyAndMe && extraChildren > 0) {
+      basePrice += getExtraChildrenCost()
+    }
+
+    if (!appliedCoupon) return basePrice
+    const discount = (basePrice * appliedCoupon.discount) / 100
+    return basePrice - discount
   }
 
   const getDiscountAmount = () => {
     if (!selectedClassData || !appliedCoupon) return 0
-    return (selectedClassData.price * appliedCoupon.discount) / 100
+    let basePrice = selectedClassData.price
+    // Add extra children cost for Mommy & Me classes
+    if (isCurrentClassMommyAndMe && extraChildren > 0) {
+      basePrice += getExtraChildrenCost()
+    }
+    return (basePrice * appliedCoupon.discount) / 100
+  }
+
+  // Get the total price before any discounts (base + extra children)
+  const getTotalBeforeDiscounts = () => {
+    if (!selectedClassData) return 0
+    let total = selectedClassData.price
+    if (isCurrentClassMommyAndMe && extraChildren > 0) {
+      total += getExtraChildrenCost()
+    }
+    return total
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -515,6 +596,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     setClientSecret('')
     setPaymentIntentId('')
     setPaymentError('')
+    // Reset child selection when going back
+    setSelectedChildId(null)
+    setSelectedChildIds([])
   }
 
   const handlePaymentSuccess = async () => {
@@ -661,8 +745,28 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       const giftCardNote = useGiftCard && giftCardAmountToUse > 0
         ? ` Gift card used: $${giftCardAmountToUse.toFixed(2)}.`
         : ''
+      // Get selected children names for notes
+      const selectedChildrenNames = isCurrentClassMommyAndMe && selectedChildIds.length > 0 && parentWithChildren
+        ? parentWithChildren.children
+            .filter(c => selectedChildIds.includes(c.id))
+            .map(c => c.child_full_name)
+        : []
+      const extraChildrenNote = isCurrentClassMommyAndMe && extraChildren > 0
+        ? ` Children attending (${selectedChildIds.length}): ${selectedChildrenNames.join(', ')}. Extra children: ${extraChildren} (+$${getExtraChildrenCost()}).`
+        : isCurrentClassMommyAndMe && selectedChildrenNames.length === 1
+          ? ` Child attending: ${selectedChildrenNames[0]}.`
+          : ''
 
-      const newBooking = await bookingsService.createBooking({
+      console.log('Creating booking with:', {
+        selectedChildIds,
+        extraChildren,
+        isCurrentClassMommyAndMe,
+        selectedChildrenNames,
+        finalPrice
+      })
+
+      // Build booking data
+      const bookingData: any = {
         user_id: user.id!,
         class_id: selectedClassData.id,
         student_id: studentInfo.id,
@@ -675,9 +779,16 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
         parent_id: parentWithChildren?.id || undefined,
         notes: isFreeBooking
-          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}`
-          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}`
-      })
+          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${extraChildrenNote}`
+          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}${extraChildrenNote}`
+      }
+
+      // Add extra_children if there are extra children
+      if (isCurrentClassMommyAndMe && extraChildren > 0) {
+        bookingData.extra_children = extraChildren
+      }
+
+      const newBooking = await bookingsService.createBooking(bookingData)
 
       console.log('Booking created:', newBooking.id)
 
@@ -720,13 +831,21 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         }
       }
 
-      // Update enrolled count in the class
-      console.log('Updating class enrollment...')
-      await clasesService.updateClassEnrollment(selectedClassData.id, 1)
+      // Update enrolled count in the class (include extra children in count)
+      const enrollmentCount = 1 + (isCurrentClassMommyAndMe && extraChildren > 0 ? extraChildren : 0)
+      console.log(`Updating class enrollment by ${enrollmentCount}...`)
+      await clasesService.updateClassEnrollment(selectedClassData.id, enrollmentCount)
       console.log('Class enrollment updated')
       
       // Send confirmation emails
       try {
+        // Get selected children names for the email
+        const emailChildrenNames = parentWithChildren && selectedChildIds.length > 0
+          ? parentWithChildren.children
+              .filter(c => selectedChildIds.includes(c.id))
+              .map(c => c.child_full_name)
+          : [studentInfo.child_name]
+
         const emailResponse = await fetch('/api/booking-confirmation', {
           method: 'POST',
           headers: {
@@ -735,11 +854,15 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           body: JSON.stringify({
             userEmail: user.email,
             userName: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
-            studentName: studentInfo.child_name,
+            studentName: emailChildrenNames.length > 0 ? emailChildrenNames[0] : studentInfo.child_name,
             classTitle: selectedClassData.title,
             classDate: selectedClassData.date,
             classTime: selectedClassData.time,
-            classPrice: selectedClassData.price,
+            classPrice: finalPrice, // Total price paid (includes extra children cost)
+            basePrice: selectedClassData.price,
+            extraChildren: extraChildren,
+            extraChildrenCost: extraChildren > 0 ? extraChildren * EXTRA_CHILD_COST : 0,
+            selectedChildrenNames: emailChildrenNames,
             bookingId: newBooking.id || `BK-${Date.now()}`
           })
         })
@@ -1183,7 +1306,43 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     </div>
   )
 
-  const renderChildSelection = () => (
+  const renderChildSelection = () => {
+    // Helper to toggle child selection for Mommy & Me classes
+    const handleChildToggle = (childId: string) => {
+      if (isCurrentClassMommyAndMe) {
+        // Multi-select for Mommy & Me classes (max 3 children)
+        setSelectedChildIds(prev => {
+          if (prev.includes(childId)) {
+            // Deselect
+            const newIds = prev.filter(id => id !== childId)
+            setSelectedChildId(newIds.length > 0 ? newIds[0] : null)
+            return newIds
+          } else if (prev.length < 3) {
+            // Select (max 3)
+            const newIds = [...prev, childId]
+            setSelectedChildId(newIds[0])
+            return newIds
+          }
+          return prev // Already at max
+        })
+      } else {
+        // Single select for regular classes
+        setSelectedChildId(childId)
+        setSelectedChildIds([childId])
+      }
+    }
+
+    const isChildSelected = (childId: string) => {
+      return isCurrentClassMommyAndMe
+        ? selectedChildIds.includes(childId)
+        : selectedChildId === childId
+    }
+
+    const canContinue = isCurrentClassMommyAndMe
+      ? selectedChildIds.length > 0
+      : selectedChildId !== null
+
+    return (
     <div className="space-y-6">
       {/* Back Button */}
       <div className="flex items-center gap-2">
@@ -1206,14 +1365,33 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               <Baby className="h-6 w-6 text-cocinarte-navy" />
             </div>
             <CardTitle className="text-2xl font-bold text-slate-800">
-              Select a Child for This Class
+              {isCurrentClassMommyAndMe
+                ? 'Select Children for This Class'
+                : 'Select a Child for This Class'}
             </CardTitle>
           </div>
           <CardDescription className="text-slate-600">
-            Which of your children will be attending this cooking class?
+            {isCurrentClassMommyAndMe
+              ? 'This is a Mommy & Me class. You can bring up to 3 children. Select all children who will be attending.'
+              : 'Which of your children will be attending this cooking class?'}
           </CardDescription>
         </CardHeader>
       </Card>
+
+      {/* Mommy & Me pricing info */}
+      {isCurrentClassMommyAndMe && (
+        <Alert className="bg-purple-50 border-purple-200">
+          <Users className="h-4 w-4 text-purple-600" />
+          <AlertDescription className="text-purple-800">
+            <strong>Pricing:</strong> First child is ${selectedClassData?.price}, each additional child is ${EXTRA_CHILD_COST}.
+            {selectedChildIds.length > 1 && (
+              <span className="ml-2 font-semibold">
+                Total: ${selectedClassData?.price! + (selectedChildIds.length - 1) * EXTRA_CHILD_COST} for {selectedChildIds.length} children
+              </span>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Selected Class Info */}
       {selectedClassData && (
@@ -1234,18 +1412,21 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             (booking.status === 'confirmed' || booking.status === 'pending' || !booking.status)
           )
           const isAlreadyBooked = !!existingBooking
+          const isSelected = isChildSelected(child.id)
+          const selectionIndex = selectedChildIds.indexOf(child.id)
+          const isAtMaxAndNotSelected = isCurrentClassMommyAndMe && selectedChildIds.length >= 3 && !isSelected
 
           return (
             <Card
               key={child.id}
               className={`transition-all duration-300 border-2 ${
-                isAlreadyBooked
-                  ? 'border-orange-300 bg-orange-50/50 opacity-75 cursor-not-allowed'
-                  : selectedChildId === child.id
+                isAlreadyBooked || isAtMaxAndNotSelected
+                  ? 'border-gray-300 bg-gray-50/50 opacity-60 cursor-not-allowed'
+                  : isSelected
                     ? 'border-cocinarte-navy shadow-lg bg-cocinarte-navy/5 cursor-pointer'
                     : 'border-slate-200 hover:border-cocinarte-navy/50 hover:shadow-md cursor-pointer'
               }`}
-              onClick={() => !isAlreadyBooked && setSelectedChildId(child.id)}
+              onClick={() => !isAlreadyBooked && !isAtMaxAndNotSelected && handleChildToggle(child.id)}
             >
               <CardContent className="pt-6">
                 <div className="space-y-3">
@@ -1261,10 +1442,16 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                         <CheckCircle className="h-3 w-3 mr-1" />
                         Already Booked
                       </Badge>
-                    ) : selectedChildId === child.id ? (
+                    ) : isSelected ? (
                       <Badge className="bg-cocinarte-navy">
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        Selected
+                        {isCurrentClassMommyAndMe && selectedChildIds.length > 1
+                          ? `Selected #${selectionIndex + 1}${selectionIndex === 0 ? ' (included)' : ` (+$${EXTRA_CHILD_COST})`}`
+                          : 'Selected'}
+                      </Badge>
+                    ) : isAtMaxAndNotSelected ? (
+                      <Badge variant="outline" className="text-gray-500">
+                        Max 3 reached
                       </Badge>
                     ) : null}
                   </div>
@@ -1303,6 +1490,31 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         })}
       </div>
 
+      {/* Selection Summary for Mommy & Me */}
+      {isCurrentClassMommyAndMe && selectedChildIds.length > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-purple-800">
+                {selectedChildIds.length} {selectedChildIds.length === 1 ? 'child' : 'children'} selected
+              </h4>
+              <p className="text-sm text-purple-600">
+                {parentWithChildren?.children
+                  .filter(c => selectedChildIds.includes(c.id))
+                  .map(c => c.child_full_name)
+                  .join(', ')}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-purple-600">Total Price</p>
+              <p className="text-2xl font-bold text-purple-800">
+                ${selectedClassData?.price! + Math.max(0, selectedChildIds.length - 1) * EXTRA_CHILD_COST}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action Buttons */}
       <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
         <Button
@@ -1314,16 +1526,28 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           Cancel
         </Button>
         <Button
-          onClick={() => setAuthStep('payment')}
-          disabled={!selectedChildId}
+          onClick={() => {
+            // Set selectedChildId to first child for backward compatibility
+            if (selectedChildIds.length > 0) {
+              setSelectedChildId(selectedChildIds[0])
+            }
+            setAuthStep('payment')
+          }}
+          disabled={!canContinue}
           size="lg"
           className="px-8 bg-cocinarte-red hover:bg-cocinarte-red/90 text-white"
         >
           Continue to Payment
+          {isCurrentClassMommyAndMe && selectedChildIds.length > 0 && (
+            <span className="ml-2">
+              (${selectedClassData?.price! + Math.max(0, selectedChildIds.length - 1) * EXTRA_CHILD_COST})
+            </span>
+          )}
         </Button>
       </div>
     </div>
   )
+  }
 
   const renderPaymentForm = () => {
     const options = {
@@ -1392,15 +1616,59 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                         </div>
                       </div>
                     </div>
+
+                    {/* Selected Children Display for Mommy & Me classes */}
+                    {isCurrentClassMommyAndMe && selectedChildIds.length > 0 && parentWithChildren && (
+                      <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Users className="h-5 w-5 text-purple-600" />
+                          <h4 className="font-semibold text-purple-800">
+                            {selectedChildIds.length} {selectedChildIds.length === 1 ? 'Child' : 'Children'} Attending
+                          </h4>
+                        </div>
+                        <div className="space-y-1">
+                          {parentWithChildren.children
+                            .filter(c => selectedChildIds.includes(c.id))
+                            .map((child, index) => (
+                              <p key={child.id} className="text-sm text-purple-700">
+                                {index + 1}. {child.child_full_name}
+                                {index === 0 ? ' (included in base price)' : ` (+$${EXTRA_CHILD_COST})`}
+                              </p>
+                            ))}
+                        </div>
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => {
+                            // Clear payment intent so it gets recreated with new amount
+                            setClientSecret('')
+                            setPaymentIntentId('')
+                            setAuthStep('child-selection')
+                          }}
+                          className="mt-2 p-0 h-auto text-purple-600 hover:text-purple-800"
+                        >
+                          Change selection
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  
+
                   <div className="border-t border-slate-200 pt-4 mt-auto space-y-3">
-                    {(appliedCoupon || (useGiftCard && giftCardAmountToUse > 0)) && (
+                    {(appliedCoupon || (useGiftCard && giftCardAmountToUse > 0) || (isCurrentClassMommyAndMe && extraChildren > 0)) && (
                       <>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-slate-600">Original Price</span>
+                          <span className="text-slate-600">Base Price</span>
                           <span className="text-slate-800">${selectedClassData.price.toFixed(2)}</span>
                         </div>
+                        {isCurrentClassMommyAndMe && extraChildren > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-purple-600 font-medium flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              Extra Children ({extraChildren})
+                            </span>
+                            <span className="text-purple-600 font-medium">+${getExtraChildrenCost().toFixed(2)}</span>
+                          </div>
+                        )}
                         {appliedCoupon && (
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-green-600 font-medium flex items-center gap-1">
@@ -2316,7 +2584,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               Payment Status: Authorized (On Hold)
             </h4>
             <div className="text-xs text-blue-700 space-y-1">
-              <p>Your payment of <strong>${selectedClassData?.price}</strong> is currently on hold and <strong>NOT yet charged</strong>.</p>
+              <p>Your payment of <strong>${calculateFinalPrice()}</strong> is currently on hold and <strong>NOT yet charged</strong>.</p>
               <p className="mt-2">
                 <strong>You will only be charged if:</strong> The class reaches minimum enrollment 24 hours before the start time.
               </p>
@@ -2369,71 +2637,82 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       )}
 
       {/* Child Information */}
-      {selectedChildId && parentWithChildren && (
+      {selectedChildIds.length > 0 && parentWithChildren && (
         <Card className="border-purple-200 bg-purple-50">
           <CardHeader className="pb-4">
             <CardTitle className="text-xl font-bold text-purple-800 flex items-center gap-2">
               <div className="bg-purple-100 p-2 rounded-lg">
                 <Baby className="h-5 w-5 text-purple-600" />
               </div>
-              Child Attending
+              {selectedChildIds.length > 1 ? `Children Attending (${selectedChildIds.length})` : 'Child Attending'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {(() => {
-              const child = parentWithChildren.children.find((c: Child) => c.id === selectedChildId)
-              if (!child) return null
+              const selectedChildren = parentWithChildren.children.filter((c: Child) => selectedChildIds.includes(c.id))
+              if (selectedChildren.length === 0) return null
 
               return (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-sm font-semibold text-purple-700">Child Name</span>
-                      <p className="text-purple-800 font-medium text-lg">{child.child_full_name}</p>
-                      {child.child_preferred_name && (
-                        <p className="text-sm text-purple-600">Goes by: {child.child_preferred_name}</p>
+                  {selectedChildren.map((child: Child, index: number) => (
+                    <div key={child.id} className={index > 0 ? "pt-4 border-t border-purple-200" : ""}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-sm font-semibold text-purple-700">Child Name</span>
+                          <p className="text-purple-800 font-medium text-lg">
+                            {child.child_full_name}
+                            {isCurrentClassMommyAndMe && (
+                              <span className="ml-2 text-sm font-normal text-purple-600">
+                                {index === 0 ? '(included in base price)' : '(+$70)'}
+                              </span>
+                            )}
+                          </p>
+                          {child.child_preferred_name && (
+                            <p className="text-sm text-purple-600">Goes by: {child.child_preferred_name}</p>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-sm font-semibold text-purple-700">Age</span>
+                          <p className="text-purple-800 font-medium text-lg">{child.child_age} years old</p>
+                        </div>
+                      </div>
+
+                      {/* Cooking Experience */}
+                      {child.has_cooking_experience && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <ChefHat className="h-4 w-4 text-green-700" />
+                            <span className="text-sm font-semibold text-green-800">Has Cooking Experience</span>
+                          </div>
+                          {child.cooking_experience_details && (
+                            <p className="text-sm text-green-700 ml-6">{child.cooking_experience_details}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Health & Safety Information */}
+                      {(child.allergies || child.dietary_restrictions) && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="h-4 w-4 text-yellow-700" />
+                            <span className="text-sm font-semibold text-yellow-800">Health & Safety Notes</span>
+                          </div>
+                          <div className="space-y-1 ml-6">
+                            {child.allergies && (
+                              <p className="text-sm text-yellow-800">
+                                <span className="font-medium">Allergies:</span> {child.allergies}
+                              </p>
+                            )}
+                            {child.dietary_restrictions && (
+                              <p className="text-sm text-yellow-800">
+                                <span className="font-medium">Dietary Restrictions:</span> {child.dietary_restrictions}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <div>
-                      <span className="text-sm font-semibold text-purple-700">Age</span>
-                      <p className="text-purple-800 font-medium text-lg">{child.child_age} years old</p>
-                    </div>
-                  </div>
-
-                  {/* Cooking Experience */}
-                  {child.has_cooking_experience && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <ChefHat className="h-4 w-4 text-green-700" />
-                        <span className="text-sm font-semibold text-green-800">Has Cooking Experience</span>
-                      </div>
-                      {child.cooking_experience_details && (
-                        <p className="text-sm text-green-700 ml-6">{child.cooking_experience_details}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Health & Safety Information */}
-                  {(child.allergies || child.dietary_restrictions) && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <AlertCircle className="h-4 w-4 text-yellow-700" />
-                        <span className="text-sm font-semibold text-yellow-800">Health & Safety Notes</span>
-                      </div>
-                      <div className="space-y-1 ml-6">
-                        {child.allergies && (
-                          <p className="text-sm text-yellow-800">
-                            <span className="font-medium">Allergies:</span> {child.allergies}
-                          </p>
-                        )}
-                        {child.dietary_restrictions && (
-                          <p className="text-sm text-yellow-800">
-                            <span className="font-medium">Dietary Restrictions:</span> {child.dietary_restrictions}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
               )
             })()}
@@ -2471,7 +2750,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                 </div>
                 <div>
                   <span className="text-sm font-semibold text-green-700">Amount Paid</span>
-                  <p className="text-2xl font-bold text-green-800">${selectedClassData.price}</p>
+                  <p className="text-2xl font-bold text-green-800">${calculateFinalPrice()}</p>
+                  {isCurrentClassMommyAndMe && extraChildren > 0 && (
+                    <p className="text-xs text-green-600 mt-1">
+                      Base: ${selectedClassData.price} + {extraChildren} extra child{extraChildren > 1 ? 'ren' : ''}: ${extraChildren * EXTRA_CHILD_COST}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
