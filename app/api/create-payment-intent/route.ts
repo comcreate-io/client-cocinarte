@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     });
 
     const body = await request.json();
-    const { amount, classTitle, userName, studentName, classId, classDate, classTime, userEmail } = body;
+    const { amount, classTitle, userName, studentName, classId, classDate, classTime, userEmail, extraChildren } = body;
 
-    console.log('Received payment intent request:', { amount, classTitle, classId, hasDate: !!classDate, hasTime: !!classTime });
+    console.log('Received payment intent request:', { amount, classTitle, classId, hasDate: !!classDate, hasTime: !!classTime, extraChildren: extraChildren || 0 });
 
     // Validate required fields - amount can be 0, so check for null/undefined specifically
     if (amount === null || amount === undefined || !classTitle || !classId) {
@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
         classId: classId,
         classDate: classDate || '',
         classTime: classTime || '',
+        extraChildren: String(extraChildren || 0),
       },
       // Show only credit/debit card in PaymentElement
       payment_method_types: ['card'],

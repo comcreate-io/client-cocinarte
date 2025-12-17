@@ -37,6 +37,7 @@ interface EnrolledStudent {
   payment_amount: number
   booking_date: string
   notes?: string
+  extra_children?: number
 }
 
 interface ClassStudentsPopupProps {
@@ -108,6 +109,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
           payment_amount,
           booking_date,
           notes,
+          extra_children,
           student_id,
           students (
             id,
@@ -138,7 +140,8 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
         payment_status: booking.payment_status,
         payment_amount: booking.payment_amount,
         booking_date: booking.booking_date,
-        notes: booking.notes
+        notes: booking.notes,
+        extra_children: booking.extra_children || 0
       }))
 
       setStudents(enrolledStudents)
@@ -287,7 +290,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
             </span>
             <span className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              {confirmedStudents.length}/{clase.maxStudents} enrolled
+              {confirmedStudents.reduce((sum, s) => sum + 1 + (s.extra_children || 0), 0)}/{clase.maxStudents} children
             </span>
             <span className="flex items-center gap-1">
               <DollarSign className="h-4 w-4" />
@@ -332,6 +335,12 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground font-medium">#{index + 1}</span>
                                 <h4 className="font-semibold text-lg">{student.child_name}</h4>
+                                {student.extra_children && student.extra_children > 0 && (
+                                  <Badge className="bg-purple-100 text-purple-800 text-xs">
+                                    <Users className="h-3 w-3 mr-1" />
+                                    +{student.extra_children} children
+                                  </Badge>
+                                )}
                               </div>
                               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                                 <User className="h-3 w-3" />
@@ -421,10 +430,13 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                 <div className="flex flex-wrap justify-between items-center gap-4 text-sm">
                   <div className="flex gap-4">
                     <span className="text-muted-foreground">
-                      Total Enrolled: <strong>{confirmedStudents.length}</strong>
+                      Bookings: <strong>{confirmedStudents.length}</strong>
                     </span>
                     <span className="text-muted-foreground">
-                      Available Spots: <strong>{clase.maxStudents - confirmedStudents.length}</strong>
+                      Total Children: <strong>{confirmedStudents.reduce((sum, s) => sum + 1 + (s.extra_children || 0), 0)}</strong>
+                    </span>
+                    <span className="text-muted-foreground">
+                      Available Spots: <strong>{Math.max(0, clase.maxStudents - confirmedStudents.reduce((sum, s) => sum + 1 + (s.extra_children || 0), 0))}</strong>
                     </span>
                   </div>
                   <div className="text-muted-foreground">
