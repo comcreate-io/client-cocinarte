@@ -15,7 +15,10 @@
       "Bash(git push:*)",
       "Bash(for f in app/api/*/route.ts)",
       "Bash(done)",
-      "Bash(iconv:*)"
+      "Bash(iconv:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git merge:*)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "ask": []

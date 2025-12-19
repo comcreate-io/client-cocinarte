@@ -31,9 +31,9 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
       try {
         const supabase = createClient()
         const classIds = clases.map(c => c.id)
-        
+
         if (classIds.length === 0) return
-        
+
         // Fetch bookings for all classes (including extra_children for proper counting)
         const { data: bookings, error } = await supabase
           .from('bookings')
@@ -66,18 +66,17 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
             counts[classId] = (counts[classId] || 0) + childCount
           }
         })
-        
+
         setEnrolledCounts(counts)
-        
-        // Check for cancelled classes - if all bookings for a class are cancelled, mark it as cancelled
+
+        // Check for cancelled classes - use the cancelled_at field from the class itself
         const cancelled = new Set<string>()
-        Object.entries(classBookings).forEach(([classId, bookingsForClass]) => {
-          // If there are bookings and ALL of them are cancelled, the class is cancelled
-          if (bookingsForClass.length > 0 && bookingsForClass.every(b => b.booking_status === 'cancelled')) {
-            cancelled.add(classId)
+        clases.forEach(clase => {
+          if (clase.cancelled_at) {
+            cancelled.add(clase.id)
           }
         })
-        
+
         setCancelledClasses(cancelled)
         
         // Check for charged classes - if any bookings have payment_status 'completed', the class has been charged

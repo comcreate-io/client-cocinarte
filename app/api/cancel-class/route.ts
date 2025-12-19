@@ -284,6 +284,18 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Mark the class itself as cancelled
+    const { error: updateClassError } = await supabase
+      .from('clases')
+      .update({ cancelled_at: new Date().toISOString() })
+      .eq('id', classId)
+
+    if (updateClassError) {
+      console.error('Error updating class cancelled_at:', updateClassError)
+    } else {
+      console.log('Class marked as cancelled')
+    }
+
     const summary = {
       classTitle: clase.title,
       totalBookings: enrolledBookings.length,

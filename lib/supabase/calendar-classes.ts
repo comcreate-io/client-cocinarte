@@ -26,6 +26,7 @@ export class CalendarClassesService {
       .from('clases')
       .select('*')
       .gte('date', today)
+      .is('cancelled_at', null)
       .order('date', { ascending: true });
 
     if (error) {
@@ -46,6 +47,7 @@ export class CalendarClassesService {
       .select('*')
       .gte('date', effectiveStart)
       .lte('date', endDate)
+      .is('cancelled_at', null)
       .order('date', { ascending: true });
 
     if (error) {
