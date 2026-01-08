@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -27,21 +27,35 @@ import {
   Trash2,
   Edit
 } from 'lucide-react'
-import { SignupFormData, ChildData, ParentInformation } from '@/types/student'
+import Link from 'next/link'
+import { SignupFormDataMultiChild, ChildData, ParentInformation } from '@/types/student'
+import { SignaturePad } from '@/components/consent/signature-pad'
+import {
+  SOCIAL_MEDIA_CONSENT_TEXT,
+  LIABILITY_CONSENT_TEXT,
+} from '@/types/consent'
+
+interface ConsentData {
+  socialMediaConsent: boolean
+  liabilityConsent: boolean
+  signatureDataUrl: string | null
+}
 
 interface SignupQuestionnaireMultiChildProps {
-  onComplete: (data: SignupFormData) => Promise<{ error: any }>
+  onComplete: (data: SignupFormDataMultiChild & { consentData?: Record<string, ConsentData> }) => Promise<{ error: any }>
   loading: boolean
 }
 
 export default function SignupQuestionnaireMultiChild({ onComplete, loading }: SignupQuestionnaireMultiChildProps) {
-  const [currentStep, setCurrentStep] = useState<'account' | 'parent-info' | 'children-list' | 'review'>('account')
+  const cardRef = useRef<HTMLDivElement>(null)
+  const [currentStep, setCurrentStep] = useState<'account' | 'parent-info' | 'children-list' | 'consent' | 'review'>('account')
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
 
   // Account credentials
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   // Parent information
   const [parentInfo, setParentInfo] = useState<ParentInformation>({
@@ -76,7 +90,11 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
     media_permission: false,
   })
 
-  const steps = ['account', 'parent-info', 'children-list', 'review'] as const
+  // Consent data per child (keyed by child index)
+  const [consentData, setConsentData] = useState<Record<number, ConsentData>>({})
+  const [currentConsentChildIndex, setCurrentConsentChildIndex] = useState(0)
+
+  const steps = ['account', 'parent-info', 'children-list', 'consent', 'review'] as const
   const currentStepIndex = steps.indexOf(currentStep)
   const progress = ((currentStepIndex + 1) / steps.length) * 100
 
@@ -91,6 +109,10 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
         }
         if (password.length < 6) {
           setError('Password must be at least 6 characters')
+          return false
+        }
+        if (!termsAccepted) {
+          setError('You must accept the Terms and Conditions to continue')
           return false
         }
         break
@@ -112,6 +134,21 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
           return false
         }
         break
+
+      case 'consent':
+        // Check if all children have liability consent signed
+        for (let i = 0; i < children.length; i++) {
+          const consent = consentData[i]
+          if (!consent?.liabilityConsent) {
+            setError(`Please accept the liability waiver for ${children[i].child_full_name}`)
+            return false
+          }
+          if (!consent?.signatureDataUrl) {
+            setError(`Please sign the consent form for ${children[i].child_full_name}`)
+            return false
+          }
+        }
+        break
     }
 
     return true
@@ -123,6 +160,10 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
     const nextIndex = currentStepIndex + 1
     if (nextIndex < steps.length) {
       setCurrentStep(steps[nextIndex])
+      // Scroll to top of card after step change
+      setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 0)
     }
   }
 
@@ -130,6 +171,10 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
     const prevIndex = currentStepIndex - 1
     if (prevIndex >= 0) {
       setCurrentStep(steps[prevIndex])
+      // Scroll to top of card after step change
+      setTimeout(() => {
+        cardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 0)
     }
   }
 
@@ -198,10 +243,41 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
     setError('')
   }
 
+  const handleConsentUpdate = (childIndex: number, field: keyof ConsentData, value: boolean | string | null) => {
+    setConsentData(prev => ({
+      ...prev,
+      [childIndex]: {
+        ...prev[childIndex],
+        socialMediaConsent: prev[childIndex]?.socialMediaConsent ?? false,
+        liabilityConsent: prev[childIndex]?.liabilityConsent ?? false,
+        signatureDataUrl: prev[childIndex]?.signatureDataUrl ?? null,
+        [field]: value,
+      }
+    }))
+  }
+
   const handleSubmit = async () => {
     if (!validateStep()) return
 
-    const formData: SignupFormData = {
+    // Convert consent data to use child names as keys for the API
+    const consentDataByName: Record<string, ConsentData> = {}
+    children.forEach((child, index) => {
+      const consent = consentData[index]
+      if (consent && consent.signatureDataUrl && consent.liabilityConsent) {
+        consentDataByName[child.child_full_name] = consent
+        console.log(`Adding consent for ${child.child_full_name}:`, {
+          socialMediaConsent: consent.socialMediaConsent,
+          liabilityConsent: consent.liabilityConsent,
+          hasSignature: !!consent.signatureDataUrl
+        })
+      } else {
+        console.log(`No valid consent for ${child.child_full_name}:`, consent)
+      }
+    })
+
+    console.log('Final consent data being sent:', Object.keys(consentDataByName))
+
+    const formData: SignupFormDataMultiChild & { consentData?: Record<string, ConsentData> } = {
       email,
       password,
       parentInfo: {
@@ -209,6 +285,7 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
         parent_email: email, // Ensure email matches
       },
       children,
+      consentData: consentDataByName,
     }
 
     const { error } = await onComplete(formData)
@@ -255,6 +332,30 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
+        </div>
+      </div>
+
+      <div className="flex items-start space-x-3 pt-2">
+        <Checkbox
+          id="terms_accepted_account"
+          checked={termsAccepted}
+          onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+        />
+        <div className="grid gap-1.5 leading-none">
+          <Label
+            htmlFor="terms_accepted_account"
+            className="text-sm font-normal leading-snug cursor-pointer"
+          >
+            I agree to the{' '}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="text-cocinarte-orange hover:text-cocinarte-red underline"
+            >
+              Terms and Conditions
+            </Link>
+            {' '}*
+          </Label>
         </div>
       </div>
     </div>
@@ -505,11 +606,11 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
             </div>
           </details>
 
-          {/* Pickup & Media - Collapsed */}
+          {/* Pickup Information - Collapsed */}
           <details className="border rounded-lg p-4">
             <summary className="cursor-pointer font-semibold flex items-center gap-2">
               <Car className="w-4 h-4 text-blue-500" />
-              Pick-Up & Media Permissions
+              Pick-Up Information
             </summary>
             <div className="mt-4 space-y-4">
               <div className="space-y-2">
@@ -521,24 +622,6 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
                     setCurrentChild({ ...currentChild, authorized_pickup_persons: e.target.value })
                   }
                 />
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id={`media_permission_${editingChildIndex}`}
-                  checked={currentChild.media_permission}
-                  onCheckedChange={(checked) =>
-                    setCurrentChild({ ...currentChild, media_permission: checked as boolean })
-                  }
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <Label
-                    htmlFor={`media_permission_${editingChildIndex}`}
-                    className="text-sm font-medium cursor-pointer"
-                  >
-                    Media permission for photos/videos
-                  </Label>
-                </div>
               </div>
             </div>
           </details>
@@ -581,6 +664,86 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
           </div>
         </div>
       </Card>
+    </div>
+  )
+
+  const renderConsentStep = () => (
+    <div className="space-y-6">
+      <Alert>
+        <Camera className="h-4 w-4" />
+        <AlertDescription>
+          Please read and sign the consent forms for each child. The liability waiver is required; photo/video permission is optional.
+        </AlertDescription>
+      </Alert>
+
+      {children.map((child, index) => (
+        <Card key={index} className="p-4">
+          <h3 className="font-semibold mb-4 text-lg">
+            Consent for {child.child_full_name}
+          </h3>
+
+          {/* Social Media & Video Consent */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-2">{SOCIAL_MEDIA_CONSENT_TEXT.title}</h4>
+            <p className="text-sm text-gray-600 mb-2">{SOCIAL_MEDIA_CONSENT_TEXT.intro}</p>
+            <p className="text-sm text-gray-600 mb-2">{SOCIAL_MEDIA_CONSENT_TEXT.understanding}</p>
+            <ul className="list-disc list-inside text-sm text-gray-600 mb-2 ml-2">
+              {SOCIAL_MEDIA_CONSENT_TEXT.uses.map((use, i) => (
+                <li key={i}>{use}</li>
+              ))}
+            </ul>
+            <p className="text-sm text-gray-600 font-medium mb-2">{SOCIAL_MEDIA_CONSENT_TEXT.privacy}</p>
+            <p className="text-sm text-gray-600 mb-4">{SOCIAL_MEDIA_CONSENT_TEXT.revocation}</p>
+
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id={`social-media-${index}`}
+                checked={consentData[index]?.socialMediaConsent ?? false}
+                onCheckedChange={(checked) => handleConsentUpdate(index, 'socialMediaConsent', checked as boolean)}
+              />
+              <Label htmlFor={`social-media-${index}`} className="text-sm cursor-pointer">
+                I give permission for photos and/or videos (Optional)
+              </Label>
+            </div>
+          </div>
+
+          {/* Liability Waiver */}
+          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-2">{LIABILITY_CONSENT_TEXT.title}</h4>
+            <p className="text-sm text-gray-600 mb-2">{LIABILITY_CONSENT_TEXT.intro}</p>
+            <p className="text-sm text-gray-600 mb-2">{LIABILITY_CONSENT_TEXT.risks}</p>
+            <p className="text-sm text-gray-600 mb-2">{LIABILITY_CONSENT_TEXT.release}</p>
+            <p className="text-sm text-gray-600 font-medium mb-4">{LIABILITY_CONSENT_TEXT.disclosure}</p>
+
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id={`liability-${index}`}
+                checked={consentData[index]?.liabilityConsent ?? false}
+                onCheckedChange={(checked) => handleConsentUpdate(index, 'liabilityConsent', checked as boolean)}
+              />
+              <Label htmlFor={`liability-${index}`} className="text-sm cursor-pointer">
+                I have read and agree to the Cooking Program Liability Acknowledgment <span className="text-red-500">*</span>
+              </Label>
+            </div>
+          </div>
+
+          {/* Signature */}
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold mb-2">Electronic Signature <span className="text-red-500">*</span></h4>
+            <p className="text-sm text-gray-600 mb-4">
+              By signing below, I confirm that I am the parent or legal guardian of {child.child_full_name} and have the authority to provide this consent.
+            </p>
+            <SignaturePad
+              onSignatureChange={(dataUrl) => handleConsentUpdate(index, 'signatureDataUrl', dataUrl)}
+            />
+            {consentData[index]?.signatureDataUrl && (
+              <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
+                <Check className="h-4 w-4" /> Signature captured
+              </p>
+            )}
+          </div>
+        </Card>
+      ))}
     </div>
   )
 
@@ -637,13 +800,14 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
   )
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card ref={cardRef} className="w-full max-w-2xl mx-auto">
       <CardHeader>
         <div className="mb-4">
           <CardTitle className="text-xl">
             {currentStep === 'account' && 'Create Account'}
             {currentStep === 'parent-info' && 'Parent Information'}
             {currentStep === 'children-list' && 'Add Children'}
+            {currentStep === 'consent' && 'Consent & Waivers'}
             {currentStep === 'review' && 'Review & Submit'}
           </CardTitle>
           <CardDescription>
@@ -663,6 +827,7 @@ export default function SignupQuestionnaireMultiChild({ onComplete, loading }: S
         {currentStep === 'account' && renderAccountStep()}
         {currentStep === 'parent-info' && renderParentInfoStep()}
         {currentStep === 'children-list' && renderChildrenListStep()}
+        {currentStep === 'consent' && renderConsentStep()}
         {currentStep === 'review' && renderReviewStep()}
 
         <div className="flex justify-between pt-4">

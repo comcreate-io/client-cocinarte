@@ -35,7 +35,12 @@ export class ParentsClientService {
       .single()
 
     if (error) {
-      if (error.code === 'PGRST116') {
+      // PGRST116 = no rows returned, 406 can also occur when no rows match
+      if (error.code === 'PGRST116' || error.message?.includes('406')) {
+        return null
+      }
+      // Also handle case where status is 406 (Not Acceptable - no matching rows)
+      if ((error as any).status === 406) {
         return null
       }
       throw error
@@ -69,9 +74,44 @@ export class ParentsClientService {
 
     if (childrenError) throw childrenError
 
+    // Fetch consent forms for all children (gracefully handle if table doesn't exist)
+    const childIds = (children || []).map(c => c.id)
+    let consentForms: any[] = []
+    if (childIds.length > 0) {
+      try {
+        const { data: consents, error: consentError } = await this.supabase
+          .from('consent_forms')
+          .select('*')
+          .in('child_id', childIds)
+          .is('revoked_at', null)
+          .order('signed_at', { ascending: false })
+
+        // Only use consents if no error (table might not exist yet)
+        if (!consentError) {
+          consentForms = consents || []
+        }
+      } catch (e) {
+        // Consent forms table might not exist yet, continue without it
+      }
+    }
+
+    // Create a map of child_id to latest consent form
+    const consentMap = new Map<string, any>()
+    for (const consent of consentForms) {
+      if (!consentMap.has(consent.child_id)) {
+        consentMap.set(consent.child_id, consent)
+      }
+    }
+
+    // Attach consent forms to children
+    const childrenWithConsent = (children || []).map(child => ({
+      ...child,
+      consent_form: consentMap.get(child.id) || null
+    }))
+
     return {
       ...parent,
-      children: children || []
+      children: childrenWithConsent
     }
   }
 

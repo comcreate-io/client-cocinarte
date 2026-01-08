@@ -3,14 +3,22 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
-import { SignupFormData, StudentRegistrationData } from '@/types/student'
+import { SignupFormData, SignupFormDataMultiChild, StudentRegistrationData } from '@/types/student'
+
+interface ConsentData {
+  socialMediaConsent: boolean
+  liabilityConsent: boolean
+  signatureDataUrl: string | null
+}
+
+type SignupFormDataWithConsent = SignupFormDataMultiChild & { consentData?: Record<string, ConsentData> }
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
   signUp: (email: string, password: string) => Promise<{ error: any }>
-  signUpWithStudentInfo: (formData: SignupFormData) => Promise<{ error: any }>
+  signUpWithStudentInfo: (formData: SignupFormData | SignupFormDataWithConsent) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
 }
@@ -51,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error }
   }
 
-  const signUpWithStudentInfo = async (formData: SignupFormData) => {
+  const signUpWithStudentInfo = async (formData: SignupFormData | SignupFormDataWithConsent) => {
     try {
       // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -92,7 +100,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // 3. Create child records
-      if (formData.children && formData.children.length > 0) {
+      // Handle single-child format (from signup questionnaire)
+      if ('childInfo' in formData && formData.childInfo) {
+        const childData = {
+          parent_id: parentRecord.id,
+          child_full_name: formData.childInfo.child_full_name,
+          child_age: formData.childInfo.child_age,
+          child_preferred_name: formData.childInfo.child_preferred_name,
+          has_cooking_experience: formData.childInfo.has_cooking_experience,
+          cooking_experience_details: formData.childInfo.cooking_experience_details,
+          allergies: 'healthSafety' in formData ? formData.healthSafety?.allergies : undefined,
+          dietary_restrictions: 'healthSafety' in formData ? formData.healthSafety?.dietary_restrictions : undefined,
+          medical_conditions: 'healthSafety' in formData ? formData.healthSafety?.medical_conditions : undefined,
+          emergency_medications: 'healthSafety' in formData ? formData.healthSafety?.emergency_medications : undefined,
+          additional_notes: 'healthSafety' in formData ? formData.healthSafety?.additional_notes : undefined,
+          authorized_pickup_persons: 'pickupInfo' in formData ? formData.pickupInfo?.authorized_pickup_persons : undefined,
+          custody_restrictions: 'pickupInfo' in formData ? formData.pickupInfo?.custody_restrictions : undefined,
+          media_permission: 'mediaPermission' in formData ? (formData.mediaPermission?.media_permission ?? false) : false,
+          terms_accepted: 'termsAcceptance' in formData ? (formData.termsAcceptance?.terms_accepted ?? false) : false,
+          terms_accepted_date: 'termsAcceptance' in formData ? formData.termsAcceptance?.terms_accepted_date : undefined,
+        }
+
+        const { error: childError } = await supabase
+          .from('children')
+          .insert([childData])
+
+        if (childError) {
+          console.error('Failed to create child record:', childError)
+          return { error: childError }
+        }
+      }
+      // Handle multi-child format (from multi-child questionnaire)
+      else if ('children' in formData && formData.children && formData.children.length > 0) {
         const childrenData = formData.children.map(child => ({
           parent_id: parentRecord.id,
           child_full_name: child.child_full_name,
@@ -110,13 +149,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           media_permission: child.media_permission,
         }))
 
-        const { error: childrenError } = await supabase
+        const { data: insertedChildren, error: childrenError } = await supabase
           .from('children')
           .insert(childrenData)
+          .select()
 
         if (childrenError) {
           console.error('Failed to create children records:', childrenError)
           return { error: childrenError }
+        }
+
+        // 4. Create consent forms if consent data was provided
+        const consentData = (formData as SignupFormDataWithConsent).consentData
+        if (consentData && insertedChildren) {
+          console.log('Creating consent forms for children:', insertedChildren.length)
+          console.log('Consent data keys:', Object.keys(consentData))
+
+          for (const child of insertedChildren) {
+            const childConsent = consentData[child.child_full_name]
+            console.log(`Looking for consent for "${child.child_full_name}":`, childConsent ? 'Found' : 'Not found')
+
+            if (childConsent?.signatureDataUrl && childConsent?.liabilityConsent) {
+              try {
+                console.log(`Saving consent for ${child.child_full_name}...`)
+                const response = await fetch('/api/consent/sign', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    child_id: child.id,
+                    parent_id: parentRecord.id,
+                    social_media_consent: childConsent.socialMediaConsent ?? false,
+                    liability_consent: childConsent.liabilityConsent,
+                    parent_name_signed: formData.parentInfo.parent_guardian_names,
+                    child_name_signed: child.child_full_name,
+                    signature_data_url: childConsent.signatureDataUrl,
+                  }),
+                })
+                const result = await response.json()
+                if (!result.success) {
+                  console.error(`Consent form failed for ${child.child_full_name}:`, result.error)
+                } else {
+                  console.log(`Consent form saved for ${child.child_full_name}`)
+                }
+              } catch (consentError) {
+                console.error('Failed to create consent form:', consentError)
+                // Don't fail the whole signup, just log the error
+              }
+            } else {
+              console.log(`Skipping consent for ${child.child_full_name}: signatureDataUrl=${!!childConsent?.signatureDataUrl}, liabilityConsent=${childConsent?.liabilityConsent}`)
+            }
+          }
         }
       }
 

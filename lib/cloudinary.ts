@@ -52,4 +52,3 @@ export async function deleteFromCloudinary(publicId: string): Promise<void> {
     throw new Error('Failed to delete image from Cloudinary')
   }
 }
-
