@@ -200,43 +200,43 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="relative">
-            <Search className="h-4 w-4 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search families and children..."
-              className="pl-8 w-64"
-            />
-          </div>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Search and Stats - Stack on mobile */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="relative w-full sm:w-auto">
+          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search families..."
+            className="pl-9 w-full sm:w-64"
+          />
         </div>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground text-center sm:text-right">
           {filtered.length} {filtered.length === 1 ? 'family' : 'families'} • {filtered.reduce((sum, p) => sum + (p.children?.length || 0), 0)} children
         </div>
       </div>
 
-      <div className="grid gap-4 w-full grid-cols-[repeat(auto-fill,minmax(350px,1fr))]">
+      {/* Cards Grid - Single column on mobile */}
+      <div className="grid gap-3 sm:gap-4 w-full grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
         {filtered.map((parent) => (
           <Card
             key={parent.id}
             className="cursor-pointer hover:bg-muted/30 transition-colors"
             onClick={() => openDetails(parent)}
           >
-            <CardContent className="pt-6">
-              <div className="space-y-4">
+            <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Parent Info */}
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
-                    <Users className="h-5 w-5" />
+                  <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-full bg-blue-100 text-blue-600 flex-shrink-0">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-lg">{parent.parent_guardian_names}</p>
-                    <p className="text-sm text-muted-foreground truncate">{parent.parent_email}</p>
+                    <p className="font-semibold text-base sm:text-lg leading-tight">{parent.parent_guardian_names}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">{parent.parent_email}</p>
                     {parent.parent_phone && (
-                      <p className="text-sm text-muted-foreground">{parent.parent_phone}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">{parent.parent_phone}</p>
                     )}
                   </div>
                 </div>
@@ -244,46 +244,48 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                 {/* Children Info */}
                 {parent.children && parent.children.length > 0 && (
                   <div className="border-t pt-3 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      <Baby className="h-4 w-4" />
+                    <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground">
+                      <Baby className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       Children ({parent.children.length})
                     </div>
                     <div className="space-y-2">
                       {parent.children.map((child) => (
-                        <div key={child.id} className="flex items-center justify-between text-sm bg-muted/50 p-2 rounded">
-                          <div className="flex-1">
+                        <div key={child.id} className="bg-muted/50 p-2 sm:p-2.5 rounded">
+                          {/* Child name and age row */}
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                             <span className="font-medium">{child.child_full_name}</span>
                             {child.child_preferred_name && (
-                              <span className="text-muted-foreground ml-1">({child.child_preferred_name})</span>
+                              <span className="text-muted-foreground text-xs">({child.child_preferred_name})</span>
                             )}
-                            <span className="text-muted-foreground ml-2">• Age {child.child_age}</span>
+                            <span className="text-muted-foreground text-xs">• Age {child.child_age}</span>
                           </div>
-                          <div className="flex gap-1 flex-wrap">
+                          {/* Badges row - wrap on mobile */}
+                          <div className="flex gap-1 flex-wrap mt-1.5">
                             {child.consent_form?.liability_consent ? (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                                <Shield className="h-3 w-3 mr-1" />
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] sm:text-xs h-5 sm:h-6 px-1.5 sm:px-2">
+                                <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                                 Waiver
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs">
-                                <XCircle className="h-3 w-3 mr-1" />
+                              <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-[10px] sm:text-xs h-5 sm:h-6 px-1.5 sm:px-2">
+                                <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                                 No Waiver
                               </Badge>
                             )}
                             {child.consent_form?.social_media_consent && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                                <Camera className="h-3 w-3" />
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] sm:text-xs h-5 sm:h-6 px-1.5 sm:px-2">
+                                <Camera className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                               </Badge>
                             )}
                             {child.has_cooking_experience && (
-                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                                <ChefHat className="h-3 w-3 mr-1" />
+                              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] sm:text-xs h-5 sm:h-6 px-1.5 sm:px-2">
+                                <ChefHat className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
                                 Exp
                               </Badge>
                             )}
                             {(child.allergies || child.dietary_restrictions) && (
-                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
-                                <AlertCircle className="h-3 w-3" />
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] sm:text-xs h-5 sm:h-6 px-1.5 sm:px-2">
+                                <AlertCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                               </Badge>
                             )}
                           </div>
@@ -307,59 +309,60 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
 
       {/* Details Dialog */}
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Family Details</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Family Details</DialogTitle>
           </DialogHeader>
           {selectedParent && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Parent Information */}
               <div className="space-y-3">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Parent/Guardian Information
+                <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                  <Users className="h-4 w-4 sm:h-5 sm:w-5" />
+                  Parent/Guardian
                 </h3>
-                <div className="grid gap-3 bg-muted/50 p-4 rounded-lg">
+                <div className="grid gap-2 sm:gap-3 bg-muted/50 p-3 sm:p-4 rounded-lg">
                   <div>
-                    <div className="text-sm text-muted-foreground">Name</div>
-                    <div className="font-medium">{selectedParent.parent_guardian_names}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Name</div>
+                    <div className="font-medium text-sm sm:text-base">{selectedParent.parent_guardian_names}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-muted-foreground">Email</div>
-                    <div className="font-medium">{selectedParent.parent_email}</div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">Email</div>
+                    <div className="font-medium text-sm sm:text-base break-all">{selectedParent.parent_email}</div>
                   </div>
                   {selectedParent.parent_phone && (
                     <div>
-                      <div className="text-sm text-muted-foreground">Phone</div>
-                      <div className="font-medium">{selectedParent.parent_phone}</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground">Phone</div>
+                      <div className="font-medium text-sm sm:text-base">{selectedParent.parent_phone}</div>
                     </div>
                   )}
                   {selectedParent.address && (
                     <div>
-                      <div className="text-sm text-muted-foreground">Address</div>
-                      <div className="font-medium">{selectedParent.address}</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground">Address</div>
+                      <div className="font-medium text-sm sm:text-base">{selectedParent.address}</div>
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                {/* Contact buttons - full width on mobile */}
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                   {selectedParent.parent_phone && (
                     <>
-                      <Button asChild variant="outline" size="sm">
+                      <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                         <a href={`tel:${selectedParent.parent_phone}`} aria-label="Call">
-                          <Phone className="h-4 w-4 mr-2" /> Call
+                          <Phone className="h-4 w-4 mr-1.5" /> Call
                         </a>
                       </Button>
-                      <Button asChild variant="outline" size="sm">
+                      <Button asChild variant="outline" size="sm" className="w-full sm:w-auto">
                         <a href={`sms:${selectedParent.parent_phone}`} aria-label="SMS">
-                          <Phone className="h-4 w-4 mr-2" /> SMS
+                          <Phone className="h-4 w-4 mr-1.5" /> SMS
                         </a>
                       </Button>
                     </>
                   )}
-                  <Button asChild size="sm">
+                  <Button asChild size="sm" className={`${selectedParent.parent_phone ? 'col-span-2' : 'col-span-2'} sm:w-auto`}>
                     <a href={`mailto:${selectedParent.parent_email}`} aria-label="Email">
-                      <Mail className="h-4 w-4 mr-2" /> Email
+                      <Mail className="h-4 w-4 mr-1.5" /> Email
                     </a>
                   </Button>
                 </div>
@@ -368,42 +371,42 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
               {/* Children Information */}
               {selectedParent.children && selectedParent.children.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <Baby className="h-5 w-5" />
+                  <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
+                    <Baby className="h-4 w-4 sm:h-5 sm:w-5" />
                     Children ({selectedParent.children.length})
                   </h3>
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     {selectedParent.children.map((child) => (
                       <Card key={child.id} className="border-2">
-                        <CardContent className="pt-6 space-y-3">
+                        <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6 pb-4 space-y-2 sm:space-y-3">
                           <div>
-                            <h4 className="font-semibold text-lg">{child.child_full_name}</h4>
+                            <h4 className="font-semibold text-base sm:text-lg">{child.child_full_name}</h4>
                             {child.child_preferred_name && (
-                              <p className="text-sm text-muted-foreground">Preferred name: {child.child_preferred_name}</p>
+                              <p className="text-xs sm:text-sm text-muted-foreground">Preferred: {child.child_preferred_name}</p>
                             )}
-                            <p className="text-sm text-muted-foreground">Age: {child.child_age} years old</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Age: {child.child_age}</p>
                           </div>
 
                           {/* Consent Forms Status */}
-                          <div className={`border rounded-lg p-3 ${child.consent_form ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                            <div className="flex items-center gap-2 mb-2">
-                              <FileCheck className={`h-4 w-4 ${child.consent_form ? 'text-green-700' : 'text-red-700'}`} />
-                              <span className={`text-sm font-semibold ${child.consent_form ? 'text-green-800' : 'text-red-800'}`}>
+                          <div className={`border rounded-lg p-2.5 sm:p-3 ${child.consent_form ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                              <FileCheck className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${child.consent_form ? 'text-green-700' : 'text-red-700'}`} />
+                              <span className={`text-xs sm:text-sm font-semibold ${child.consent_form ? 'text-green-800' : 'text-red-800'}`}>
                                 Consent Forms
                               </span>
                             </div>
                             {child.consent_form ? (
-                              <div className="space-y-1 ml-6">
-                                <p className="text-sm text-green-700 flex items-center gap-2">
-                                  <Shield className="h-3 w-3" />
-                                  <span className="font-medium">Liability Waiver:</span> Signed
+                              <div className="space-y-1 ml-5 sm:ml-6">
+                                <p className="text-xs sm:text-sm text-green-700 flex items-center gap-1.5 sm:gap-2">
+                                  <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+                                  <span className="font-medium">Waiver:</span> Signed
                                 </p>
-                                <p className="text-sm text-green-700 flex items-center gap-2">
-                                  <Camera className="h-3 w-3" />
-                                  <span className="font-medium">Photo/Video:</span>{' '}
-                                  {child.consent_form.social_media_consent ? 'Allowed' : 'Not Allowed'}
+                                <p className="text-xs sm:text-sm text-green-700 flex items-center gap-1.5 sm:gap-2">
+                                  <Camera className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0" />
+                                  <span className="font-medium">Photo:</span>{' '}
+                                  {child.consent_form.social_media_consent ? 'Yes' : 'No'}
                                 </p>
-                                <p className="text-xs text-green-600 mt-2">
+                                <p className="text-[10px] sm:text-xs text-green-600 mt-1.5 sm:mt-2">
                                   Signed by {child.consent_form.parent_name_signed} on{' '}
                                   {new Date(child.consent_form.signed_at).toLocaleDateString()}
                                 </p>
@@ -411,64 +414,56 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="text-xs h-7 mt-2"
+                                    className="text-[10px] sm:text-xs h-6 sm:h-7 mt-1.5 sm:mt-2 px-2 sm:px-3"
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       openContractPopup(child)
                                     }}
                                   >
-                                    <Eye className="h-3 w-3 mr-1" />
+                                    <Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                                     View Contract
                                   </Button>
                                 )}
                               </div>
                             ) : (
-                              <p className="text-sm text-red-700 ml-6">
-                                No consent forms signed. Parent needs to sign before attending classes.
+                              <p className="text-xs sm:text-sm text-red-700 ml-5 sm:ml-6">
+                                No consent signed yet.
                               </p>
                             )}
                           </div>
 
                           {/* Cooking Experience */}
                           {child.has_cooking_experience && (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-2.5 sm:p-3">
                               <div className="flex items-center gap-2 mb-1">
-                                <ChefHat className="h-4 w-4 text-green-700" />
-                                <span className="text-sm font-semibold text-green-800">Has Cooking Experience</span>
+                                <ChefHat className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-700" />
+                                <span className="text-xs sm:text-sm font-semibold text-green-800">Has Cooking Experience</span>
                               </div>
                               {child.cooking_experience_details && (
-                                <p className="text-sm text-green-700 ml-6">{child.cooking_experience_details}</p>
+                                <p className="text-xs sm:text-sm text-green-700 ml-5 sm:ml-6">{child.cooking_experience_details}</p>
                               )}
                             </div>
                           )}
 
                           {/* Health & Safety Information */}
                           {(child.allergies || child.dietary_restrictions || child.medical_conditions || child.emergency_medications) && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                <AlertCircle className="h-4 w-4 text-yellow-700" />
-                                <span className="text-sm font-semibold text-yellow-800">Health & Safety Information</span>
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2.5 sm:p-3">
+                              <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                                <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-yellow-700" />
+                                <span className="text-xs sm:text-sm font-semibold text-yellow-800">Health & Safety</span>
                               </div>
-                              <div className="space-y-1 ml-6">
+                              <div className="space-y-1 ml-5 sm:ml-6 text-xs sm:text-sm text-yellow-800">
                                 {child.allergies && (
-                                  <p className="text-sm text-yellow-800">
-                                    <span className="font-medium">Allergies:</span> {child.allergies}
-                                  </p>
+                                  <p><span className="font-medium">Allergies:</span> {child.allergies}</p>
                                 )}
                                 {child.dietary_restrictions && (
-                                  <p className="text-sm text-yellow-800">
-                                    <span className="font-medium">Dietary Restrictions:</span> {child.dietary_restrictions}
-                                  </p>
+                                  <p><span className="font-medium">Diet:</span> {child.dietary_restrictions}</p>
                                 )}
                                 {child.medical_conditions && (
-                                  <p className="text-sm text-yellow-800">
-                                    <span className="font-medium">Medical Conditions:</span> {child.medical_conditions}
-                                  </p>
+                                  <p><span className="font-medium">Medical:</span> {child.medical_conditions}</p>
                                 )}
                                 {child.emergency_medications && (
-                                  <p className="text-sm text-yellow-800">
-                                    <span className="font-medium">Emergency Medications:</span> {child.emergency_medications}
-                                  </p>
+                                  <p><span className="font-medium">Meds:</span> {child.emergency_medications}</p>
                                 )}
                               </div>
                             </div>
@@ -481,39 +476,39 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
               )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+          <DialogFooter className="pt-2 sm:pt-0">
+            <Button variant="outline" onClick={() => setIsDetailsOpen(false)} className="w-full sm:w-auto">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Contract Popup Dialog */}
       <Dialog open={isContractOpen} onOpenChange={setIsContractOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Consent Form Contract</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Consent Form Contract</DialogTitle>
           </DialogHeader>
           {selectedChild && selectedChild.consent_form && (
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Child Info */}
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <h3 className="font-semibold text-lg mb-2">{selectedChild.child_full_name}</h3>
+              <div className="bg-muted/50 p-3 sm:p-4 rounded-lg">
+                <h3 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2">{selectedChild.child_full_name}</h3>
                 {selectedChild.child_preferred_name && (
-                  <p className="text-sm text-muted-foreground">Preferred Name: {selectedChild.child_preferred_name}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Preferred: {selectedChild.child_preferred_name}</p>
                 )}
-                <p className="text-sm text-muted-foreground">Age: {selectedChild.child_age} years old</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Age: {selectedChild.child_age}</p>
               </div>
 
               {/* Social Media Consent Section */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                  <Camera className="h-5 w-5 text-blue-600" />
-                  {SOCIAL_MEDIA_CONSENT_TEXT.title}
+              <div className="border rounded-lg p-3 sm:p-4">
+                <h3 className="font-semibold text-sm sm:text-lg mb-2 sm:mb-3 flex items-center gap-2">
+                  <Camera className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                  <span className="leading-tight">{SOCIAL_MEDIA_CONSENT_TEXT.title}</span>
                 </h3>
-                <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-muted-foreground">
                   <p>{SOCIAL_MEDIA_CONSENT_TEXT.intro}</p>
                   <p>{SOCIAL_MEDIA_CONSENT_TEXT.understanding}</p>
-                  <ul className="list-disc list-inside ml-2 space-y-1">
+                  <ul className="list-disc list-inside ml-1 sm:ml-2 space-y-1">
                     {SOCIAL_MEDIA_CONSENT_TEXT.uses.map((use, index) => (
                       <li key={index}>{use}</li>
                     ))}
@@ -521,63 +516,64 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                   <p className="font-medium text-foreground">{SOCIAL_MEDIA_CONSENT_TEXT.privacy}</p>
                   <p>{SOCIAL_MEDIA_CONSENT_TEXT.revocation}</p>
                 </div>
-                <div className={`mt-4 p-3 rounded-lg ${selectedChild.consent_form.social_media_consent ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
-                  <p className={`text-sm font-semibold ${selectedChild.consent_form.social_media_consent ? 'text-green-700' : 'text-gray-700'}`}>
-                    Social Media Consent: {selectedChild.consent_form.social_media_consent ? 'GRANTED' : 'NOT GRANTED'}
+                <div className={`mt-3 sm:mt-4 p-2.5 sm:p-3 rounded-lg ${selectedChild.consent_form.social_media_consent ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+                  <p className={`text-xs sm:text-sm font-semibold ${selectedChild.consent_form.social_media_consent ? 'text-green-700' : 'text-gray-700'}`}>
+                    Social Media: {selectedChild.consent_form.social_media_consent ? 'GRANTED' : 'NOT GRANTED'}
                   </p>
                 </div>
               </div>
 
               {/* Liability Waiver Section */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                  <Shield className="h-5 w-5 text-green-600" />
-                  {LIABILITY_CONSENT_TEXT.title}
+              <div className="border rounded-lg p-3 sm:p-4">
+                <h3 className="font-semibold text-sm sm:text-lg mb-2 sm:mb-3 flex items-center gap-2">
+                  <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+                  <span className="leading-tight">{LIABILITY_CONSENT_TEXT.title}</span>
                 </h3>
-                <div className="space-y-3 text-sm text-muted-foreground">
+                <div className="space-y-2 sm:space-y-3 text-xs sm:text-sm text-muted-foreground">
                   <p>{LIABILITY_CONSENT_TEXT.intro}</p>
                   <p>{LIABILITY_CONSENT_TEXT.risks}</p>
                   <p>{LIABILITY_CONSENT_TEXT.release}</p>
                   <p className="font-medium text-foreground">{LIABILITY_CONSENT_TEXT.disclosure}</p>
                 </div>
-                <div className="mt-4 p-3 rounded-lg bg-green-50 border border-green-200">
-                  <p className="text-sm font-semibold text-green-700">
+                <div className="mt-3 sm:mt-4 p-2.5 sm:p-3 rounded-lg bg-green-50 border border-green-200">
+                  <p className="text-xs sm:text-sm font-semibold text-green-700">
                     Liability Waiver: ACCEPTED
                   </p>
                 </div>
               </div>
 
               {/* Signature Section */}
-              <div className="border rounded-lg p-4">
-                <h3 className="font-semibold text-lg mb-3">Signature</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="text-muted-foreground">Parent/Guardian Name:</span> <span className="font-medium">{selectedChild.consent_form.parent_name_signed}</span></p>
-                  <p><span className="text-muted-foreground">Date Signed:</span> <span className="font-medium">{new Date(selectedChild.consent_form.signed_at).toLocaleDateString()}</span></p>
+              <div className="border rounded-lg p-3 sm:p-4">
+                <h3 className="font-semibold text-sm sm:text-lg mb-2 sm:mb-3">Signature</h3>
+                <div className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm">
+                  <p><span className="text-muted-foreground">Parent:</span> <span className="font-medium">{selectedChild.consent_form.parent_name_signed}</span></p>
+                  <p><span className="text-muted-foreground">Date:</span> <span className="font-medium">{new Date(selectedChild.consent_form.signed_at).toLocaleDateString()}</span></p>
                 </div>
                 {selectedChild.consent_form.signature_url && (
-                  <div className="mt-4 p-4 bg-white border rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-2">Signature:</p>
+                  <div className="mt-3 sm:mt-4 p-3 sm:p-4 bg-white border rounded-lg">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mb-1.5 sm:mb-2">Signature:</p>
                     <img
                       src={selectedChild.consent_form.signature_url}
                       alt="Signature"
-                      className="max-h-24 object-contain"
+                      className="max-h-16 sm:max-h-24 object-contain"
                     />
                   </div>
                 )}
               </div>
             </div>
           )}
-          <DialogFooter className="flex gap-2">
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2 sm:pt-0">
             <Button
               variant="outline"
               onClick={() => setIsContractOpen(false)}
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               Close
             </Button>
             {selectedChild && selectedChild.consent_form && (
               <Button
                 onClick={() => generatePDF(selectedChild)}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto order-1 sm:order-2"
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
