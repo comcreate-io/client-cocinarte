@@ -50,6 +50,8 @@ export async function updateSession(request: NextRequest) {
     '/landing',
     '/login',
     '/programs',
+    '/signup',
+    '/terms',
     '/tuition',
   ]
 

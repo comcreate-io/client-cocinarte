@@ -29,6 +29,7 @@ export default function CocinarteFooter() {
               <li><Link href="#faq" className="text-cocinarte-blue hover:text-cocinarte-yellow transition-colors">FAQ</Link></li>
               <li><Link href="#birthday-parties" className="text-cocinarte-blue hover:text-cocinarte-yellow transition-colors">Birthday Parties</Link></li>
               <li><Link href="#private-events" className="text-cocinarte-blue hover:text-cocinarte-yellow transition-colors">Private Events</Link></li>
+              <li><Link href="/terms" className="text-cocinarte-blue hover:text-cocinarte-yellow transition-colors">Terms & Conditions</Link></li>
             </ul>
           </div>
           

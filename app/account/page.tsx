@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { User, Mail, Phone, LogOut, Users, Gift, ArrowLeft } from 'lucide-react'
 import GiftCardBalance from '@/components/gift-cards/gift-card-balance'
+import ConsentManagement from '@/components/account/consent-management'
 import Link from 'next/link'
 
 export default function AccountPage() {
@@ -169,6 +170,13 @@ export default function AccountPage() {
           {/* Children Management */}
           <ChildrenManagement
             parentId={parentData.id}
+            onUpdate={loadParentData}
+          />
+
+          {/* Consent Forms */}
+          <ConsentManagement
+            parentId={parentData.id}
+            parentName={parentData.parent_guardian_names}
             onUpdate={loadParentData}
           />
 

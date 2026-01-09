@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Mail, Lock, Eye, EyeOff, LogIn, UserPlus, ArrowLeft } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import SignupQuestionnaireMultiChild from '../auth/signup-questionnaire-multi-child'
-import { SignupFormData } from '@/types/student'
+import { SignupFormDataMultiChild } from '@/types/student'
 
 interface AuthPopupProps {
   isOpen: boolean
@@ -111,7 +111,7 @@ export default function CocinarteAuthPopup({ isOpen, onClose }: AuthPopupProps) 
     setAuthLoading(false)
   }
 
-  const handleQuestionnaireComplete = async (formData: SignupFormData) => {
+  const handleQuestionnaireComplete = async (formData: SignupFormDataMultiChild) => {
     setAuthLoading(true)
     setAuthError('')
     setAuthMessage('')
