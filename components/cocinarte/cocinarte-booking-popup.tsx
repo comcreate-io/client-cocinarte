@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift, Shield, FileCheck } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
 import { StudentsClientService } from "@/lib/supabase/students-client"
@@ -20,8 +20,12 @@ import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import StripePaymentForm from './stripe-payment-form'
 import SignupQuestionnaireMultiChild from '../auth/signup-questionnaire-multi-child'
-import { SignupFormData, ParentWithChildren, Child } from '@/types/student'
+import { SignupFormData, SignupFormDataMultiChild, ParentWithChildren, Child } from '@/types/student'
 import GiftCardBalance from '@/components/gift-cards/gift-card-balance'
+import ConsentManagement from '@/components/account/consent-management'
+import { SignaturePad } from '@/components/consent/signature-pad'
+import { SOCIAL_MEDIA_CONSENT_TEXT, LIABILITY_CONSENT_TEXT } from '@/types/consent'
+import { Checkbox } from '@/components/ui/checkbox'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
@@ -85,6 +89,23 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [childFormData, setChildFormData] = useState<Partial<Child>>({})
   const [childrenBookings, setChildrenBookings] = useState<{ [key: string]: any[] }>({})
+
+  // Consent form states for Add Child dialog
+  const [showConsentDialog, setShowConsentDialog] = useState(false)
+  const [consentSignature, setConsentSignature] = useState<string | null>(null)
+  const [consentSocialMedia, setConsentSocialMedia] = useState(false)
+  const [consentLiability, setConsentLiability] = useState(false)
+  const [consentParentName, setConsentParentName] = useState('')
+  const [consentChildName, setConsentChildName] = useState('')
+  const [consentSigning, setConsentSigning] = useState(false)
+  // Store pending consent data for new children (not yet saved to DB)
+  const [pendingConsentData, setPendingConsentData] = useState<{
+    socialMediaConsent: boolean
+    liabilityConsent: boolean
+    parentNameSigned: string
+    childNameSigned: string
+    signatureDataUrl: string
+  } | null>(null)
 
   // Extra children pricing for Mommy & Me classes
   const EXTRA_CHILD_COST = 70 // Cost per extra child
@@ -1217,7 +1238,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     </div>
   )
 
-  const handleQuestionnaireComplete = async (formData: SignupFormData) => {
+  const handleQuestionnaireComplete = async (formData: SignupFormDataMultiChild) => {
     setAuthLoading(true)
     setAuthError('')
     setAuthMessage('')
@@ -2022,7 +2043,10 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   }
 
   const handleSaveChild = async () => {
+    console.log('handleSaveChild called', { childFormData, editingChildId })
+
     if (!childFormData.child_full_name || !childFormData.child_age) {
+      console.log('Validation failed - missing required fields')
       setAuthError('Please fill in all required fields')
       setTimeout(() => setAuthError(''), 3000)
       return
@@ -2032,8 +2056,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       const parentsService = new ParentsClientService()
 
       if (editingChildId) {
-        // Update existing child
-        await parentsService.updateChild(editingChildId, childFormData)
+        // Update existing child - remove consent_form as it's a joined object, not a column
+        const { consent_form, id, parent_id, created_at, updated_at, ...updateData } = childFormData as any
+        console.log('Updating child:', editingChildId, updateData)
+        await parentsService.updateChild(editingChildId, updateData)
+        console.log('Child updated successfully')
         setAuthMessage('Child updated successfully')
       } else {
         // Add new child
@@ -2041,15 +2068,41 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           setAuthError('Parent information not found')
           return
         }
-        await parentsService.addChild(parentWithChildren.id, childFormData as Child)
+        const newChild = await parentsService.addChild(parentWithChildren.id, childFormData as Child)
+
+        // If we have pending consent data, save it now that we have the child ID
+        if (pendingConsentData && newChild.id) {
+          try {
+            await fetch('/api/consent/sign', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                child_id: newChild.id,
+                parent_id: parentWithChildren.id,
+                social_media_consent: pendingConsentData.socialMediaConsent,
+                liability_consent: pendingConsentData.liabilityConsent,
+                parent_name_signed: pendingConsentData.parentNameSigned,
+                child_name_signed: pendingConsentData.childNameSigned,
+                signature_data_url: pendingConsentData.signatureDataUrl,
+              }),
+            })
+          } catch (consentError) {
+            console.error('Error saving consent form:', consentError)
+            // Don't fail the child creation, just log the error
+          }
+        }
+
         setAuthMessage('Child added successfully')
       }
 
-      // Reset form and refresh data
+      // Close form immediately
       setIsAddingChild(false)
       setEditingChildId(null)
       setChildFormData({})
-      await fetchStudentProfile()
+      setPendingConsentData(null)
+
+      // Then refresh data in background
+      fetchStudentProfile()
       setTimeout(() => setAuthMessage(''), 3000)
     } catch (error) {
       console.error('Error saving child:', error)
@@ -2062,6 +2115,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     setIsAddingChild(false)
     setEditingChildId(null)
     setChildFormData({})
+    setPendingConsentData(null)
   }
 
   const renderAccount = () => (
@@ -2096,9 +2150,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                   </div>
                   <div>
                     <span className="text-sm font-semibold text-blue-700">Account Status</span>
-                    <p className="text-blue-900 font-medium">
+                    <div className="text-blue-900 font-medium">
                       <Badge variant="default" className="bg-green-600">Active</Badge>
-                    </p>
+                    </div>
                   </div>
                   <div>
                     <span className="text-sm font-semibold text-blue-700">Member Since</span>
@@ -2181,21 +2235,24 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               <div className="border-t border-blue-200 pt-4"></div>
 
               {/* Children Information */}
-              {parentWithChildren && parentWithChildren.children && parentWithChildren.children.length > 0 ? (
+              {parentWithChildren ? (
+                parentWithChildren.children && parentWithChildren.children.length > 0 ? (
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
                       <Baby className="h-5 w-5" />
                       My Children ({parentWithChildren.children.length})
                     </h3>
-                    <Button
-                      onClick={handleAddChild}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Child
-                    </Button>
+                    {!isAddingChild && !editingChildId && (
+                      <Button
+                        onClick={handleAddChild}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add Child
+                      </Button>
+                    )}
                   </div>
                   <div className="space-y-4">
                     {parentWithChildren.children.map((child: Child) => (
@@ -2233,25 +2290,33 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                               </div>
 
                               {/* Badges - stacked on mobile, horizontal on desktop */}
-                              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+                              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 flex-wrap items-start sm:items-center">
                                 <Badge variant="outline" className="bg-blue-50 w-fit">
                                   Age: {child.child_age}
                                 </Badge>
+                                {(child as any).consent_form?.liability_consent ? (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    Consent Signed
+                                    {(child as any).consent_form?.social_media_consent && (
+                                      <span className="ml-1">(+Media)</span>
+                                    )}
+                                  </Badge>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2 text-xs border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
+                                    onClick={() => handleEditChild(child)}
+                                  >
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Sign Consent Required
+                                  </Button>
+                                )}
                                 {child.has_cooking_experience && (
                                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">
                                     <ChefHat className="h-3 w-3 mr-1" />
-                                    Has cooking experience
-                                  </Badge>
-                                )}
-                                {child.media_permission ? (
-                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 w-fit">
-                                    <Camera className="h-3 w-3 mr-1" />
-                                    Media OK
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 w-fit">
-                                    <Camera className="h-3 w-3 mr-1" />
-                                    No media
+                                    Cooking Exp
                                   </Badge>
                                 )}
                               </div>
@@ -2396,20 +2461,33 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <Alert className="border-yellow-200 bg-yellow-50">
-                    <AlertDescription className="text-yellow-800">
-                      No children found. Please add children information to your account.
-                    </AlertDescription>
-                  </Alert>
-                  <Button
-                    onClick={handleAddChild}
-                    className="w-full bg-green-600 hover:bg-green-700"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Your First Child
-                  </Button>
+                  {!isAddingChild && (
+                    <>
+                      <Alert className="border-yellow-200 bg-yellow-50">
+                        <AlertDescription className="text-yellow-800">
+                          No children found. Please add children information to your account.
+                        </AlertDescription>
+                      </Alert>
+                      <Button
+                        onClick={handleAddChild}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Add Your First Child
+                      </Button>
+                    </>
+                  )}
                 </div>
+                )
+              ) : (
+                <Alert className="border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-800">
+                    No parent profile found. Please complete your registration.
+                  </AlertDescription>
+                </Alert>
               )}
+
+              {/* Consent status is shown in each child's badges above - click "Edit" on a child to update consent */}
 
               {/* Child Form for Add/Edit */}
               {(isAddingChild || editingChildId) && (
@@ -2501,16 +2579,138 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                       </div>
                     )}
 
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="checkbox"
-                        id="media_permission"
-                        checked={childFormData.media_permission || false}
-                        onChange={(e) => setChildFormData({ ...childFormData, media_permission: e.target.checked })}
-                        className="h-4 w-4"
-                      />
-                      <Label htmlFor="media_permission">Media permission (photos/videos)</Label>
-                    </div>
+                    {/* Consent Form Section */}
+                    {(() => {
+                      // Determine if consent has been signed
+                      const existingChild = editingChildId
+                        ? parentWithChildren?.children?.find(c => c.id === editingChildId)
+                        : null
+                      const hasExistingConsent = existingChild && (existingChild as any).consent_form?.liability_consent
+                      const hasPendingConsent = pendingConsentData?.liabilityConsent
+                      const hasConsent = hasExistingConsent || hasPendingConsent
+                      const currentSocialMediaConsent = hasPendingConsent
+                        ? pendingConsentData?.socialMediaConsent
+                        : (existingChild as any)?.consent_form?.social_media_consent
+
+                      // For new children (no existing consent)
+                      if (!hasConsent) {
+                        return (
+                          <div className="border rounded-lg p-3 bg-yellow-50/50 border-yellow-200">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Shield className="h-4 w-4 text-yellow-600" />
+                                <Label className="font-medium text-yellow-800">Consent Form (Required)</Label>
+                              </div>
+                              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                Not Signed
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-yellow-700 mt-2">
+                              Consent form includes liability waiver (required) and optional media permission.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="mt-2 text-yellow-700 border-yellow-300 hover:bg-yellow-100"
+                              onClick={() => {
+                                setConsentChildName(childFormData.child_full_name || '')
+                                setConsentParentName(parentWithChildren?.parent_guardian_names || '')
+                                setConsentSocialMedia(false)
+                                setConsentLiability(false)
+                                setConsentSignature(null)
+                                setShowConsentDialog(true)
+                              }}
+                            >
+                              <FileCheck className="h-4 w-4 mr-2" />
+                              Sign Consent Form
+                            </Button>
+                          </div>
+                        )
+                      }
+
+                      // For existing consent - show toggle for media permission
+                      return (
+                        <div className="border rounded-lg p-3 bg-green-50/50 border-green-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-green-600" />
+                              <Label className="font-medium text-green-800">Consent Form</Label>
+                            </div>
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Waiver Signed
+                            </Badge>
+                          </div>
+
+                          {/* Media Permission Toggle */}
+                          <div className="flex items-center justify-between p-2 bg-white rounded border">
+                            <div className="flex items-center gap-2">
+                              <Camera className="h-4 w-4 text-gray-500" />
+                              <span className="text-sm text-gray-700">Allow photos/videos</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (currentSocialMediaConsent) {
+                                  // Turning OFF - no signature needed, just update directly
+                                  if (editingChildId && existingChild) {
+                                    try {
+                                      const response = await fetch('/api/consent/update-media', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                          child_id: editingChildId,
+                                          social_media_consent: false,
+                                        }),
+                                      })
+                                      const result = await response.json()
+                                      if (result.success) {
+                                        // Refresh parent data
+                                        if (user?.email) {
+                                          const parentsService = new ParentsClientService()
+                                          const updatedParent = await parentsService.getParentWithChildrenByEmail(user.email)
+                                          if (updatedParent) {
+                                            setParentWithChildren(updatedParent)
+                                          }
+                                        }
+                                      }
+                                    } catch (err) {
+                                      console.error('Failed to update media consent:', err)
+                                    }
+                                  } else if (pendingConsentData) {
+                                    setPendingConsentData({ ...pendingConsentData, socialMediaConsent: false })
+                                  }
+                                } else {
+                                  // Turning ON - need new signature
+                                  setConsentChildName(childFormData.child_full_name || '')
+                                  setConsentParentName(parentWithChildren?.parent_guardian_names || '')
+                                  setConsentSocialMedia(true)
+                                  setConsentLiability(true)
+                                  setConsentSignature(null)
+                                  setShowConsentDialog(true)
+                                }
+                              }}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                currentSocialMediaConsent ? 'bg-green-500' : 'bg-gray-300'
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  currentSocialMediaConsent ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {currentSocialMediaConsent
+                              ? 'Photos/videos allowed for social media & marketing'
+                              : 'Turn on to allow photos/videos (requires new signature)'}
+                          </p>
+                        </div>
+                      )
+                    })()}
 
                     <div className="flex gap-3 justify-end">
                       <Button
@@ -2815,6 +3015,242 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         ) : null}
         </div>
       </DialogContent>
+
+      {/* Consent Form Dialog */}
+      <Dialog open={showConsentDialog} onOpenChange={setShowConsentDialog}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileCheck className="h-5 w-5 text-blue-600" />
+              Consent Form for {consentChildName || 'Child'}
+            </DialogTitle>
+            <DialogDescription>
+              Please review and sign the consent forms below
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Social Media & Video Consent */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Camera className="h-5 w-5 text-blue-600" />
+                  {SOCIAL_MEDIA_CONSENT_TEXT.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {SOCIAL_MEDIA_CONSENT_TEXT.intro}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {SOCIAL_MEDIA_CONSENT_TEXT.understanding}
+                </p>
+                <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 ml-2">
+                  {SOCIAL_MEDIA_CONSENT_TEXT.uses.map((use, index) => (
+                    <li key={index}>{use}</li>
+                  ))}
+                </ul>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {SOCIAL_MEDIA_CONSENT_TEXT.privacy}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {SOCIAL_MEDIA_CONSENT_TEXT.revocation}
+                </p>
+
+                <div className="flex items-start space-x-3 pt-2 border-t">
+                  <Checkbox
+                    id="consent-social-media"
+                    checked={consentSocialMedia}
+                    onCheckedChange={(checked) => setConsentSocialMedia(checked === true)}
+                  />
+                  <Label
+                    htmlFor="consent-social-media"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    I give permission for my child to participate in photos and/or videos
+                    <span className="text-muted-foreground font-normal block mt-1">
+                      (Optional - you can change this at any time)
+                    </span>
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Liability Waiver */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-green-600" />
+                  {LIABILITY_CONSENT_TEXT.title}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  {LIABILITY_CONSENT_TEXT.intro}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {LIABILITY_CONSENT_TEXT.risks}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {LIABILITY_CONSENT_TEXT.release}
+                </p>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {LIABILITY_CONSENT_TEXT.disclosure}
+                </p>
+
+                <div className="flex items-start space-x-3 pt-2 border-t">
+                  <Checkbox
+                    id="consent-liability"
+                    checked={consentLiability}
+                    onCheckedChange={(checked) => setConsentLiability(checked === true)}
+                    required
+                  />
+                  <Label
+                    htmlFor="consent-liability"
+                    className="text-sm font-medium leading-none cursor-pointer"
+                  >
+                    I have read and agree to the Cooking Program Liability Acknowledgment
+                    <span className="text-destructive ml-1">*</span>
+                  </Label>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Signature Section */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Electronic Signature</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="consent-parent-name">
+                      Parent/Guardian Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="consent-parent-name"
+                      value={consentParentName}
+                      onChange={(e) => setConsentParentName(e.target.value)}
+                      placeholder="Enter your full name"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="consent-child-name">
+                      Child&apos;s Name <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="consent-child-name"
+                      value={consentChildName}
+                      onChange={(e) => setConsentChildName(e.target.value)}
+                      placeholder="Enter child's full name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Signature <span className="text-destructive">*</span></Label>
+                  <SignaturePad onSignatureChange={setConsentSignature} />
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  By signing above, I confirm that I am the parent or legal guardian of the child
+                  named and have the authority to provide this consent. Today&apos;s date:{' '}
+                  {new Date().toLocaleDateString()}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="flex gap-3 justify-end pt-4 border-t">
+            <Button
+              variant="outline"
+              onClick={() => setShowConsentDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                // Validate form
+                if (!consentLiability) {
+                  alert('Please accept the liability waiver to continue')
+                  return
+                }
+                if (!consentParentName.trim() || !consentChildName.trim()) {
+                  alert('Please enter both parent and child names')
+                  return
+                }
+                if (!consentSignature) {
+                  alert('Please provide your signature')
+                  return
+                }
+
+                setConsentSigning(true)
+
+                try {
+                  // If we have a parent ID and this is for an existing child, save to database immediately
+                  if (parentWithChildren?.id && editingChildId) {
+                    const response = await fetch('/api/consent/sign', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        child_id: editingChildId,
+                        parent_id: parentWithChildren.id,
+                        social_media_consent: consentSocialMedia,
+                        liability_consent: consentLiability,
+                        parent_name_signed: consentParentName.trim(),
+                        child_name_signed: consentChildName.trim(),
+                        signature_data_url: consentSignature,
+                      }),
+                    })
+
+                    if (!response.ok) {
+                      throw new Error('Failed to save consent form')
+                    }
+
+                    // Refresh parent data to show updated consent status
+                    if (user?.email) {
+                      const parentsService = new ParentsClientService()
+                      const updatedParent = await parentsService.getParentWithChildrenByEmail(user.email)
+                      if (updatedParent) {
+                        setParentWithChildren(updatedParent)
+                      }
+                    }
+                  } else {
+                    // For new children, store consent data to be saved after child is created
+                    setPendingConsentData({
+                      socialMediaConsent: consentSocialMedia,
+                      liabilityConsent: consentLiability,
+                      parentNameSigned: consentParentName.trim(),
+                      childNameSigned: consentChildName.trim(),
+                      signatureDataUrl: consentSignature,
+                    })
+                  }
+
+                  // Update child form data with consent info
+                  setChildFormData({
+                    ...childFormData,
+                    media_permission: consentSocialMedia,
+                  })
+
+                  // Close dialog
+                  setShowConsentDialog(false)
+                } catch (error) {
+                  console.error('Error saving consent:', error)
+                  alert('Failed to save consent form. Please try again.')
+                } finally {
+                  setConsentSigning(false)
+                }
+              }}
+              disabled={!consentLiability || !consentParentName.trim() || !consentChildName.trim() || !consentSignature || consentSigning}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {consentSigning ? 'Saving...' : 'Sign & Save Consent'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }

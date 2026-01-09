@@ -22,8 +22,11 @@ import {
   Eye,
   EyeOff,
   Mail,
-  Lock
+  Lock,
+  FileText,
+  ExternalLink
 } from 'lucide-react'
+import Link from 'next/link'
 import { SignupFormData, SignupStep } from '@/types/student'
 
 interface SignupQuestionnaireProps {
@@ -69,6 +72,10 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
     mediaPermission: {
       media_permission: false,
     },
+    termsAcceptance: {
+      terms_accepted: false,
+      terms_accepted_date: '',
+    },
   })
 
   const steps: SignupStep[] = [
@@ -78,6 +85,7 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
     'parent-info',
     'pickup-info',
     'media-permission',
+    'terms-acceptance',
     'review',
   ]
 
@@ -88,6 +96,8 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
     'parent-info': 'Parent Information',
     'pickup-info': 'Pick-Up Information',
     'media-permission': 'Media Permission',
+    'terms-acceptance': 'Terms & Conditions',
+    'children-list': 'Children',
     'review': 'Review & Submit',
   }
 
@@ -98,6 +108,8 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
     'parent-info': <Users className="w-5 h-5" />,
     'pickup-info': <Car className="w-5 h-5" />,
     'media-permission': <Camera className="w-5 h-5" />,
+    'terms-acceptance': <FileText className="w-5 h-5" />,
+    'children-list': <Users className="w-5 h-5" />,
     'review': <Check className="w-5 h-5" />,
   }
 
@@ -115,6 +127,10 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
         }
         if (formData.password.length < 6) {
           setError('Password must be at least 6 characters')
+          return false
+        }
+        if (!formData.termsAcceptance.terms_accepted) {
+          setError('You must accept the Terms and Conditions to continue')
           return false
         }
         break
@@ -141,6 +157,13 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
         }
         if (!formData.parentInfo.parent_email) {
           setError('Email is required')
+          return false
+        }
+        break
+
+      case 'terms-acceptance':
+        if (!formData.termsAcceptance.terms_accepted) {
+          setError('You must accept the Terms & Conditions to continue')
           return false
         }
         break
@@ -215,6 +238,38 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3 pt-2">
+              <Checkbox
+                id="terms_accepted_account"
+                checked={formData.termsAcceptance.terms_accepted}
+                onCheckedChange={(checked) =>
+                  setFormData({
+                    ...formData,
+                    termsAcceptance: {
+                      terms_accepted: checked as boolean,
+                      terms_accepted_date: checked ? new Date().toISOString() : '',
+                    },
+                  })
+                }
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label
+                  htmlFor="terms_accepted_account"
+                  className="text-sm font-normal leading-snug cursor-pointer"
+                >
+                  I agree to the{' '}
+                  <Link
+                    href="/terms"
+                    target="_blank"
+                    className="text-cocinarte-orange hover:text-cocinarte-red underline"
+                  >
+                    Terms and Conditions
+                  </Link>
+                  {' '}*
+                </Label>
               </div>
             </div>
           </div>
@@ -615,6 +670,72 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
           </div>
         )
 
+      case 'terms-acceptance':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-cocinarte-orange/10 p-4">
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-cocinarte-orange" />
+                Terms & Conditions
+              </h3>
+              <p className="text-sm text-gray-700 mb-4">
+                Before completing enrollment, please review and accept our Terms & Conditions.
+                These cover important information about:
+              </p>
+              <ul className="text-sm text-gray-700 space-y-1 ml-4 list-disc">
+                <li>Program overview and safety guidelines</li>
+                <li>Assumption of risk and liability release</li>
+                <li>Medical information and allergy disclosure</li>
+                <li>Behavior expectations and supervision</li>
+                <li>Photo/video usage policies</li>
+                <li>Payment and refund policies</li>
+              </ul>
+            </div>
+
+            <div className="rounded-lg border p-4 bg-white">
+              <Link
+                href="/terms"
+                target="_blank"
+                className="flex items-center gap-2 text-cocinarte-orange hover:text-cocinarte-red font-medium transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Read Full Terms & Conditions
+              </Link>
+              <p className="text-xs text-gray-500 mt-1">
+                Opens in a new tab
+              </p>
+            </div>
+
+            <div className="flex items-start space-x-3 p-4 border rounded-lg border-cocinarte-orange/30 bg-cocinarte-orange/5">
+              <Checkbox
+                id="terms_accepted"
+                checked={formData.termsAcceptance.terms_accepted}
+                onCheckedChange={(checked) =>
+                  setFormData({
+                    ...formData,
+                    termsAcceptance: {
+                      terms_accepted: checked as boolean,
+                      terms_accepted_date: checked ? new Date().toISOString() : '',
+                    },
+                  })
+                }
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label
+                  htmlFor="terms_accepted"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  I have read and agree to the Terms & Conditions *
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  By checking this box, I confirm that I am the legal parent or guardian of the enrolled child,
+                  I have read and understood the Terms & Conditions, and I voluntarily agree to all terms including the liability release.
+                </p>
+              </div>
+            </div>
+          </div>
+        )
+
       case 'review':
         return (
           <div className="space-y-6">
@@ -704,6 +825,18 @@ export default function SignupQuestionnaire({ onComplete, loading }: SignupQuest
                   {formData.mediaPermission.media_permission
                     ? 'Permission granted for photos/videos'
                     : 'No media permission granted'}
+                </p>
+              </div>
+
+              <div className="rounded-lg border p-4 bg-green-50 border-green-200">
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-green-600" />
+                  Terms & Conditions
+                </h3>
+                <p className="text-sm text-green-700">
+                  {formData.termsAcceptance.terms_accepted
+                    ? 'Terms & Conditions accepted'
+                    : 'Terms & Conditions not accepted'}
                 </p>
               </div>
             </div>

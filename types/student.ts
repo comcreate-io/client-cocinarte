@@ -36,6 +36,11 @@ export interface MediaPermission {
   media_permission: boolean
 }
 
+export interface TermsAcceptance {
+  terms_accepted: boolean
+  terms_accepted_date: string
+}
+
 // Database models
 export interface Parent {
   id: string
@@ -106,8 +111,8 @@ export interface StudentRegistrationData
   updated_at?: string
 }
 
-// Form step data for multi-step form
-export interface SignupFormData {
+// Form step data for multi-step form (multi-child version)
+export interface SignupFormDataMultiChild {
   // Auth credentials
   email: string
   password: string
@@ -119,8 +124,38 @@ export interface SignupFormData {
   children: ChildData[]
 }
 
+// Form step data for single-child signup questionnaire
+export interface SignupFormData {
+  // Auth credentials
+  email: string
+  password: string
+
+  // Child Information
+  childInfo: ChildInformation
+
+  // Health & Safety
+  healthSafety: HealthAndSafety
+
+  // Parent Information
+  parentInfo: ParentInformation
+
+  // Pick-Up Information
+  pickupInfo: PickupInformation
+
+  // Media Permission
+  mediaPermission: MediaPermission
+
+  // Terms Acceptance
+  termsAcceptance: TermsAcceptance
+}
+
 export type SignupStep =
   | 'account'
+  | 'child-info'
+  | 'health-safety'
   | 'parent-info'
+  | 'pickup-info'
+  | 'media-permission'
+  | 'terms-acceptance'
   | 'children-list'
   | 'review'

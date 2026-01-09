@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Users, Plus, Edit, Trash2, Mail, Phone, Calendar, BookOpen } from 'lucide-react'
+import { Users, Plus, Edit, Trash2, Mail, Phone, Calendar, BookOpen, FileCheck, Shield } from 'lucide-react'
 import { StudentsClient } from '@/components/dashboard/students-client'
 import { isAdminUser } from '@/lib/supabase/admin'
 
@@ -51,7 +52,35 @@ export default async function StudentsPage() {
     `)
     .order('created_at', { ascending: false })
 
-  const safeParents = parents ?? []
+  // Fetch all consent forms using service role client (bypasses RLS for admin access)
+  const serviceClient = createServiceRoleClient()
+  const { data: consentForms } = await serviceClient
+    .from('consent_forms')
+    .select('*')
+    .is('revoked_at', null)
+    .order('signed_at', { ascending: false })
+
+  // Create a map of child_id to consent_form (latest)
+  const consentMap = new Map<string, any>()
+  if (consentForms) {
+    for (const consent of consentForms) {
+      // Only store the first (latest) consent for each child
+      if (!consentMap.has(consent.child_id)) {
+        consentMap.set(consent.child_id, consent)
+      }
+    }
+  }
+
+  // Attach consent forms to children
+  const parentsWithConsent = (parents ?? []).map((parent: any) => ({
+    ...parent,
+    children: parent.children?.map((child: any) => ({
+      ...child,
+      consent_form: consentMap.get(child.id) || null
+    }))
+  }))
+
+  const safeParents = parentsWithConsent
 
   // Count total children
   const totalChildren = safeParents.reduce((sum, parent: any) =>
@@ -69,6 +98,16 @@ export default async function StudentsPage() {
     )
   }).reduce((sum, parent: any) => sum + (parent.children?.length || 0), 0)
 
+  // Count children with signed waivers
+  const childrenWithWaivers = safeParents.reduce((sum, parent: any) => {
+    return sum + (parent.children?.filter((c: any) => c.consent_form?.liability_consent)?.length || 0)
+  }, 0)
+
+  // Count children with photo permission
+  const childrenWithPhotoPermission = safeParents.reduce((sum, parent: any) => {
+    return sum + (parent.children?.filter((c: any) => c.consent_form?.social_media_consent)?.length || 0)
+  }, 0)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -82,7 +121,7 @@ export default async function StudentsPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Families</CardTitle>
@@ -99,6 +138,26 @@ export default async function StudentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalChildren}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Signed Waivers</CardTitle>
+            <Shield className="h-4 w-4 text-green-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{childrenWithWaivers}</div>
+            <p className="text-xs text-muted-foreground">{totalChildren - childrenWithWaivers} pending</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Photo Permission</CardTitle>
+            <FileCheck className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{childrenWithPhotoPermission}</div>
+            <p className="text-xs text-muted-foreground">of {totalChildren} children</p>
           </CardContent>
         </Card>
         <Card>
