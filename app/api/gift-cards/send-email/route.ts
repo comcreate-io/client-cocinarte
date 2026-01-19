@@ -141,7 +141,7 @@ async function sendGiftCardEmail(giftCard: any, metadata: any) {
             Cocinarte Cooking School
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0 0 5px 0;">
-            info@cocinartepdx.org
+            info@cocinartepdx.com
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0;">
             +1 (503) 916-9758
@@ -177,7 +177,7 @@ This gift card is valid for 1 year from the date of purchase.
 
 ---
 Cocinarte Cooking School
-Email: info@cocinartepdx.org
+Email: info@cocinartepdx.com
 Phone: +1 (503) 916-9758
   `
 

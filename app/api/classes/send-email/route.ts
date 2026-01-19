@@ -94,8 +94,8 @@ function generateEmailHtml(classTitle: string, classDate: string, classTime: str
                     Questions? Reply to this email or contact us at
                   </p>
                   <p style="margin: 0;">
-                    <a href="mailto:info@cocinartepdx.org" style="color: ${COLORS.navy}; text-decoration: none; font-weight: 600;">
-                      info@cocinartepdx.org
+                    <a href="mailto:info@cocinartepdx.com" style="color: ${COLORS.navy}; text-decoration: none; font-weight: 600;">
+                      info@cocinartepdx.com
                     </a>
                   </p>
                   <p style="color: #999; font-size: 12px; margin: 20px 0 0 0;">
@@ -212,7 +212,7 @@ export async function POST(request: NextRequest) {
         )
 
         await transporter.sendMail({
-          from: `"Cocinarte PDX" <${process.env.SMTP_FROM || 'info@cocinartepdx.org'}>`,
+          from: `"Cocinarte PDX" <${process.env.SMTP_FROM || 'info@cocinartepdx.com'}>`,
           to: student.email,
           subject: `[Cocinarte] ${subject}`,
           html: html,

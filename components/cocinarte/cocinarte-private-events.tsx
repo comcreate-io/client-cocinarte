@@ -584,7 +584,7 @@ export default function CocinartePrivateEvents() {
               <h4 className="text-xl font-bold text-white mb-2">Questions?</h4>
               <p className="text-white/90 mb-4">We're happy to help you plan your perfect cooking experience!</p>
               <div className="space-y-2 text-white">
-                <p className="font-semibold">📧 info@cocinartepdx.org</p>
+                <p className="font-semibold">📧 info@cocinartepdx.com</p>
                 <p className="font-semibold">📞 (503) 916-9758</p>
               </div>
             </div>

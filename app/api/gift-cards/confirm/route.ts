@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import nodemailer from 'nodemailer'
 import { GiftCardsClientService } from '@/lib/supabase/gift-cards-client'
+import { sendAdminNotification } from '@/lib/email'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2024-12-18.acacia'
@@ -59,6 +60,16 @@ export async function POST(request: NextRequest) {
 
     // Mark gift card as sent
     await giftCardsService.markGiftCardAsSent(giftCard.id)
+
+    // Send admin notification
+    await sendAdminNotification('gift_card_purchase', {
+      gift_card_code: giftCard.code,
+      amount: `$${giftCard.initial_balance.toFixed(2)}`,
+      purchaser_name: metadata.purchaser_name,
+      purchaser_email: metadata.purchaser_email,
+      recipient_name: metadata.recipient_name,
+      recipient_email: metadata.recipient_email,
+    })
 
     return NextResponse.json({
       success: true,
@@ -181,7 +192,7 @@ async function sendGiftCardEmail(giftCard: any, metadata: any, purchasedAmount: 
             Cocinarte Cooking School
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0 0 5px 0;">
-            info@cocinartepdx.org
+            info@cocinartepdx.com
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0;">
             +1 (503) 916-9758
@@ -217,7 +228,7 @@ This gift card is valid for 1 year from the date of purchase.
 
 ---
 Cocinarte Cooking School
-Email: info@cocinartepdx.org
+Email: info@cocinartepdx.com
 Phone: +1 (503) 916-9758
   `
 
@@ -282,7 +293,7 @@ Phone: +1 (503) 916-9758
             Cocinarte Cooking School
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0;">
-            info@cocinartepdx.org | +1 (503) 916-9758
+            info@cocinartepdx.com | +1 (503) 916-9758
           </p>
         </div>
       </div>
@@ -295,7 +306,7 @@ Phone: +1 (503) 916-9758
     to: metadata.purchaser_email,
     subject: `Your Cocinarte Gift Card has been sent to ${metadata.recipient_name}!`,
     html: purchaserEmailHtml,
-    text: `Gift Card Sent Successfully!\n\nYour $${giftCard.initial_balance} gift card has been sent to ${metadata.recipient_name} (${metadata.recipient_email}).\n\nCode: ${giftCard.code}\n\nThank you for sharing the joy of cooking!\n\n---\nCocinarte Cooking School\nEmail: info@cocinartepdx.org\nPhone: +1 (503) 916-9758`
+    text: `Gift Card Sent Successfully!\n\nYour $${giftCard.initial_balance} gift card has been sent to ${metadata.recipient_name} (${metadata.recipient_email}).\n\nCode: ${giftCard.code}\n\nThank you for sharing the joy of cooking!\n\n---\nCocinarte Cooking School\nEmail: info@cocinartepdx.com\nPhone: +1 (503) 916-9758`
   })
 
   console.log(`Gift card email sent to ${metadata.recipient_email}`)
