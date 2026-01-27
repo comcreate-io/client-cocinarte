@@ -109,17 +109,18 @@ export default function CocinarteBirthday() {
 
   return (
     <section id="birthday-parties" className="py-20 relative">
-      {/* Background Image */}
+      {/* Background Video */}
       <div className="absolute inset-0">
-        <Image
-          src="/cocinarte/cocinarte11.jpeg"
-          alt="Birthday party background"
-          fill
-          className="object-cover"
-          priority
+        <video
+          src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769506618/Diciendo_COCINARTE_g1qket.mov"
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
         />
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-white/50"></div>
+        <div className="absolute inset-0 bg-white/60"></div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

@@ -1,21 +1,21 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Phone, Mail, MapPin } from "lucide-react"
-import Image from "next/image"
 
 export default function CocinarteContact() {
   return (
     <section id="contact" className="py-16 sm:py-20 relative">
-      {/* Background Image */}
+      {/* Background Video - Videos of the Place */}
       <div className="absolute inset-0">
-        <Image
-          src="/cocinarte/cocinarte2.jpeg"
-          alt="Contact background"
-          fill
-          className="object-cover"
-          priority
+        <video
+          src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769507987/IMG_4217_pvjbco.mov"
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
         />
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-white/50"></div>
+        <div className="absolute inset-0 bg-white/60"></div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

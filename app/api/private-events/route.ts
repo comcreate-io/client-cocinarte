@@ -299,7 +299,7 @@ This request was submitted from the Private Classes section on your website.
 
             <div style="background-color: #00ADEE; padding: 20px; border-radius: 8px; text-align: center;">
               <p style="color: #FEFEFE; font-size: 14px; margin: 5px 0;">
-                Questions? Email us at <a href="mailto:info@cocinartepdx.org" style="color: #FCB414; text-decoration: none;">info@cocinartepdx.org</a>
+                Questions? Email us at <a href="mailto:info@cocinartepdx.com" style="color: #FCB414; text-decoration: none;">info@cocinartepdx.com</a>
               </p>
               <p style="color: #FEFEFE; font-size: 14px; margin: 5px 0;">
                 Or call us at <a href="tel:+15039169758" style="color: #FCB414; text-decoration: none;">+1 (503) 916-9758</a>
@@ -338,7 +338,7 @@ We can't wait to cook with you!
 🎊 The Cocinarte Team 🎊
 
 Questions?
-Email: info@cocinartepdx.org
+Email: info@cocinartepdx.com
 Phone: +1 (503) 916-9758
       `
     }

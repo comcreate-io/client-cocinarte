@@ -167,23 +167,23 @@ export default function CocinarteLandingPage() {
         </div>
       </section>
 
-      {/* Image Gallery Section */}
+      {/* Gallery Section - Kids in the Kitchen */}
       <section className="py-20 sm:py-28 px-4 sm:px-6 lg:px-8 bg-cocinarte-navy">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
-              See Our Classes in Action
+              Kids in the Kitchen
             </h2>
             <p className="text-xl sm:text-2xl text-white/80 max-w-3xl mx-auto">
               Watch as young chefs create delicious dishes and unforgettable memories
             </p>
           </div>
 
-          {/* Full Width Video */}
+          {/* Main Video - Kids Cooking */}
           <div className="mb-8">
             <div className="relative w-full rounded-2xl overflow-hidden shadow-2xl" style={{ aspectRatio: '16/9' }}>
               <video
-                src="https://res.cloudinary.com/dku1gnuat/video/upload/v1762977232/Untitled_design_6_zfvdmr.mp4"
+                src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769507266/IMG_4306_psztdq.mov"
                 className="w-full h-full object-cover"
                 autoPlay
                 loop
@@ -193,50 +193,103 @@ export default function CocinarteLandingPage() {
             </div>
           </div>
 
-          {/* Images Grid Below */}
+          {/* Mixed Grid - Videos and Images */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
+            {/* Video - Kids cooking */}
+            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
+              <video
+                src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769508012/IMG_4246_pb3da3.mov"
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            </div>
+
+            {/* Image - Kitchen with kids */}
+            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
+              <Image
+                src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507166/IMG_4271_jndruw.heic"
+                alt="Kids learning to cook"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+            </div>
+
+            {/* Video - Kids in kitchen */}
+            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
+              <video
+                src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769508707/IMG_4285_s1kolp.mov"
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            </div>
+
+            {/* Image - Kitchen with kids */}
+            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
+              <Image
+                src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769508848/IMG_8421_lv6ip3.jpg"
+                alt="Young chefs at work"
+                fill
+                className="object-cover group-hover:scale-110 transition-transform duration-500"
+              />
+            </div>
+          </div>
+
+          {/* Food Photos Section */}
+          <div className="text-center mb-8 mt-16">
+            <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              Delicious Creations
+            </h3>
+          </div>
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-            {/* Image 1 */}
+            {/* Food Video */}
+            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
+              <video
+                src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769507313/Tacos_frying_hfvqea.mov"
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            </div>
+
+            {/* Food Photo */}
             <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
               <Image
-                src="/cocinarte/cocinarte10.jpeg"
-                alt="Kids cooking together"
+                src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507291/IMG_4120_uxkirf.heic"
+                alt="Delicious Latin food"
                 fill
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
             </div>
 
-            {/* Image 2 */}
+            {/* Food Video - Tortillas */}
+            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
+              <video
+                src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769507354/Tortillas_up_close_gqbqhd.mov"
+                className="w-full h-full object-cover"
+                autoPlay
+                loop
+                muted
+                playsInline
+              />
+            </div>
+
+            {/* Food Photo */}
             <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
               <Image
-                src="/cocinarte/cocinarte11.jpeg"
-                alt="Young chef creating"
+                src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507294/IMG_4136_tcpd1r.heic"
+                alt="Fresh ingredients"
                 fill
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
               />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
-            </div>
-
-            {/* Image 3 */}
-            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
-              <Image
-                src="/cocinarte/cocinarte2.jpeg"
-                alt="Cooking class fun"
-                fill
-                className="object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
-            </div>
-
-            {/* Image 4 */}
-            <div className="relative aspect-square rounded-xl overflow-hidden shadow-xl group">
-              <Image
-                src="/cocinarte/cocinarte3.jpeg"
-                alt="Delicious creations"
-                fill
-                className="object-cover object-top group-hover:scale-110 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300" />
             </div>
           </div>
         </div>

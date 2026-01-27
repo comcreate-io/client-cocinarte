@@ -13,6 +13,7 @@ import {
   Cake,
   FileText,
   Gift,
+  Mail,
 } from "lucide-react"
 
 import {
@@ -77,6 +78,11 @@ const navigationItems = [
     url: "/dashboard/gift-cards",
     icon: Gift,
   },
+  {
+    title: "Emails",
+    url: "/dashboard/emails",
+    icon: Mail,
+  },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -136,7 +142,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <SidebarTrigger className="flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <h1 className="text-base sm:text-lg lg:text-xl font-semibold truncate">
-                {navigationItems.find(item => item.url === pathname)?.title || "Dashboard"}
+                {navigationItems.find(item => pathname === item.url || pathname.startsWith(item.url + "/"))?.title || "Dashboard"}
               </h1>
             </div>
           </header>

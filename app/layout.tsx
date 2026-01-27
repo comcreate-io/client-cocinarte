@@ -187,6 +187,9 @@ export default function RootLayout({
         <meta name="format-detection" content="address=no" />
         <meta name="format-detection" content="email=no" />
         
+        {/* Ahrefs Analytics */}
+        <script src="https://analytics.ahrefs.com/analytics.js" data-key="WGtXuhlwl1X148pxAF2BnA" async></script>
+
         {/* Structured Data */}
         <script
           type="application/ld+json"
