@@ -37,7 +37,7 @@ export default function CocinarteAbout() {
             title="Hands-On Learning"
             description="Interactive cooking experiences where kids learn by doing"
             category="Learning"
-            imageSrc="/cocinarte/card1.jpg"
+            imageSrc="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507200/IMG_4309_qmmpbq.heic"
             detailedDescription="Interactive cooking experiences where kids learn by doing, building confidence and skills in the kitchen. Our hands-on approach ensures every child actively participates in creating delicious dishes."
             learningOutcomes={[
               "Build practical cooking skills and kitchen confidence",
@@ -50,7 +50,7 @@ export default function CocinarteAbout() {
             title="Latin Flavors"
             description="Explore authentic Latin American cuisine"
             category="Culture"
-            imageSrc="/cocinarte/cocinarte3.jpeg"
+            imageSrc="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507294/IMG_4136_tcpd1r.heic"
             imagePosition="center top"
             detailedDescription="Explore authentic Latin American cuisine and discover new flavors, ingredients, and cooking techniques. Each class introduces children to the rich culinary traditions of Latin America."
             learningOutcomes={[
@@ -64,7 +64,7 @@ export default function CocinarteAbout() {
             title="Family Fun"
             description="Perfect for kids and families to cook together"
             category="Community"
-            imageSrc="/cocinarte/cocinarte10.jpeg"
+            imageSrc="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507282/IMG_4065_bp2sxi.jpg"
             detailedDescription="Perfect for kids and families to cook together, creating lasting memories and bonding experiences. Our classes foster a warm, inclusive environment where everyone can learn and grow together."
             learningOutcomes={[
               "Strengthen family bonds through shared cooking experiences",

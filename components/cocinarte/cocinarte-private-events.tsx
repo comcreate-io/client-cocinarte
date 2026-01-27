@@ -541,38 +541,43 @@ export default function CocinartePrivateEvents() {
             </form>
           </div>
 
-          {/* Images Section */}
+          {/* Media Section */}
           <div className="space-y-6">
             <div className="bg-white rounded-2xl shadow-lg p-6">
               <h4 className="text-xl font-bold text-cocinarte-navy mb-4">Our Cooking Space</h4>
               <div className="space-y-4">
+                {/* Video - Adults in Kitchen */}
                 <div className="aspect-video rounded-xl overflow-hidden">
-                  <Image
-                    src="/cocinarte/cocinarte2.jpeg"
-                    alt="Cooking class in action"
-                    width={600}
-                    height={338}
-                    className="w-full h-full object-cover object-[center_20%]"
+                  <video
+                    src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769507976/IMG_4244_mh5gae.mov"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
+                  {/* Kitchen with Adults */}
                   <div className="aspect-square rounded-xl overflow-hidden">
                     <Image
-                      src="/cocinarte/cocinarte10.jpeg"
-                      alt="Kids cooking together"
+                      src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507283/IMG_4070_hlgyu9.heic"
+                      alt="Adults cooking class"
                       width={300}
                       height={300}
                       className="w-full h-full object-cover"
                     />
                   </div>
+                  {/* Video - Group cooking */}
                   <div className="aspect-square rounded-xl overflow-hidden">
-                    <Image
-                      src="/cocinarte/cocinarte11.jpeg"
-                      alt="Group cooking experience"
-                      width={300}
-                      height={300}
-                      className="w-full h-full object-cover object-[center_35%]"
+                    <video
+                      src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769509021/IMG_6958_euwbtu.mov"
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
                     />
                   </div>
                 </div>

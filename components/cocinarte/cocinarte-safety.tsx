@@ -82,8 +82,8 @@ export default function CocinarteSafety() {
                 <div className="bg-gradient-to-br from-cocinarte-yellow/20 to-cocinarte-yellow/40 rounded-xl p-4 sm:p-6 text-center relative overflow-hidden">
                   {/* Background Image */}
                   <Image
-                    src="/cocinarte/card1.jpg"
-                    alt="Class Duration"
+                    src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507207/IMG_4322_w2it9u.heic"
+                    alt="Kids cooking - Class Duration"
                     fill
                     className="object-cover"
                   />
@@ -100,8 +100,8 @@ export default function CocinarteSafety() {
                 <div className="bg-gradient-to-br from-cocinarte-red/20 to-cocinarte-red/40 rounded-xl p-4 sm:p-6 text-center relative overflow-hidden">
                   {/* Background Image */}
                   <Image
-                    src="/cocinarte/card2.jpg"
-                    alt="Age Group"
+                    src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769508849/IMG_8426_mkuph8.jpg"
+                    alt="Young chefs - Age Group"
                     fill
                     className="object-cover"
                   />
@@ -120,8 +120,8 @@ export default function CocinarteSafety() {
                 <div className="bg-cocinarte-blue rounded-xl p-4 sm:p-6 text-center relative overflow-hidden">
                   {/* Background Image */}
                   <Image
-                    src="/cocinarte/card3.jpg"
-                    alt="Pricing"
+                    src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507227/IMG_4422_vrp7pr.heic"
+                    alt="Delicious food - Pricing"
                     fill
                     className="object-cover"
                   />
@@ -138,8 +138,8 @@ export default function CocinarteSafety() {
                 <div className="bg-gradient-to-br from-cocinarte-yellow/20 to-cocinarte-yellow/40 rounded-xl p-4 sm:p-6 text-center relative overflow-hidden">
                   {/* Background Image */}
                   <Image
-                    src="/cocinarte/card5.jpg"
-                    alt="Family Fun"
+                    src="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507218/IMG_4386_lgd9ba.heic"
+                    alt="Family cooking - Family Fun"
                     fill
                     className="object-cover"
                   />

@@ -11,6 +11,8 @@ import CocinarteFAQ from "@/components/cocinarte/cocinarte-faq"
 import CocinarteContact from "@/components/cocinarte/cocinarte-contact"
 import CocinarteSocialFeed from "@/components/cocinarte/cocinarte-social-feed"
 import CocinarteCTA from "@/components/cocinarte/cocinarte-cta"
+import CocinarteIntensiveCooking from "@/components/cocinarte/cocinarte-intensive-cooking"
+import CocinarteGallery from "@/components/cocinarte/cocinarte-gallery"
 import Image from "next/image"
 
 export default function HomePage() {
@@ -93,10 +95,12 @@ export default function HomePage() {
         <CocinarteAbout />
         <CocinarteCalendar />
         <CocinarteClassTypes />
+        <CocinarteIntensiveCooking />
         <CocinarteSafety />
         <CocinarteSocialFeed />
         <CocinarteBirthday />
         <CocinartePrivateEvents />
+        <CocinarteGallery />
         <CocinarteFAQ />
         <CocinarteContact />
         <CocinarteCTA />

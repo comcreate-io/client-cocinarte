@@ -5,17 +5,18 @@ import Image from "next/image"
 export default function CocinarteClassTypes() {
   return (
     <section id="classes" className="py-16 sm:py-20 relative">
-      {/* Background Image */}
+      {/* Background Video - Kids in Kitchen */}
       <div className="absolute inset-0">
-        <Image
-          src="/cocinarte/cocinarte3.jpeg"
-          alt="Cooking class background"
-          fill
-          className="object-cover object-top"
-          priority
+        <video
+          src="https://res.cloudinary.com/dku1gnuat/video/upload/v1769508720/IMG_4293_ras9jm.mov"
+          className="w-full h-full object-cover"
+          autoPlay
+          loop
+          muted
+          playsInline
         />
         {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-white/40"></div>
+        <div className="absolute inset-0 bg-white/50"></div>
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
