@@ -18,7 +18,20 @@
       "Bash(iconv:*)",
       "Bash(npx tsc:*)",
       "Bash(git merge:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill /F /PID 109136)",
+      "Bash(taskkill:*)",
+      "Bash(npx eslint:*)",
+      "Bash(cat:*)",
+      "Bash(npm install:*)",
+      "WebFetch(domain:www.hartlandpdx.com)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npm run build:*)",
+      "Bash(tasklist:*)",
+      "Bash(timeout:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

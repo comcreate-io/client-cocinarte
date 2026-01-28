@@ -38,7 +38,10 @@ export default function ConditionalLayout({ children, showHeader = true }: Condi
   // Check if we're on the signup page
   const isSignupPage = pathname?.startsWith('/signup')
 
-  if (isRootPage || isCocinartePage || isLandingPage || isDashboardPage || isLoginPage || isInvoicePage || isTermsPage || isSignupPage || !showHeader) {
+  // Check if we're on the camps page (uses Cocinarte layout)
+  const isCampsPage = pathname?.startsWith('/camps')
+
+  if (isRootPage || isCocinartePage || isLandingPage || isDashboardPage || isLoginPage || isInvoicePage || isTermsPage || isSignupPage || isCampsPage || !showHeader) {
     // For root page, Cocinarte pages, landing page, dashboard, login, invoice pages, or when showHeader is false, only render the children (no header/footer)
     return <>{children}</>
   }

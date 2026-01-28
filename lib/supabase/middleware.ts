@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
     '/admissions',
     '/calendar',
     '/camp-alegria',
+    '/camps',
     '/casita-azul',
     '/cocinarte',
     '/contact',
