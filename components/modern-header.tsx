@@ -201,12 +201,12 @@ export default function ModernHeader() {
                       className="flex items-center px-4 py-4 text-base font-questa text-slate hover:bg-slate hover:text-white transition-colors duration-200"
                       onClick={() => setActiveDropdown(null)}
                     >
-                      <Image 
-                        src="/camp-alegria.png" 
-                        alt="Camp Alegria Logo" 
-                        width={44} 
-                        height={44} 
-                        className="mr-4 object-contain" 
+                      <Image
+                        src="/camp-alegria.png"
+                        alt="Camp Alegria Logo"
+                        width={44}
+                        height={44}
+                        className="mr-4 object-contain"
                       />
                       Camp Alegria
                     </Link>
@@ -385,12 +385,12 @@ export default function ModernHeader() {
                               }, 300)
                             }}
                           >
-                            <Image 
-                              src="/camp-alegria.png" 
-                              alt="Camp Alegria Logo" 
-                              width={36} 
-                              height={36} 
-                              className="mr-4 object-contain" 
+                            <Image
+                              src="/camp-alegria.png"
+                              alt="Camp Alegria Logo"
+                              width={36}
+                              height={36}
+                              className="mr-4 object-contain"
                             />
                             Camp Alegria
                           </Link>

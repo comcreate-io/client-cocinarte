@@ -419,6 +419,12 @@ function CocinarteHeaderInner() {
                   >
                     Private Events
                   </Link>
+                  <Link
+                    href="/camps"
+                    className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
+                  >
+                    Camps
+                  </Link>
                   <button
                     onClick={() => {
                       setIsGiftCardOpen(true)
@@ -524,6 +530,13 @@ function CocinarteHeaderInner() {
               onClick={() => setIsMenuOpen(false)}
             >
               Private Events
+            </Link>
+            <Link
+              href="/camps"
+              className="flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Camps
             </Link>
             <Link
               href="#faq"
