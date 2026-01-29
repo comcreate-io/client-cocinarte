@@ -770,16 +770,31 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
                 Back
               </Button>
 
-              <div className="bg-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
-                <p className="font-semibold text-slate mb-1 text-sm sm:text-base">Booking Summary:</p>
-                <p className="text-xs sm:text-sm text-slate-medium">Child: {selectedChild?.child_full_name}</p>
-                <p className="text-xs sm:text-sm text-slate-medium">
-                  Days: {selectedClasses.map(c => {
-                    const campDate = CAMP_DATES.find(d => d.fullDate === new Date(c.date).toISOString().split('T')[0])
-                    return campDate?.day
-                  }).join(', ')}
-                </p>
-                <p className="text-base sm:text-lg font-bold text-[#F0614F] mt-2">Total: ${totalPrice}</p>
+              {/* Compact booking summary for mobile */}
+              <div className="bg-gradient-to-r from-[#F0614F]/10 to-[#FCB414]/10 rounded-xl p-3 sm:p-4 mb-3 sm:mb-4">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate text-sm sm:text-base truncate">
+                      {selectedChild?.child_full_name}
+                    </p>
+                    <p className="text-xs sm:text-sm text-slate-medium truncate">
+                      {selectedClasses.length} day{selectedClasses.length > 1 ? 's' : ''} • {selectedClasses.map(c => {
+                        const campDate = CAMP_DATES.find(d => d.fullDate === new Date(c.date).toISOString().split('T')[0])
+                        return campDate?.day?.slice(0, 3)
+                      }).join(', ')}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-xl sm:text-2xl font-bold text-[#F0614F]">${totalPrice}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-center mb-2">
+                <div className="flex items-center justify-center gap-1.5 text-slate-medium text-xs sm:text-sm">
+                  <CreditCard className="w-4 h-4" />
+                  <span>Secure payment</span>
+                </div>
               </div>
 
               {paymentError && (
@@ -789,17 +804,43 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
               )}
 
               {paymentLoading && (
-                <div className="text-center py-6 sm:py-8">
-                  <p className="text-slate-medium text-sm sm:text-base">Initializing payment...</p>
+                <div className="text-center py-8 sm:py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F0614F] mx-auto mb-3"></div>
+                  <p className="text-slate-medium text-sm sm:text-base">Preparing secure checkout...</p>
                 </div>
               )}
 
               {clientSecret && (
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret,
+                    appearance: {
+                      theme: 'stripe',
+                      variables: {
+                        colorPrimary: '#F0614F',
+                        borderRadius: '8px',
+                        fontSizeBase: '16px',
+                      },
+                      rules: {
+                        '.Input': {
+                          padding: '12px',
+                          fontSize: '16px',
+                        },
+                        '.Label': {
+                          fontSize: '14px',
+                          marginBottom: '8px',
+                        },
+                      },
+                    },
+                  }}
+                >
                   <StripePaymentForm
                     onSuccess={handlePaymentSuccess}
                     onError={(error) => setPaymentError(error)}
                     amount={totalPrice}
+                    submitLabel={`Pay $${totalPrice}`}
+                    showCancel={false}
                   />
                 </Elements>
               )}
