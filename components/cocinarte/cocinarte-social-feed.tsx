@@ -1,38 +1,21 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Instagram } from "lucide-react"
 
-// TypeScript declaration for Instagram embed script
-declare global {
-  interface Window {
-    instgrm?: {
-      Embeds: {
-        process: () => void
-      }
-    }
-  }
-}
-
 export default function CocinarteSocialFeed() {
-  const instagramPosts = [
-    "https://www.instagram.com/p/DT1Jj8RlT_a/",
-    "https://www.instagram.com/p/DTycnN3Fc7t/",
-    "https://www.instagram.com/p/DTtgj98CPuQ/",
-    "https://www.instagram.com/p/DTjM11glfad/",
-    "https://www.instagram.com/p/DTeBrxXCEPN/",
-    "https://www.instagram.com/p/DTbZoMOFRu3/"
-  ]
+  const widgetRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Load Instagram embed script
-    if (window.instgrm) {
-      window.instgrm.Embeds.process()
-    } else {
-      const script = document.createElement("script")
-      script.src = "https://www.instagram.com/embed.js"
-      script.async = true
-      document.body.appendChild(script)
+    // Load Elfsight script for Instagram widget
+    // You'll need to replace the widget ID after setting up your free Elfsight account
+    const script = document.createElement("script")
+    script.src = "https://static.elfsight.com/platform/platform.js"
+    script.async = true
+    document.body.appendChild(script)
+
+    return () => {
+      // Cleanup if needed
     }
   }, [])
 
@@ -50,68 +33,42 @@ export default function CocinarteSocialFeed() {
           </p>
         </div>
 
-        {/* Mobile: Show only 2 posts stacked + View All button */}
-        <div className="sm:hidden space-y-4">
-          {instagramPosts.slice(0, 2).map((postUrl, index) => (
-            <div key={index} className="flex justify-center">
-              <blockquote
-                className="instagram-media"
-                data-instgrm-captioned
-                data-instgrm-permalink={postUrl}
-                data-instgrm-version="14"
-                style={{
-                  background: '#FFF',
-                  border: 0,
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  margin: 0,
-                  maxWidth: '100%',
-                  padding: 0,
-                  width: '100%'
-                }}
-              />
-            </div>
-          ))}
+        {/* Instagram Widget Container */}
+        <div ref={widgetRef} className="flex justify-center">
+          {/*
+            SETUP INSTRUCTIONS:
+            1. Go to https://elfsight.com/instagram-feed-widget/
+            2. Click "Create widget for FREE"
+            3. Sign up for a free account
+            4. Connect your Instagram account (@cocinartepdx)
+            5. Choose "Grid" or "Collage" layout
+            6. Customize colors to match (use #F0614F for accents)
+            7. Copy the widget code and replace the div below
 
-          {/* View all on Instagram button for mobile */}
-          <div className="text-center pt-4">
-            <a
-              href="https://www.instagram.com/cocinartepdx/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-cocinarte-red hover:bg-cocinarte-orange text-white px-6 py-3 rounded-full font-semibold text-base hover:scale-105 transition-all duration-300 shadow-lg"
-            >
-              <Instagram className="w-5 h-5" />
-              View All Posts
-            </a>
-          </div>
+            The free plan includes:
+            - Auto-updating feed
+            - Up to 200 views/month
+            - Basic customization
+          */}
+
+          {/* Replace this div with your Elfsight widget code */}
+          {/* Example: <div className="elfsight-app-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" data-elfsight-app-lazy></div> */}
+
+          <div className="elfsight-app-0a1b2c3d-4e5f-6789-abcd-ef0123456789" data-elfsight-app-lazy></div>
         </div>
 
-        {/* Tablet/Desktop: Grid layout */}
-        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {instagramPosts.map((postUrl, index) => (
-            <div key={index} className="flex justify-center">
-              <blockquote
-                className="instagram-media"
-                data-instgrm-captioned
-                data-instgrm-permalink={postUrl}
-                data-instgrm-version="14"
-                style={{
-                  background: '#FFF',
-                  border: 0,
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  margin: 0,
-                  maxWidth: '100%',
-                  minWidth: '280px',
-                  padding: 0,
-                  width: '100%'
-                }}
-              />
-            </div>
-          ))}
+        {/* Fallback: View on Instagram button */}
+        <div className="text-center mt-8">
+          <a
+            href="https://www.instagram.com/cocinartepdx/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-cocinarte-red hover:bg-cocinarte-orange text-white px-6 py-3 rounded-full font-semibold text-base hover:scale-105 transition-all duration-300 shadow-lg"
+          >
+            <Instagram className="w-5 h-5" />
+            Follow Us on Instagram
+          </a>
         </div>
-
       </div>
     </section>
   )

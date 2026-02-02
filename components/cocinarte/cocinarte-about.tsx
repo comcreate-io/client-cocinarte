@@ -50,8 +50,8 @@ export default function CocinarteAbout() {
             title="Latin Flavors"
             description="Explore authentic Latin American cuisine"
             category="Culture"
-            imageSrc="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507294/IMG_4136_tcpd1r.heic"
-            imagePosition="center top"
+            imageSrc="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507282/IMG_4065_bp2sxi.jpg"
+            imagePosition="center center"
             detailedDescription="Explore authentic Latin American cuisine and discover new flavors, ingredients, and cooking techniques. Each class introduces children to the rich culinary traditions of Latin America."
             learningOutcomes={[
               "Discover traditional Latin American ingredients and spices",
@@ -64,7 +64,7 @@ export default function CocinarteAbout() {
             title="Family Fun"
             description="Perfect for kids and families to cook together"
             category="Community"
-            imageSrc="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1769507282/IMG_4065_bp2sxi.jpg"
+            imageSrc="https://res.cloudinary.com/dku1gnuat/image/upload/f_auto,q_auto/v1770033180/FAMILY_FUN_PHOTO_m3qkjn.heic"
             detailedDescription="Perfect for kids and families to cook together, creating lasting memories and bonding experiences. Our classes foster a warm, inclusive environment where everyone can learn and grow together."
             learningOutcomes={[
               "Strengthen family bonds through shared cooking experiences",

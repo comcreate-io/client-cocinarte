@@ -111,7 +111,7 @@ export default function CocinarteSafety() {
                   {/* Content */}
                   <div className="relative z-10">
                     <Users className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 text-white mx-auto mb-2 sm:mb-3" />
-                    <h3 className="font-semibold text-white text-base sm:text-lg lg:text-xl">Ages 7-12</h3>
+                    <h3 className="font-semibold text-white text-base sm:text-lg lg:text-xl">Ages 5+</h3>
                     <p className="text-xs sm:text-sm text-white">Main program focus</p>
                   </div>
                 </div>

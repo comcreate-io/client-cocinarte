@@ -25,6 +25,7 @@ function CocinarteHeaderInner() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false)
+  const [isCampsDropdownOpen, setIsCampsDropdownOpen] = useState(false)
   const [isBookingOpen, setIsBookingOpen] = useState(false)
   const [bookingInitialStep, setBookingInitialStep] = useState<'class-selection' | 'login' | 'signup' | 'payment' | 'confirmation' | 'account'>('class-selection')
   const [isAccountOpen, setIsAccountOpen] = useState(false)
@@ -298,6 +299,14 @@ function CocinarteHeaderInner() {
                 <button
                   className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
                 >
+                  Camps
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="relative">
+                <button
+                  className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
+                >
                   More
                   <ChevronDown className="h-4 w-4" />
                 </button>
@@ -393,6 +402,38 @@ function CocinarteHeaderInner() {
             >
               FAQ
             </Link>
+            {/* Camps Dropdown */}
+            <div
+              className="relative"
+              onMouseEnter={() => setIsCampsDropdownOpen(true)}
+              onMouseLeave={() => setIsCampsDropdownOpen(false)}
+            >
+              <button
+                type="button"
+                className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
+              >
+                Camps
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isCampsDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isCampsDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-cocinarte-navy rounded-xl shadow-xl border border-cocinarte-orange/20 overflow-hidden min-w-[280px] z-[100]">
+                  <Link
+                    href="/camps"
+                    onClick={() => setIsCampsDropdownOpen(false)}
+                    className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
+                  >
+                    Spring Break Camp (March 23–27)
+                  </Link>
+                  <Link
+                    href="/camps/summer-intensive"
+                    onClick={() => setIsCampsDropdownOpen(false)}
+                    className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
+                  >
+                    Summer Intensive Cooking Camp
+                  </Link>
+                </div>
+              )}
+            </div>
             {/* More Dropdown */}
             <div
               className="relative"
@@ -418,12 +459,6 @@ function CocinarteHeaderInner() {
                     className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
                   >
                     Private Events
-                  </Link>
-                  <Link
-                    href="/camps"
-                    className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
-                  >
-                    Camps
                   </Link>
                   <button
                     onClick={() => {
@@ -531,12 +566,23 @@ function CocinarteHeaderInner() {
             >
               Private Events
             </Link>
+            {/* Camps Section */}
+            <div className="px-3 py-2">
+              <span className="text-xs font-semibold text-cocinarte-orange uppercase tracking-wide">Camps</span>
+            </div>
             <Link
               href="/camps"
-              className="flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
+              className="flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black ml-2"
               onClick={() => setIsMenuOpen(false)}
             >
-              Camps
+              Spring Break Camp (March 23–27)
+            </Link>
+            <Link
+              href="/camps/summer-intensive"
+              className="block px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black ml-2"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Summer Intensive Cooking Camp
             </Link>
             <Link
               href="#faq"
