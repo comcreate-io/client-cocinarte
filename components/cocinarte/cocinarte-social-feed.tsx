@@ -1,21 +1,22 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect } from "react"
 import { Instagram } from "lucide-react"
 
 export default function CocinarteSocialFeed() {
-  const widgetRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
-    // Load Elfsight script for Instagram widget
-    // You'll need to replace the widget ID after setting up your free Elfsight account
+    // Load Elfsight script
     const script = document.createElement("script")
     script.src = "https://static.elfsight.com/platform/platform.js"
     script.async = true
     document.body.appendChild(script)
 
     return () => {
-      // Cleanup if needed
+      // Cleanup
+      const existingScript = document.querySelector('script[src="https://static.elfsight.com/platform/platform.js"]')
+      if (existingScript) {
+        existingScript.remove()
+      }
     }
   }, [])
 
@@ -33,31 +34,12 @@ export default function CocinarteSocialFeed() {
           </p>
         </div>
 
-        {/* Instagram Widget Container */}
-        <div ref={widgetRef} className="flex justify-center">
-          {/*
-            SETUP INSTRUCTIONS:
-            1. Go to https://elfsight.com/instagram-feed-widget/
-            2. Click "Create widget for FREE"
-            3. Sign up for a free account
-            4. Connect your Instagram account (@cocinartepdx)
-            5. Choose "Grid" or "Collage" layout
-            6. Customize colors to match (use #F0614F for accents)
-            7. Copy the widget code and replace the div below
-
-            The free plan includes:
-            - Auto-updating feed
-            - Up to 200 views/month
-            - Basic customization
-          */}
-
-          {/* Replace this div with your Elfsight widget code */}
-          {/* Example: <div className="elfsight-app-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" data-elfsight-app-lazy></div> */}
-
-          <div className="elfsight-app-0a1b2c3d-4e5f-6789-abcd-ef0123456789" data-elfsight-app-lazy></div>
+        {/* Elfsight Instagram Feed */}
+        <div className="w-full flex justify-center">
+          <div className="elfsight-app-525b2565-128d-44f1-8d4e-339c0c5ebdf7" data-elfsight-app-lazy></div>
         </div>
 
-        {/* Fallback: View on Instagram button */}
+        {/* Follow on Instagram button */}
         <div className="text-center mt-8">
           <a
             href="https://www.instagram.com/cocinartepdx/"
