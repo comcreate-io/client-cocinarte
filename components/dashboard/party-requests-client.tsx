@@ -191,30 +191,16 @@ export function PartyRequestsClient() {
     if (request.status === 'approved') {
       setGuestsLoading(true)
       try {
-        const { data } = await supabase
-          .from('party_guests')
-          .select('id, child_name, parent_name, parent_email, form_completed_at, email_sent_at, guest_child_id')
-          .eq('party_request_id', request.id)
-          .order('created_at', { ascending: true })
+        const res = await fetch(`/api/admin/party-guests?party_request_id=${request.id}`)
+        const result = await res.json()
 
-        const guests = data || []
-        setSelectedGuests(guests)
+        if (result.success) {
+          setSelectedGuests(result.guests || [])
 
-        // Pre-fetch child details for all completed guests
-        const childIds = guests
-          .filter(g => g.guest_child_id)
-          .map(g => g.guest_child_id as string)
-
-        if (childIds.length > 0) {
-          const { data: children } = await supabase
-            .from('guest_children')
-            .select('id, child_full_name, child_age, child_preferred_name, has_cooking_experience, cooking_experience_details, allergies, dietary_restrictions, medical_conditions, emergency_medications, additional_notes, authorized_pickup_persons, custody_restrictions, media_permission, guest_parent_name, guest_parent_phone, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, liability_consent, social_media_consent, parent_name_signed, child_name_signed, signed_at')
-            .in('id', childIds)
-
-          if (children) {
+          if (result.children) {
             const details: Record<string, GuestChildDetails> = {}
-            for (const child of children) {
-              details[child.id] = child
+            for (const [id, child] of Object.entries(result.children)) {
+              details[id] = child as GuestChildDetails
             }
             setChildDetails(details)
           }
