@@ -37,8 +37,9 @@ export default async function CouponsPage() {
   const safeCoupons = coupons ?? []
   const safeClasses = classes ?? []
   const totalCoupons = safeCoupons.length
-  const usedCoupons = safeCoupons.filter((c: any) => c.is_used).length
-  const unusedCoupons = totalCoupons - usedCoupons
+  const usedCoupons = safeCoupons.filter((c: any) => c.use_count >= (c.max_uses || 1)).length
+  const expiredCoupons = safeCoupons.filter((c: any) => c.expires_at && new Date(c.expires_at) < new Date() && c.use_count < (c.max_uses || 1)).length
+  const availableCoupons = totalCoupons - usedCoupons - expiredCoupons
   const sentCoupons = safeCoupons.filter((c: any) => c.sent_at !== null).length
 
   return (
@@ -54,7 +55,7 @@ export default async function CouponsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Coupons</CardTitle>
@@ -79,7 +80,16 @@ export default async function CouponsPage() {
               <Ticket className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{unusedCoupons}</div>
+              <div className="text-2xl font-bold">{availableCoupons}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Expired</CardTitle>
+              <Ticket className="h-4 w-4 text-orange-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{expiredCoupons}</div>
             </CardContent>
           </Card>
           <Card>

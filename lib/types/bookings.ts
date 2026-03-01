@@ -13,7 +13,9 @@ export interface Booking {
   gift_card_amount_used?: number; // Amount paid using gift card balance
   parent_id?: string; // Reference to parent for gift card refunds
   extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
+  is_guest_booking?: boolean; // Whether this booking is a gift for a guest child
   notes?: string;
+  booking_comments?: string;
   created_at: string;
   updated_at: string;
 }
@@ -31,7 +33,9 @@ export interface CreateBookingData {
   gift_card_amount_used?: number; // Amount paid using gift card balance
   parent_id?: string; // Reference to parent for gift card refunds
   extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
+  is_guest_booking?: boolean; // Whether this booking is a gift for a guest child
   notes?: string;
+  booking_comments?: string;
 }
 
 export interface UpdateBookingData extends Partial<CreateBookingData> {
@@ -49,6 +53,8 @@ export interface BookingWithDetails extends Booking {
     price: number;
     classDuration: number;
     class_type?: string;
+    late_cancel_refund_type?: 'percentage' | 'fixed' | null;
+    late_cancel_refund_value?: number | null;
   };
   student: {
     id: string;

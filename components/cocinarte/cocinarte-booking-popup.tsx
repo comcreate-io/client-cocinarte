@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift, Shield, FileCheck } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift, Shield, FileCheck, XCircle, Loader2 } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
 import { StudentsClientService } from "@/lib/supabase/students-client"
@@ -74,7 +75,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
   // Coupon states
   const [couponCode, setCouponCode] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null)
+  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number, discountType: 'percentage' | 'fixed', discountAmount: number | null} | null>(null)
   const [couponValidating, setCouponValidating] = useState(false)
   const [couponError, setCouponError] = useState('')
   const [couponSuccess, setCouponSuccess] = useState('')
@@ -89,6 +90,16 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [childFormData, setChildFormData] = useState<Partial<Child>>({})
   const [childrenBookings, setChildrenBookings] = useState<{ [key: string]: any[] }>({})
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null)
+  const [cancelDialog, setCancelDialog] = useState<{
+    open: boolean
+    booking: any
+    childId: string
+    title: string
+    refundAmount: number
+    isLateCancel: boolean
+  }>({ open: false, booking: null, childId: '', title: '', refundAmount: 0, isLateCancel: false })
+  const [cancelResultDialog, setCancelResultDialog] = useState<{ open: boolean; message: string; isError: boolean }>({ open: false, message: '', isError: false })
 
   // Consent form states for Add Child dialog
   const [showConsentDialog, setShowConsentDialog] = useState(false)
@@ -106,6 +117,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     childNameSigned: string
     signatureDataUrl: string
   } | null>(null)
+
+  // Booking comments state
+  const [bookingComments, setBookingComments] = useState('')
+
+  // Guest booking states
+  const [isGuestBooking, setIsGuestBooking] = useState(false)
+  const [guestChildName, setGuestChildName] = useState('')
+  const [guestParentName, setGuestParentName] = useState('')
+  const [guestParentEmail, setGuestParentEmail] = useState('')
+  const [myGuestBookings, setMyGuestBookings] = useState<any[]>([])
+  const [loadingGuestBookings, setLoadingGuestBookings] = useState(false)
 
   // Extra children pricing for Mommy & Me classes
   const EXTRA_CHILD_COST = 70 // Cost per extra child
@@ -270,8 +292,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
           // Apply coupon if any
           if (appliedCoupon) {
-            const discount = (finalAmount * appliedCoupon.discount) / 100
-            finalAmount = finalAmount - discount
+            if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+              finalAmount = Math.max(0, finalAmount - appliedCoupon.discountAmount)
+            } else {
+              const discount = (finalAmount * appliedCoupon.discount) / 100
+              finalAmount = finalAmount - discount
+            }
           }
 
           // Apply gift card if enabled
@@ -383,10 +409,30 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             const isMomMeClass = isMommyAndMeClass(classes.find(c => c.id === selectedClassId))
 
             if (parentData.children.length === 1 && !isMomMeClass) {
-              // Only one child and NOT a Mommy & Me class, auto-select and proceed to payment
-              setSelectedChildId(parentData.children[0].id)
-              setSelectedChildIds([parentData.children[0].id])
-              setAuthStep('payment')
+              // Only one child and NOT a Mommy & Me class
+              // Check if already booked before auto-selecting
+              await loadBookingsForChildren(parentData.children)
+              const { createClient } = await import('@/lib/supabase/client')
+              const supabase = createClient()
+              const childId = parentData.children[0].id
+              const { data: existingBookings } = await supabase
+                .from('bookings')
+                .select('id, booking_status, payment_status')
+                .eq('child_id', childId)
+                .eq('class_id', selectedClassId)
+                .not('booking_status', 'eq', 'cancelled')
+                .not('payment_status', 'in', '("failed","canceled")')
+                .limit(1)
+
+              if (existingBookings && existingBookings.length > 0) {
+                // Child is already booked, show child-selection screen with "Already Booked" indicator
+                setAuthStep('child-selection')
+              } else {
+                // Not booked, auto-select and proceed to payment
+                setSelectedChildId(childId)
+                setSelectedChildIds([childId])
+                setAuthStep('payment')
+              }
             } else {
               // Multiple children OR Mommy & Me class, show selection screen
               // For Mommy & Me, they need to select which children are attending (up to 3)
@@ -432,11 +478,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       )
 
       if (result.valid && result.coupon) {
+        const coupon = result.coupon
         setAppliedCoupon({
-          code: result.coupon.code,
-          discount: result.coupon.discount_percentage
+          code: coupon.code,
+          discount: coupon.discount_percentage || 0,
+          discountType: coupon.discount_type || 'percentage',
+          discountAmount: coupon.discount_amount,
         })
-        setCouponSuccess(`${result.coupon.discount_percentage}% discount applied!`)
+        const successMsg = coupon.discount_type === 'fixed'
+          ? `$${coupon.discount_amount} discount applied!`
+          : `${coupon.discount_percentage}% discount applied!`
+        setCouponSuccess(successMsg)
         setCouponCode('')
       } else {
         setCouponError(result.error || 'Invalid coupon code')
@@ -471,8 +523,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
     // Apply coupon discount first
     if (appliedCoupon) {
-      const discount = (price * appliedCoupon.discount) / 100
-      price = price - discount
+      if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+        price = Math.max(0, price - appliedCoupon.discountAmount)
+      } else {
+        const discount = (price * appliedCoupon.discount) / 100
+        price = price - discount
+      }
     }
 
     // Then apply gift card if enabled
@@ -494,6 +550,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     }
 
     if (!appliedCoupon) return basePrice
+    if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+      return Math.max(0, basePrice - appliedCoupon.discountAmount)
+    }
     const discount = (basePrice * appliedCoupon.discount) / 100
     return basePrice - discount
   }
@@ -504,6 +563,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     // Add extra children cost for Mommy & Me classes
     if (isCurrentClassMommyAndMe && extraChildren > 0) {
       basePrice += getExtraChildrenCost()
+    }
+    if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+      return Math.min(appliedCoupon.discountAmount, basePrice)
     }
     return (basePrice * appliedCoupon.discount) / 100
   }
@@ -622,6 +684,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     // Reset child selection when going back
     setSelectedChildId(null)
     setSelectedChildIds([])
+    setBookingComments('')
   }
 
   const handlePaymentSuccess = async () => {
@@ -763,7 +826,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       console.log('Creating booking record...')
       const bookingsService = new BookingsClientService()
       const discountNote = appliedCoupon
-        ? ` Coupon ${appliedCoupon.code} applied (${appliedCoupon.discount}% off, saved $${getDiscountAmount().toFixed(2)}).`
+        ? ` Coupon ${appliedCoupon.code} applied (${appliedCoupon.discountType === 'fixed' ? `$${appliedCoupon.discountAmount} off` : `${appliedCoupon.discount}% off`}, saved $${getDiscountAmount().toFixed(2)}).`
         : ''
       const giftCardNote = useGiftCard && giftCardAmountToUse > 0
         ? ` Gift card used: $${giftCardAmountToUse.toFixed(2)}.`
@@ -789,11 +852,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       })
 
       // Build booking data
+      const guestNote = isGuestBooking ? ` Guest booking for ${guestChildName} (parent: ${guestParentName}, ${guestParentEmail}).` : ''
       const bookingData: any = {
         user_id: user.id!,
         class_id: selectedClassData.id,
         student_id: studentInfo.id,
-        child_id: selectedChildId || undefined,
+        child_id: isGuestBooking ? null : (selectedChildId || undefined),
         payment_amount: finalPrice,
         payment_method: isFreeBooking ? 'coupon' : 'stripe',
         payment_status: isFreeBooking ? 'completed' : 'held',
@@ -801,9 +865,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
         gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
         parent_id: parentWithChildren?.id || undefined,
+        booking_comments: bookingComments || undefined,
+        is_guest_booking: isGuestBooking || undefined,
         notes: isFreeBooking
-          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${extraChildrenNote}`
-          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}${extraChildrenNote}`
+          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${extraChildrenNote}${guestNote}`
+          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}${extraChildrenNote}${guestNote}`
       }
 
       // Add extra_children if there are extra children
@@ -860,46 +926,94 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       await clasesService.updateClassEnrollment(selectedClassData.id, enrollmentCount)
       console.log('Class enrollment updated')
       
-      // Send confirmation emails
-      try {
-        // Get selected children names for the email
-        const emailChildrenNames = parentWithChildren && selectedChildIds.length > 0
-          ? parentWithChildren.children
-              .filter(c => selectedChildIds.includes(c.id))
-              .map(c => c.child_full_name)
-          : [studentInfo.child_name]
+      // Send confirmation emails (skip for guest bookings — they get their own emails)
+      if (!isGuestBooking) {
+        try {
+          // Get selected children names for the email
+          const emailChildrenNames = parentWithChildren && selectedChildIds.length > 0
+            ? parentWithChildren.children
+                .filter(c => selectedChildIds.includes(c.id))
+                .map(c => c.child_full_name)
+            : [studentInfo.child_name]
 
-        const emailResponse = await fetch('/api/booking-confirmation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userEmail: user.email,
-            userName: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
-            studentName: emailChildrenNames.length > 0 ? emailChildrenNames[0] : studentInfo.child_name,
-            classTitle: selectedClassData.title,
-            classDate: selectedClassData.date,
-            classTime: selectedClassData.time,
-            classPrice: finalPrice, // Total price paid (includes extra children cost)
-            basePrice: selectedClassData.price,
-            extraChildren: extraChildren,
-            extraChildrenCost: extraChildren > 0 ? extraChildren * EXTRA_CHILD_COST : 0,
-            selectedChildrenNames: emailChildrenNames,
-            bookingId: newBooking.id || `BK-${Date.now()}`
+          const emailResponse = await fetch('/api/booking-confirmation', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userEmail: user.email,
+              userName: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
+              studentName: emailChildrenNames.length > 0 ? emailChildrenNames[0] : studentInfo.child_name,
+              classTitle: selectedClassData.title,
+              classDate: selectedClassData.date,
+              classTime: selectedClassData.time,
+              classPrice: finalPrice, // Total price paid (includes extra children cost)
+              basePrice: selectedClassData.price,
+              extraChildren: extraChildren,
+              extraChildrenCost: extraChildren > 0 ? extraChildren * EXTRA_CHILD_COST : 0,
+              selectedChildrenNames: emailChildrenNames,
+              bookingId: newBooking.id || `BK-${Date.now()}`
+            })
           })
-        })
 
-        if (!emailResponse.ok) {
-          console.error('Failed to send confirmation emails')
-        } else {
-          console.log('Confirmation emails sent successfully')
+          if (!emailResponse.ok) {
+            console.error('Failed to send confirmation emails')
+          } else {
+            console.log('Confirmation emails sent successfully')
+          }
+        } catch (emailError) {
+          console.error('Error sending confirmation emails:', emailError)
+          // Don't fail the booking if email fails
         }
-      } catch (emailError) {
-        console.error('Error sending confirmation emails:', emailError)
-        // Don't fail the booking if email fails
       }
-      
+
+      // Handle guest booking: create record + send guest emails
+      if (isGuestBooking) {
+        try {
+          console.log('Creating guest booking record...')
+          const guestCreateRes = await fetch('/api/guest-booking/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              booking_id: newBooking.id,
+              purchaser_user_id: user.id,
+              purchaser_name: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
+              purchaser_email: user.email,
+              guest_parent_name: guestParentName,
+              guest_parent_email: guestParentEmail,
+              guest_child_name: guestChildName,
+            }),
+          })
+          const guestCreateData = await guestCreateRes.json()
+
+          if (guestCreateData.success) {
+            console.log('Guest booking created, sending emails...')
+            await fetch('/api/guest-booking/send-emails', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                purchaser_name: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
+                purchaser_email: user.email,
+                guest_parent_name: guestParentName,
+                guest_parent_email: guestParentEmail,
+                guest_child_name: guestChildName,
+                class_title: selectedClassData.title,
+                class_date: selectedClassData.date,
+                class_time: selectedClassData.time,
+                class_price: finalPrice,
+                form_token: guestCreateData.form_token,
+                booking_id: newBooking.id,
+              }),
+            })
+            console.log('Guest booking emails sent')
+          }
+        } catch (guestError) {
+          console.error('Error in guest booking flow:', guestError)
+          // Don't fail the booking if guest flow fails
+        }
+      }
+
       // Payment successful, clear pending booking and show confirmation
       console.log('Booking completed successfully, showing confirmation...')
       sessionStorage.removeItem('pendingBooking')
@@ -1432,7 +1546,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           // Check if this child is already booked for the selected class
           const existingBooking = childrenBookings[child.id]?.find(
             (booking: any) => booking.class_id === selectedClassId &&
-            (booking.status === 'confirmed' || booking.status === 'pending' || !booking.status)
+            (booking.booking_status === 'confirmed' || booking.booking_status === 'pending' || !booking.booking_status)
           )
           const isAlreadyBooked = !!existingBooking
           const isSelected = isChildSelected(child.id)
@@ -1511,7 +1625,96 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           </Card>
           )
         })}
+
+        {/* Book for a Guest Child card */}
+        {!isGuestBooking && !isCurrentClassMommyAndMe && (
+          <Card
+            className="transition-all duration-300 border-2 border-dashed border-slate-300 hover:border-[#1E3A8A]/50 hover:shadow-md cursor-pointer bg-slate-50/50"
+            onClick={() => {
+              setIsGuestBooking(true)
+              setSelectedChildId(null)
+              setSelectedChildIds([])
+            }}
+          >
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center text-center space-y-2 py-4">
+                <div className="bg-[#1E3A8A]/10 p-3 rounded-full">
+                  <Gift className="h-6 w-6 text-[#1E3A8A]" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-800">Book for a Guest Child</h4>
+                <p className="text-sm text-slate-500">Gift a class to a friend's child</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Guest booking mini form */}
+      {isGuestBooking && (
+        <Card className="border-[#1E3A8A]/20 bg-blue-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Gift className="h-5 w-5 text-[#1E3A8A]" />
+                Guest Child Information
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsGuestBooking(false)
+                  setGuestChildName('')
+                  setGuestParentName('')
+                  setGuestParentEmail('')
+                }}
+                className="text-slate-500 hover:text-slate-700 text-xs"
+              >
+                <ArrowLeft className="h-3 w-3 mr-1" />
+                Back to my children
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="guest-child-name" className="text-sm font-medium text-slate-700">
+                Guest Child's Name *
+              </Label>
+              <Input
+                id="guest-child-name"
+                value={guestChildName}
+                onChange={(e) => setGuestChildName(e.target.value)}
+                placeholder="Child's name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest-parent-name" className="text-sm font-medium text-slate-700">
+                Guest Parent's Name *
+              </Label>
+              <Input
+                id="guest-parent-name"
+                value={guestParentName}
+                onChange={(e) => setGuestParentName(e.target.value)}
+                placeholder="Parent's full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest-parent-email" className="text-sm font-medium text-slate-700">
+                Guest Parent's Email *
+              </Label>
+              <Input
+                id="guest-parent-email"
+                type="email"
+                value={guestParentEmail}
+                onChange={(e) => setGuestParentEmail(e.target.value)}
+                placeholder="parent@email.com"
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              An enrollment form will be sent to this email after payment. The guest parent will need to complete the child's details and sign consent forms.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Selection Summary for Mommy & Me */}
       {isCurrentClassMommyAndMe && selectedChildIds.length > 0 && (
@@ -1538,6 +1741,21 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </div>
       )}
 
+      {/* Comments */}
+      <div className="space-y-2">
+        <Label htmlFor="booking-comments" className="text-sm font-medium text-slate-700">
+          Comments (optional)
+        </Label>
+        <Textarea
+          id="booking-comments"
+          value={bookingComments}
+          onChange={(e) => setBookingComments(e.target.value)}
+          placeholder="Any allergies, dietary needs, or special requests..."
+          rows={3}
+          className="resize-none"
+        />
+      </div>
+
       {/* Action Buttons */}
       <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
         <Button
@@ -1551,12 +1769,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         <Button
           onClick={() => {
             // Set selectedChildId to first child for backward compatibility
-            if (selectedChildIds.length > 0) {
+            if (!isGuestBooking && selectedChildIds.length > 0) {
               setSelectedChildId(selectedChildIds[0])
             }
             setAuthStep('payment')
           }}
-          disabled={!canContinue}
+          disabled={isGuestBooking ? !(guestChildName && guestParentName && guestParentEmail) : !canContinue}
           size="lg"
           className="px-8 bg-cocinarte-red hover:bg-cocinarte-red/90 text-white"
         >
@@ -1696,7 +1914,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-green-600 font-medium flex items-center gap-1">
                               <Ticket className="h-3 w-3" />
-                              Discount ({appliedCoupon.discount}%)
+                              Discount ({appliedCoupon.discountType === 'fixed' ? `$${appliedCoupon.discountAmount}` : `${appliedCoupon.discount}%`})
                             </span>
                             <span className="text-green-600 font-medium">-${getDiscountAmount().toFixed(2)}</span>
                           </div>
@@ -1770,7 +1988,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                       <Ticket className="h-4 w-4 text-green-600" />
                       <span className="font-semibold text-green-800">{appliedCoupon.code}</span>
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        {appliedCoupon.discount}% OFF
+                        {appliedCoupon.discountType === 'fixed' ? `$${appliedCoupon.discountAmount} OFF` : `${appliedCoupon.discount}% OFF`}
                       </Badge>
                     </div>
                     <Button
@@ -1954,10 +2172,84 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       if (parentData && parentData.children) {
         await loadBookingsForChildren(parentData.children)
       }
+
+      // Fetch guest bookings purchased by this user
+      if (user.id) {
+        await loadGuestBookings(user.id)
+      }
     } catch (error) {
       console.error('Error fetching student profile:', error)
     } finally {
       setLoadingProfile(false)
+    }
+  }
+
+  const openCancelDialog = (booking: any, childId: string) => {
+    const clase = booking.clases
+    if (!clase) return
+
+    const now = new Date()
+    const classDateTime = new Date(`${clase.date}T${clase.time}`)
+    const hoursUntil = (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+    if (hoursUntil <= 0) {
+      setCancelResultDialog({ open: true, message: 'This class has already started or passed.', isError: true })
+      return
+    }
+
+    const isLateCancel = hoursUntil < 48
+    let refundEstimate = 0
+    const paymentAmount = booking.payment_amount || 0
+    if (hoursUntil >= 48) {
+      refundEstimate = paymentAmount
+    } else if (clase.late_cancel_refund_type && clase.late_cancel_refund_value != null) {
+      if (clase.late_cancel_refund_type === 'percentage') {
+        refundEstimate = Math.round(paymentAmount * (clase.late_cancel_refund_value / 100) * 100) / 100
+      } else if (clase.late_cancel_refund_type === 'fixed') {
+        refundEstimate = Math.min(clase.late_cancel_refund_value, paymentAmount)
+      }
+    }
+
+    setCancelDialog({
+      open: true,
+      booking,
+      childId,
+      title: clase.title,
+      refundAmount: refundEstimate,
+      isLateCancel,
+    })
+  }
+
+  const confirmCancelBooking = async () => {
+    const { booking, childId } = cancelDialog
+    if (!booking) return
+
+    setCancelDialog(prev => ({ ...prev, open: false }))
+    setCancellingBookingId(booking.id)
+
+    try {
+      const response = await fetch('/api/cancel-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Failed to cancel booking')
+
+      if (parentWithChildren?.children) {
+        await loadBookingsForChildren(parentWithChildren.children)
+      }
+
+      if (result.refundAmount > 0) {
+        setCancelResultDialog({ open: true, message: `Booking cancelled. A refund of $${result.refundAmount.toFixed(2)} will be processed.`, isError: false })
+      } else {
+        setCancelResultDialog({ open: true, message: 'Booking cancelled successfully.', isError: false })
+      }
+    } catch (error: any) {
+      console.error('Error cancelling booking:', error)
+      setCancelResultDialog({ open: true, message: error.message || 'Failed to cancel booking. Please try again.', isError: true })
+    } finally {
+      setCancellingBookingId(null)
     }
   }
 
@@ -1978,12 +2270,15 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               title,
               date,
               time,
-              price
+              price,
+              late_cancel_refund_type,
+              late_cancel_refund_value
             )
           `)
           .eq('child_id', child.id)
+          .not('booking_status', 'eq', 'cancelled')
+          .not('payment_status', 'in', '("failed","canceled")')
           .order('created_at', { ascending: false })
-          .limit(5)
 
         if (error) {
           console.error(`Error loading bookings for child ${child.id}:`, error)
@@ -1995,6 +2290,45 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       setChildrenBookings(bookingsMap)
     } catch (error) {
       console.error('Failed to load bookings:', error)
+    }
+  }
+
+  const loadGuestBookings = async (userId: string) => {
+    setLoadingGuestBookings(true)
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { data: guestBookings, error } = await supabase
+        .from('guest_bookings')
+        .select(`
+          *,
+          bookings:booking_id (
+            id,
+            booking_status,
+            payment_status,
+            payment_amount,
+            clases:class_id (
+              id,
+              title,
+              date,
+              time,
+              price
+            )
+          )
+        `)
+        .eq('purchaser_user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading guest bookings:', error)
+      } else {
+        setMyGuestBookings(guestBookings || [])
+      }
+    } catch (error) {
+      console.error('Failed to load guest bookings:', error)
+    } finally {
+      setLoadingGuestBookings(false)
     }
   }
 
@@ -2232,6 +2566,72 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                 />
               )}
 
+              {/* Guest Bookings Section */}
+              {myGuestBookings.length > 0 && (
+                <>
+                  <div className="border-t border-blue-200 pt-4"></div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2 mb-4">
+                      <Gift className="h-5 w-5" />
+                      Guest Bookings ({myGuestBookings.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {myGuestBookings.map((gb: any) => {
+                        const clase = gb.bookings?.clases
+                        const formCompleted = !!gb.form_completed_at
+                        return (
+                          <Card key={gb.id} className="border-purple-200">
+                            <CardContent className="pt-4 pb-4">
+                              <div className="space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="font-semibold text-purple-900 text-sm sm:text-base">
+                                      {clase?.title || 'Class'}
+                                    </div>
+                                    <div className="text-xs text-purple-700 mt-1">
+                                      {clase?.date && new Date(clase.date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                      {clase?.time && ` • ${clase.time}`}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <Badge className="bg-purple-100 text-purple-700 border-0 text-xs">
+                                      Gift
+                                    </Badge>
+                                    {formCompleted ? (
+                                      <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                                        Form Complete
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">
+                                        Form Pending
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-2 text-xs space-y-1">
+                                  <div>
+                                    <span className="font-medium text-purple-800">Guest Child: </span>
+                                    <span className="text-purple-700">{gb.guest_child_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-purple-800">Guest Parent: </span>
+                                    <span className="text-purple-700">{gb.guest_parent_name} ({gb.guest_parent_email})</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="border-t border-blue-200 pt-4"></div>
 
               {/* Children Information */}
@@ -2424,32 +2824,62 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                                   </h5>
                                 </div>
                                 <div className="space-y-2">
-                                  {childrenBookings[child.id].map((booking: any) => (
+                                  {childrenBookings[child.id].map((booking: any) => {
+                                    const classDate = booking.clases?.date
+                                    const classTime = booking.clases?.time
+                                    const isFuture = classDate && classTime && new Date(`${classDate}T${classTime}`).getTime() > Date.now()
+                                    const isCancelled = booking.booking_status === 'cancelled'
+
+                                    return (
                                     <div key={booking.id} className="bg-white border border-orange-100 rounded p-2">
-                                      <div className="font-medium text-sm text-orange-900">
-                                        {booking.clases?.title || 'Class'}
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                          <div className="font-medium text-sm text-orange-900">
+                                            {booking.clases?.title || 'Class'}
+                                          </div>
+                                          <div className="text-xs text-orange-700 mt-1">
+                                            {classDate && new Date(classDate).toLocaleDateString('en-US', {
+                                              month: 'short',
+                                              day: 'numeric',
+                                              year: 'numeric'
+                                            })}
+                                            {classTime && ` • ${classTime}`}
+                                          </div>
+                                          <Badge
+                                            variant="outline"
+                                            className={`mt-1 text-xs ${
+                                              booking.booking_status === 'confirmed' ? 'bg-green-50 text-green-800 border-green-200' :
+                                              booking.booking_status === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                                              booking.booking_status === 'cancelled' ? 'bg-red-50 text-red-800 border-red-200' :
+                                              'bg-blue-50 text-blue-800 border-blue-200'
+                                            }`}
+                                          >
+                                            {booking.booking_status || 'booked'}
+                                          </Badge>
+                                        </div>
+                                        {isFuture && !isCancelled && (
+                                          <button
+                                            onClick={() => openCancelDialog(booking, child.id)}
+                                            disabled={cancellingBookingId === booking.id}
+                                            className="mt-0.5 px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:bg-red-100 text-red-500 hover:text-red-700 border border-red-200 transition-colors disabled:opacity-50 flex-shrink-0"
+                                          >
+                                            {cancellingBookingId === booking.id ? (
+                                              <>
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                Cancelling...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <XCircle className="h-3 w-3" />
+                                                Cancel
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
                                       </div>
-                                      <div className="text-xs text-orange-700 mt-1">
-                                        {booking.clases?.date && new Date(booking.clases.date).toLocaleDateString('en-US', {
-                                          month: 'short',
-                                          day: 'numeric',
-                                          year: 'numeric'
-                                        })}
-                                        {booking.clases?.time && ` • ${booking.clases.time}`}
-                                      </div>
-                                      <Badge
-                                        variant="outline"
-                                        className={`mt-1 text-xs ${
-                                          booking.status === 'confirmed' ? 'bg-green-50 text-green-800 border-green-200' :
-                                          booking.status === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
-                                          booking.status === 'cancelled' ? 'bg-red-50 text-red-800 border-red-200' :
-                                          'bg-blue-50 text-blue-800 border-blue-200'
-                                        }`}
-                                      >
-                                        {booking.status || 'booked'}
-                                      </Badge>
                                     </div>
-                                  ))}
+                                    )
+                                  })}
                                 </div>
                               </div>
                             )}
@@ -2769,9 +3199,34 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </div>
         <h3 className="text-2xl font-bold text-slate-800 mb-3">Booking Confirmed!</h3>
         <p className="text-slate-600 max-w-md mx-auto">
-          Your cooking class has been successfully booked. You will receive a confirmation email shortly.
+          {isGuestBooking
+            ? 'Your gift booking has been confirmed! The guest parent will receive an enrollment form.'
+            : 'Your cooking class has been successfully booked. You will receive a confirmation email shortly.'}
         </p>
       </div>
+
+      {/* Guest booking info */}
+      {isGuestBooking && (
+        <Alert className="border-purple-200 bg-purple-50">
+          <div className="flex gap-3">
+            <div className="flex-shrink-0">
+              <Gift className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-purple-800 mb-1">
+                Guest Enrollment Form Sent
+              </h4>
+              <div className="text-xs text-purple-700 space-y-1">
+                <p>An enrollment form has been sent to <strong>{guestParentEmail}</strong>.</p>
+                <p>
+                  <strong>{guestParentName}</strong> will need to complete {guestChildName}'s information
+                  and sign consent forms before the class.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Payment Hold Reminder */}
       <Alert className="border-blue-200 bg-blue-50">
@@ -2969,6 +3424,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   )
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
         <div className="bg-cocinarte-navy text-white p-6 rounded-t-lg">
@@ -3252,5 +3708,72 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </DialogContent>
       </Dialog>
     </Dialog>
+
+    {/* Cancel Booking Confirmation Dialog */}
+    <Dialog open={cancelDialog.open} onOpenChange={(open) => !open && setCancelDialog(prev => ({ ...prev, open: false }))}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-lg text-red-700 flex items-center gap-2">
+            <XCircle className="h-5 w-5" />
+            Cancel Booking
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <p className="text-sm text-gray-700">
+            Are you sure you want to cancel your booking for <strong>{cancelDialog.title}</strong>?
+          </p>
+          <div className={`rounded-lg p-3 text-sm ${
+            !cancelDialog.isLateCancel
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : cancelDialog.refundAmount > 0
+                ? 'bg-yellow-50 border border-yellow-200 text-yellow-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {!cancelDialog.isLateCancel ? (
+              <p>You will receive a <strong>full refund of ${cancelDialog.refundAmount.toFixed(2)}</strong>.</p>
+            ) : cancelDialog.refundAmount > 0 ? (
+              <p>This is a late cancellation (less than 48 hours before class). Per our policy, you will receive a <strong>refund of ${cancelDialog.refundAmount.toFixed(2)}</strong>.</p>
+            ) : (
+              <p>This is a late cancellation (less than 48 hours before class). Per our policy, <strong>no refund</strong> will be issued.</p>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">This action cannot be undone.</p>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={() => setCancelDialog(prev => ({ ...prev, open: false }))}>
+            Keep Booking
+          </Button>
+          <Button
+            size="sm"
+            className="bg-red-600 hover:bg-red-700 text-white"
+            onClick={confirmCancelBooking}
+          >
+            Yes, Cancel Booking
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Cancel Result Dialog */}
+    <Dialog open={cancelResultDialog.open} onOpenChange={(open) => !open && setCancelResultDialog(prev => ({ ...prev, open: false }))}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className={`text-lg flex items-center gap-2 ${cancelResultDialog.isError ? 'text-red-700' : 'text-green-700'}`}>
+            {cancelResultDialog.isError ? (
+              <><AlertCircle className="h-5 w-5" /> Error</>
+            ) : (
+              <><CheckCircle className="h-5 w-5" /> Success</>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-gray-700 py-2">{cancelResultDialog.message}</p>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setCancelResultDialog(prev => ({ ...prev, open: false }))}>
+            OK
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

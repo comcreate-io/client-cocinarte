@@ -18,10 +18,20 @@ export interface CampaignRecipient {
   last_name?: string;
 }
 
+export interface ClassContext {
+  class_name?: string;
+  class_date?: string;
+  class_time?: string;
+  class_description?: string;
+  class_type?: string;
+  class_price?: string;
+}
+
 export interface CampaignEmailOptions {
   recipient: CampaignRecipient;
   subject: string;
   html: string;
+  classContext?: ClassContext;
 }
 
 export interface CampaignProgress {
@@ -72,12 +82,13 @@ export async function sendTestEmail({ to, subject, html }: SendTestEmailOptions)
   return transporter.sendMail(mailOptions);
 }
 
-// Personalize email content with recipient data
+// Personalize email content with recipient data and optional class context
 export function personalizeEmailContent(
   html: string,
-  recipient: CampaignRecipient
+  recipient: CampaignRecipient,
+  classContext?: ClassContext
 ): string {
-  return html
+  let result = html
     .replace(/{{first_name}}/gi, recipient.first_name || "Friend")
     .replace(/{{last_name}}/gi, recipient.last_name || "")
     .replace(/{{email}}/gi, recipient.email)
@@ -85,6 +96,17 @@ export function personalizeEmailContent(
       /{{full_name}}/gi,
       `${recipient.first_name || ""} ${recipient.last_name || ""}`.trim() || "Friend"
     );
+
+  // Replace class context variables
+  result = result
+    .replace(/{{class_name}}/gi, classContext?.class_name || "")
+    .replace(/{{class_date}}/gi, classContext?.class_date || "")
+    .replace(/{{class_time}}/gi, classContext?.class_time || "")
+    .replace(/{{class_description}}/gi, classContext?.class_description || "")
+    .replace(/{{class_type}}/gi, classContext?.class_type || "")
+    .replace(/{{class_price}}/gi, classContext?.class_price || "");
+
+  return result;
 }
 
 // ============ ADMIN NOTIFICATIONS ============
@@ -198,12 +220,13 @@ export async function sendCampaignEmail({
   recipient,
   subject,
   html,
+  classContext,
 }: CampaignEmailOptions): Promise<{ success: boolean; error?: string }> {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
 
   // Personalize subject and content
-  const personalizedSubject = personalizeEmailContent(subject, recipient);
-  const personalizedHtml = personalizeEmailContent(html, recipient);
+  const personalizedSubject = personalizeEmailContent(subject, recipient, classContext);
+  const personalizedHtml = personalizeEmailContent(html, recipient, classContext);
 
   const mailOptions = {
     from: `"Cocinarte PDX" <${from}>`,

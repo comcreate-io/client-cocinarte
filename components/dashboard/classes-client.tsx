@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { BookOpen, Plus, Calendar, Users, Clock, DollarSign } from 'lucide-react'
+import { BookOpen, Plus, Calendar, Users, Clock, DollarSign, Archive, ChevronDown, ChevronUp } from 'lucide-react'
 import { Clase } from '@/lib/types/clases'
 import { ClassForm } from './class-form'
 import { ClassActions } from './class-actions'
@@ -24,6 +24,12 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
   const [chargedClasses, setChargedClasses] = useState<Set<string>>(new Set())
   const [selectedClass, setSelectedClass] = useState<Clase | null>(null)
   const [showStudentsPopup, setShowStudentsPopup] = useState(false)
+  const [showArchive, setShowArchive] = useState(false)
+
+  // Split classes into upcoming and archived
+  const today = new Date().toISOString().split('T')[0]
+  const upcomingClasses = clases.filter(c => c.date >= today)
+  const archivedClasses = clases.filter(c => c.date < today).sort((a, b) => b.date.localeCompare(a.date))
 
   // Fetch enrolled counts from bookings and check for cancelled classes
   useEffect(() => {
@@ -175,6 +181,92 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
     setShowStudentsPopup(true)
   }
 
+  const renderClassCard = (clase: Clase, isArchived = false) => {
+    const status = getClassStatus(clase)
+    const isCancelled = cancelledClasses.has(clase.id)
+    const dateStr = clase.date.includes('T') ? clase.date.split('T')[0] : clase.date
+    const timeStr = clase.time.includes(':') ? clase.time.split(':').slice(0, 2).join(':') : clase.time
+    const classDate = new Date(`${dateStr}T${timeStr}`)
+    const isToday = new Date().toDateString() === classDate.toDateString()
+
+    return (
+      <Card
+        key={clase.id}
+        className={`cursor-pointer transition-shadow duration-200 min-h-[380px] flex flex-col ${
+          isCancelled
+            ? 'bg-gray-50 border-gray-300 opacity-75'
+            : isArchived
+              ? 'bg-slate-50 border-slate-200 hover:shadow-md hover:border-slate-300'
+              : 'hover:shadow-lg hover:border-blue-300'
+        }`}
+        onClick={() => handleClassClick(clase)}
+      >
+        <CardHeader>
+          <div className="flex flex-col space-y-2">
+            <CardTitle className={`${isCancelled ? 'text-gray-500' : isArchived ? 'text-slate-600' : ''}`}>{clase.title}</CardTitle>
+            <div className="flex items-center space-x-2">
+              {isCancelled && (
+                <Badge variant="destructive">Cancelled</Badge>
+              )}
+              {isArchived && !isCancelled && (
+                <Badge variant="outline" className="text-slate-500 border-slate-300">Completed</Badge>
+              )}
+              {!isCancelled && !isArchived && status.label && <Badge variant={status.variant}>{status.label}</Badge>}
+            </div>
+          </div>
+          <CardDescription className={isCancelled ? 'text-gray-400' : ''}>
+            {formatDate(clase.date)} at {formatTime(clase.time)}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col">
+          <div className={`space-y-4 flex-1 ${isCancelled ? 'text-gray-400' : ''}`}>
+            {clase.description && (
+              <p className={`text-sm line-clamp-4 ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+                {clase.description}
+              </p>
+            )}
+
+            <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+              <Users className="h-4 w-4" />
+              <span>{enrolledCounts[clase.id] ?? 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity)</span>
+            </div>
+
+            <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+              <DollarSign className="h-4 w-4" />
+              <span>${clase.price.toFixed(2)} per student</span>
+            </div>
+
+            <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+              <Clock className="h-4 w-4" />
+              <span>Duration: {clase.classDuration} minutes</span>
+            </div>
+
+            <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
+              <Calendar className="h-4 w-4" />
+              <span>
+                {isCancelled ? 'Cancelled' :
+                 isArchived ? 'Completed' :
+                 isToday ? 'Today' :
+                 `In ${Math.ceil((classDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days`}
+              </span>
+            </div>
+          </div>
+
+          <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4">
+            <ClassActions
+              clase={clase}
+              onEdit={handleEditClass}
+              onDelete={handleDeleteSuccess}
+              onCancel={handleCancelSuccess}
+              isCancelled={isCancelled}
+              enrolledCount={enrolledCounts[clase.id] ?? 0}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <>
       {/* Header */}
@@ -211,13 +303,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
                 <Calendar className="h-4 w-4 text-green-700" />
                 <div>
                   <p className="text-sm font-medium text-green-700">Upcoming</p>
-                  <p className="text-2xl font-bold text-green-900">
-                    {(() => {
-                      const today = new Date()
-                      const todayString = today.toISOString().split('T')[0]
-                      return clases.filter(clase => clase.date >= todayString).length
-                    })()}
-                  </p>
+                  <p className="text-2xl font-bold text-green-900">{upcomingClasses.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -267,93 +353,48 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {clases.map((clase) => {
-            const status = getClassStatus(clase)
-            const isCancelled = cancelledClasses.has(clase.id)
-            // Parse date properly - handle both date string and time string formats
-            const dateStr = clase.date.includes('T') ? clase.date.split('T')[0] : clase.date
-            const timeStr = clase.time.includes(':') ? clase.time.split(':').slice(0, 2).join(':') : clase.time
-            const classDate = new Date(`${dateStr}T${timeStr}`)
-            const isToday = new Date().toDateString() === classDate.toDateString()
-
-            return (
-              <Card
-                key={clase.id}
-                className={`cursor-pointer transition-shadow duration-200 min-h-[380px] flex flex-col relative ${
-                  isCancelled
-                    ? 'bg-gray-50 border-gray-300 opacity-75'
-                    : 'hover:shadow-lg hover:border-blue-300'
-                }`}
-                onClick={() => handleClassClick(clase)}
+        <>
+          {/* Archived Classes */}
+          {archivedClasses.length > 0 && (
+            <div className="space-y-4">
+              <button
+                onClick={() => setShowArchive(!showArchive)}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors w-full"
               >
-                {isCancelled && (
-                  <div className="absolute top-3 right-3 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide">
-                    Cancelled
-                  </div>
-                )}
-                <CardHeader>
-                  <div className="flex flex-col space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <CardTitle className={`h-[50px] ${isCancelled ? 'text-gray-500' : ''}`}>{clase.title}</CardTitle>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                       {!isCancelled && status.label && <Badge variant={status.variant}>{status.label}</Badge>}
-                    </div>
-                  </div>
-                  <CardDescription className={isCancelled ? 'text-gray-400' : ''}>
-                    {formatDate(clase.date)} at {formatTime(clase.time)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <div className={`space-y-4 flex-1 ${isCancelled ? 'text-gray-400' : ''}`}>
-                    {clase.description && (
-                      <p className={`text-sm line-clamp-4 ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
-                        {clase.description}
-                      </p>
-                    )}
+                <Archive className="h-5 w-5" />
+                <h2 className="text-xl font-semibold">Archived Classes</h2>
+                <Badge variant="secondary" className="ml-1">{archivedClasses.length}</Badge>
+                {showArchive ? <ChevronUp className="h-4 w-4 ml-auto" /> : <ChevronDown className="h-4 w-4 ml-auto" />}
+              </button>
+              {showArchive && (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {archivedClasses.map((clase) => renderClassCard(clase, true))}
+                </div>
+              )}
+            </div>
+          )}
 
-                    <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
-                      <Users className="h-4 w-4" />
-                      <span>{enrolledCounts[clase.id] ?? 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity)</span>
-                    </div>
-
-                    <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
-                      <DollarSign className="h-4 w-4" />
-                      <span>${clase.price.toFixed(2)} per student</span>
-                    </div>
-
-                    <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
-                      <Clock className="h-4 w-4" />
-                      <span>Duration: {clase.classDuration} minutes</span>
-                    </div>
-
-                    <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {isCancelled ? 'Cancelled' :
-                         isToday ? 'Today' :
-                         status.status === 'completed' ? 'Completed' :
-                         `In ${Math.ceil((classDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days`}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div onClick={(e) => e.stopPropagation()} className="mt-auto pt-4">
-                    <ClassActions
-                      clase={clase}
-                      onEdit={handleEditClass}
-                      onDelete={handleDeleteSuccess}
-                      onCancel={handleCancelSuccess}
-                      isCancelled={isCancelled}
-                      enrolledCount={enrolledCounts[clase.id] ?? 0}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
+          {/* Upcoming Classes */}
+          {upcomingClasses.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No Upcoming Classes</h3>
+                <p className="text-muted-foreground text-center mb-4">
+                  All your classes have passed. Create a new class to get started!
+                </p>
+                <Button onClick={handleCreateClass}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Cooking Class
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {upcomingClasses.map((clase) => renderClassCard(clase))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Form Modal */}

@@ -12,7 +12,9 @@ export async function POST(request: NextRequest) {
       classDate,
       classTime,
       classPrice,
-      bookingId
+      bookingId,
+      refundAmount,
+      isLateCancel,
     } = body;
 
     // Validate required fields
@@ -76,8 +78,15 @@ export async function POST(request: NextRequest) {
           </div>
 
           <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h4 style="color: #92400E; margin: 0 0 10px 0; font-size: 18px;">📝 Action Required</h4>
-            <p style="color: #92400E; margin: 0; font-size: 15px;">Please update class roster and process any necessary refunds.</p>
+            <h4 style="color: #92400E; margin: 0 0 10px 0; font-size: 18px;">📝 Refund Details</h4>
+            <p style="color: #92400E; margin: 0; font-size: 15px;">
+              ${refundAmount != null && refundAmount > 0
+                ? `Refund of $${Number(refundAmount).toFixed(2)} has been automatically processed${isLateCancel ? ' (late cancellation policy)' : ''}.`
+                : refundAmount != null && refundAmount === 0
+                  ? 'No refund issued (late cancellation policy — $0 refund).'
+                  : 'Please update class roster and process any necessary refunds.'
+              }
+            </p>
           </div>
         </div>
       </div>
@@ -119,8 +128,14 @@ export async function POST(request: NextRequest) {
           <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
             <h4 style="color: #92400E; margin: 0 0 12px 0; font-size: 18px;">💳 Refund Information</h4>
             <p style="color: #92400E; margin: 0; font-size: 15px; line-height: 1.6;">
-              If you paid for this class, a refund will be processed to your original payment method within 5-7 business days.
-              You will receive a separate confirmation once the refund has been issued.
+              ${refundAmount != null && refundAmount > 0
+                ? isLateCancel
+                  ? `A refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> will be processed to your original payment method within 5-7 business days (late cancellation policy).`
+                  : `A full refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> will be processed to your original payment method within 5-7 business days.`
+                : refundAmount != null && refundAmount === 0
+                  ? 'Per our late cancellation policy, no refund will be issued for this booking.'
+                  : 'If you paid for this class, a refund will be processed to your original payment method within 5-7 business days.'
+              }
             </p>
           </div>
 

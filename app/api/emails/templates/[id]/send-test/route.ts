@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEmailTemplate } from "@/lib/supabase";
-import { sendTestEmail } from "@/lib/email";
+import { sendTestEmail, personalizeEmailContent, ClassContext } from "@/lib/email";
 
 export async function POST(
   request: NextRequest,
@@ -9,7 +9,7 @@ export async function POST(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { email } = body;
+    const { email, classContext } = body as { email: string; classContext?: ClassContext };
 
     if (!id) {
       return NextResponse.json(
@@ -27,10 +27,15 @@ export async function POST(
 
     const template = await getEmailTemplate(id);
 
+    // Personalize with test recipient and optional class context
+    const testRecipient = { email, first_name: "Test", last_name: "User" };
+    const personalizedSubject = personalizeEmailContent(template.subject, testRecipient, classContext);
+    const personalizedHtml = personalizeEmailContent(template.html_content, testRecipient, classContext);
+
     await sendTestEmail({
       to: email,
-      subject: template.subject,
-      html: template.html_content,
+      subject: personalizedSubject,
+      html: personalizedHtml,
     });
 
     return NextResponse.json({

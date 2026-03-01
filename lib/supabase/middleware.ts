@@ -60,7 +60,10 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/auth') ||
     request.nextUrl.pathname.startsWith('/api') ||
     request.nextUrl.pathname.startsWith('/landing') ||
-    request.nextUrl.pathname.startsWith('/camps')
+    request.nextUrl.pathname.startsWith('/camps') ||
+    request.nextUrl.pathname.startsWith('/guest-form') ||
+    request.nextUrl.pathname.startsWith('/party-dashboard') ||
+    request.nextUrl.pathname.startsWith('/party-form')
 
   // Admin-only routes (dashboard only, login is public)
   const isAdminRoute = request.nextUrl.pathname.startsWith('/dashboard')

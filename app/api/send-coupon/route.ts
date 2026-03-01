@@ -6,16 +6,34 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       couponCode,
+      discountType = 'percentage',
       discountPercentage,
+      discountAmount,
       recipientEmail,
       recipientName,
-      classDetails
+      classDetails,
+      expiresAt,
+      maxUses,
     } = body;
 
     // Validate required fields
-    if (!couponCode || !discountPercentage || !recipientEmail) {
+    if (!couponCode || !recipientEmail) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    if (discountType === 'percentage' && !discountPercentage) {
+      return NextResponse.json(
+        { error: 'Missing discount percentage' },
+        { status: 400 }
+      );
+    }
+
+    if (discountType === 'fixed' && !discountAmount) {
+      return NextResponse.json(
+        { error: 'Missing discount amount' },
         { status: 400 }
       );
     }
@@ -32,6 +50,35 @@ export async function POST(request: NextRequest) {
     });
 
     const greeting = recipientName ? `Hi ${recipientName}` : 'Hello';
+
+    // Build discount display
+    const discountDisplay = discountType === 'fixed'
+      ? `$${discountAmount} OFF`
+      : `${discountPercentage}% OFF`;
+
+    const discountHeroDisplay = discountType === 'fixed'
+      ? `$${discountAmount}`
+      : `${discountPercentage}%`;
+
+    // Build expiry info
+    const expiryHtml = expiresAt
+      ? `<p style="color: #F0614F; font-size: 14px; margin-top: 15px; font-weight: bold;">
+           Expires: ${new Date(expiresAt).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+         </p>`
+      : '';
+
+    // Build usage info
+    const usageNote = maxUses && maxUses > 1
+      ? `This coupon can be used up to ${maxUses} times.`
+      : 'This coupon is single-use only and cannot be combined with other offers.';
+
+    // Calculate discounted price for class-specific coupons
+    const getDiscountedPrice = (price: number) => {
+      if (discountType === 'fixed') {
+        return Math.max(0, price - discountAmount).toFixed(2);
+      }
+      return (price * (1 - discountPercentage / 100)).toFixed(2);
+    };
 
     // Customer email content with Cocinarte brand colors
     const customerHtml = `
@@ -151,7 +198,7 @@ export async function POST(request: NextRequest) {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 You've Got a Special Gift!</h1>
+              <h1>You've Got a Special Gift!</h1>
               <p>A discount coupon just for you</p>
             </div>
 
@@ -163,9 +210,10 @@ export async function POST(request: NextRequest) {
             </div>
 
             <div class="coupon-box">
-              <div class="discount">${discountPercentage}% OFF</div>
+              <div class="discount">${discountHeroDisplay} OFF</div>
               <div class="discount-text">Your Discount Code:</div>
               <div class="coupon-code">${couponCode}</div>
+              ${expiryHtml}
               ${classDetails ? `
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #CDECF9;">
                   <h4 style="color: #00ADEE; margin: 0 0 10px 0; font-size: 16px;">Valid for this class only:</h4>
@@ -174,12 +222,12 @@ export async function POST(request: NextRequest) {
                     <p style="margin: 5px 0; color: #333;"><strong>Date:</strong> ${new Date(classDetails.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
                     <p style="margin: 5px 0; color: #333;"><strong>Time:</strong> ${classDetails.time}</p>
                     <p style="margin: 5px 0; color: #333;"><strong>Original Price:</strong> $${classDetails.price}</p>
-                    <p style="margin: 5px 0; color: #F0614F; font-weight: bold;"><strong>Your Price:</strong> $${(classDetails.price * (1 - discountPercentage / 100)).toFixed(2)}</p>
+                    <p style="margin: 5px 0; color: #F0614F; font-weight: bold;"><strong>Your Price:</strong> $${getDiscountedPrice(classDetails.price)}</p>
                   </div>
                 </div>
               ` : `
                 <p style="color: #777; font-size: 14px; margin-top: 20px;">
-                  ✨ This coupon can be used once on any Cocinarte class
+                  This coupon can be used on any Cocinarte class
                 </p>
               `}
             </div>
@@ -190,7 +238,7 @@ export async function POST(request: NextRequest) {
                 <li>Visit our website and browse available cooking classes</li>
                 <li>Select the class you'd like to attend</li>
                 <li>During checkout, enter the code <strong>${couponCode}</strong> in the coupon field</li>
-                <li>Your ${discountPercentage}% discount will be applied automatically!</li>
+                <li>Your ${discountDisplay} discount will be applied automatically!</li>
               </ol>
             </div>
 
@@ -201,14 +249,14 @@ export async function POST(request: NextRequest) {
             </div>
 
             <div class="note">
-              <strong>Important:</strong> This coupon is single-use only and cannot be combined with other offers. Book your class soon!
+              <strong>Important:</strong> ${usageNote} Book your class soon!
             </div>
 
             <div class="footer">
               <p>Cocinarte - Cooking Classes for All Ages</p>
               <p>Questions? Reply to this email or contact us</p>
               <p style="margin-top: 20px; font-size: 12px;">
-                © ${new Date().getFullYear()} Cocinarte. All rights reserved.
+                &copy; ${new Date().getFullYear()} Cocinarte. All rights reserved.
               </p>
             </div>
           </div>
@@ -220,7 +268,7 @@ export async function POST(request: NextRequest) {
     await transporter.sendMail({
       from: `"Cocinarte" <${process.env.SMTP_USER}>`,
       to: recipientEmail,
-      subject: `🎁 Your ${discountPercentage}% Discount Coupon for Cocinarte - ${couponCode}`,
+      subject: `Your ${discountDisplay} Discount Coupon for Cocinarte - ${couponCode}`,
       html: customerHtml,
     });
 

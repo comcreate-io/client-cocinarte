@@ -52,6 +52,8 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
         classDuration: editingClass.classDuration,
         class_type: editingClass.class_type,
         image_url: editingClass.image_url,
+        late_cancel_refund_type: editingClass.late_cancel_refund_type ?? null,
+        late_cancel_refund_value: editingClass.late_cancel_refund_value ?? null,
       }
     }
     return {
@@ -65,6 +67,8 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
       classDuration: 60,
       class_type: undefined,
       image_url: null,
+      late_cancel_refund_type: null,
+      late_cancel_refund_value: null,
     }
   }
 
@@ -331,6 +335,63 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
                   onChange={(e) => handleChange('classDuration', parseInt(e.target.value) || 60)}
                   required
                 />
+              </div>
+            </div>
+
+            {/* Late Cancellation Policy */}
+            <div className="grid gap-2 border-t pt-4">
+              <Label className="text-sm font-semibold">Late Cancellation Policy</Label>
+              <p className="text-xs text-muted-foreground">
+                Refund for cancellations made less than 48 hours before class. Cancellations 48+ hours before always get a full refund.
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="late_cancel_refund_type">Type</Label>
+                  <Select
+                    value={formData.late_cancel_refund_type || 'none'}
+                    onValueChange={(value) => {
+                      if (value === 'none') {
+                        setFormData(prev => ({
+                          ...prev,
+                          late_cancel_refund_type: null,
+                          late_cancel_refund_value: null,
+                        }))
+                      } else {
+                        setFormData(prev => ({
+                          ...prev,
+                          late_cancel_refund_type: value as 'percentage' | 'fixed',
+                          late_cancel_refund_value: prev.late_cancel_refund_value ?? 0,
+                        }))
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="No late refund" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No late refund</SelectItem>
+                      <SelectItem value="percentage">Percentage</SelectItem>
+                      <SelectItem value="fixed">Fixed amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.late_cancel_refund_type && (
+                  <div className="grid gap-2">
+                    <Label htmlFor="late_cancel_refund_value">
+                      {formData.late_cancel_refund_type === 'percentage' ? 'Refund %' : 'Refund $'}
+                    </Label>
+                    <Input
+                      id="late_cancel_refund_value"
+                      type="number"
+                      step={formData.late_cancel_refund_type === 'percentage' ? '1' : '0.01'}
+                      min="0"
+                      max={formData.late_cancel_refund_type === 'percentage' ? '100' : undefined}
+                      value={formData.late_cancel_refund_value ?? 0}
+                      onChange={(e) => handleChange('late_cancel_refund_value', parseFloat(e.target.value) || 0)}
+                      placeholder={formData.late_cancel_refund_type === 'percentage' ? '0-100' : '0.00'}
+                    />
+                  </div>
+                )}
               </div>
             </div>
             </div>

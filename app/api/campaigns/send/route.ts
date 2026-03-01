@@ -5,12 +5,14 @@ import {
   CampaignProgress,
   CAMPAIGN_CONFIG,
   verifyEmailConnection,
+  ClassContext,
 } from "@/lib/email";
 import { getEmailTemplate, recordEmailSendsBatch } from "@/lib/supabase";
 
 interface CampaignRequest {
   templateId: string;
   recipients: CampaignRecipient[];
+  classContext?: ClassContext;
 }
 
 function createSSEMessage(data: CampaignProgress): string {
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
     async start(controller) {
       try {
         const body: CampaignRequest = await request.json();
-        const { templateId, recipients } = body;
+        const { templateId, recipients, classContext } = body;
 
         // Validate request
         if (!templateId) {
@@ -157,6 +159,7 @@ export async function POST(request: NextRequest) {
                 },
                 subject: template.subject,
                 html: template.html_content,
+                classContext,
               });
 
               const contactName = `${recipient.first_name || ""} ${recipient.last_name || ""}`.trim() || "No name";

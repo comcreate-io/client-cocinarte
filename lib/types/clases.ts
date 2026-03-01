@@ -12,6 +12,8 @@ export interface Clase {
   class_type?: 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa'; // type of cooking class
   image_url?: string | null; // URL to the class image
   cancelled_at?: string | null; // ISO timestamp when class was cancelled
+  late_cancel_refund_type?: 'percentage' | 'fixed' | null;
+  late_cancel_refund_value?: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +48,8 @@ export interface CreateClaseData {
   classDuration: number;
   class_type?: 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa';
   image_url?: string | null;
+  late_cancel_refund_type?: 'percentage' | 'fixed' | null;
+  late_cancel_refund_value?: number | null;
 }
 
 export interface UpdateClaseData extends Partial<CreateClaseData> {
