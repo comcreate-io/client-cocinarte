@@ -1,31 +1,27 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Progress } from '@/components/ui/progress'
 import { Clase } from '@/lib/types/clases'
 import { createClient } from '@/lib/supabase/client'
+import type { EmailTemplate } from '@/lib/supabase'
+import { formatDate } from '@/lib/utils'
+import { Input } from '@/components/ui/input'
 import {
   Calendar, Clock, Users, Mail, Phone, DollarSign, User, Loader2,
   AlertCircle, Send, CheckCircle2, Camera, CameraOff, FileCheck,
-  FileX, AlertTriangle, Tag, CreditCard, Ticket, Download, FileSpreadsheet, FileText
+  FileX, AlertTriangle, Tag, CreditCard, Ticket, Download, FileSpreadsheet, FileText,
+  Eye, XCircle, Code, Plus, ArrowLeft, Pencil, Save
 } from 'lucide-react'
 
 interface EnrolledStudent {
@@ -60,28 +56,47 @@ interface ClassStudentsPopupProps {
   onClose: () => void
 }
 
-// Email templates
-const EMAIL_TEMPLATES = {
-  reminder: {
-    name: 'Class Reminder',
-    subject: 'Reminder: Upcoming Cooking Class',
-    message: `This is a friendly reminder about the upcoming cooking class.\n\nPlease remember to:\n• Arrive 10 minutes early\n• Wear comfortable clothes\n• Bring any required supplies if mentioned\n\nWe're excited to see you there!\n\nBest regards,\nCocinarte Team`
-  },
-  update: {
-    name: 'Important Update',
-    subject: 'Important Update About Your Class',
-    message: `We have an important update regarding your upcoming cooking class.\n\n[Please add your update here]\n\nIf you have any questions, please don't hesitate to contact us.\n\nBest regards,\nCocinarte Team`
-  },
-  supplies: {
-    name: 'Supplies Needed',
-    subject: 'Supplies Needed for Class',
-    message: `Please bring the following supplies to the upcoming class:\n\n• [Item 1]\n• [Item 2]\n• [Item 3]\n\nIf you have any questions about the supplies, please let us know.\n\nBest regards,\nCocinarte Team`
-  },
-  custom: {
-    name: 'Custom Message',
-    subject: '',
-    message: ''
-  }
+interface CampaignProgress {
+  total: number
+  sent: number
+  failed: number
+  currentBatch: number
+  totalBatches: number
+  errors: Array<{ email: string; error: string }>
+  status: 'running' | 'completed' | 'failed'
+}
+
+function getDefaultTemplate() {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Template</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="padding: 40px 30px;">
+        <h1 style="margin: 0 0 20px; color: #333333; font-size: 24px;">Hello {{first_name}}!</h1>
+        <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.5;">
+          This is your email content. Edit this template to create your custom email.
+        </p>
+        <a href="#" style="display: inline-block; padding: 12px 24px; background-color: #F0614F; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px;">
+          Call to Action
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 30px; background-color: #f8f8f8; text-align: center;">
+        <p style="margin: 0; color: #999999; font-size: 12px;">
+          &copy; 2024 Cocinarte PDX. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
 }
 
 export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopupProps) {
@@ -89,14 +104,36 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Email form state
-  const [showEmailForm, setShowEmailForm] = useState(false)
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('')
-  const [emailSubject, setEmailSubject] = useState('')
-  const [emailMessage, setEmailMessage] = useState('')
-  const [sendingEmail, setSendingEmail] = useState(false)
-  const [emailSuccess, setEmailSuccess] = useState<string | null>(null)
-  const [emailError, setEmailError] = useState<string | null>(null)
+  // Template & email state
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [showTestModal, setShowTestModal] = useState(false)
+
+  // Campaign state
+  const [campaignProgress, setCampaignProgress] = useState<CampaignProgress | null>(null)
+  const [isSending, setIsSending] = useState(false)
+  const [activityLog, setActivityLog] = useState<Array<{ time: string; message: string; type: 'info' | 'success' | 'error' }>>([])
+  const abortControllerRef = useRef<AbortController | null>(null)
+
+  // Test email state
+  const [testEmail, setTestEmail] = useState('')
+  const [isSendingTest, setIsSendingTest] = useState(false)
+  const [testError, setTestError] = useState<string | null>(null)
+  const [testSuccess, setTestSuccess] = useState(false)
+
+  // Editor state
+  const [editorMode, setEditorMode] = useState<'list' | 'editor'>('list')
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
+  const [editorName, setEditorName] = useState('')
+  const [editorSubject, setEditorSubject] = useState('')
+  const [editorHtml, setEditorHtml] = useState('')
+  const [showEditorPreview, setShowEditorPreview] = useState(false)
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false)
+  const [editorError, setEditorError] = useState<string | null>(null)
+
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
 
   useEffect(() => {
@@ -214,66 +251,301 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
     }
   }
 
-  const handleTemplateChange = (templateKey: string) => {
-    setSelectedTemplate(templateKey)
-    const template = EMAIL_TEMPLATES[templateKey as keyof typeof EMAIL_TEMPLATES]
-    if (template) {
-      setEmailSubject(template.subject)
-      setEmailMessage(template.message)
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true)
+    try {
+      const supabase = createClient()
+      const { data, error: fetchError } = await supabase
+        .from('email_templates')
+        .select('*')
+        .order('updated_at', { ascending: false })
+
+      if (fetchError) {
+        console.error('Error fetching templates:', fetchError)
+        return
+      }
+      setTemplates(data || [])
+    } catch (err) {
+      console.error('Error fetching templates:', err)
+    } finally {
+      setLoadingTemplates(false)
     }
   }
 
-  const handleSendEmail = async () => {
-    if (!clase || !emailSubject.trim() || !emailMessage.trim()) {
-      setEmailError('Please fill in both subject and message')
-      return
-    }
+  const handleOpenEmailDialog = () => {
+    setShowEmailDialog(true)
+    fetchTemplates()
+  }
 
-    setSendingEmail(true)
-    setEmailError(null)
-    setEmailSuccess(null)
+  const resetCampaignState = () => {
+    setCampaignProgress(null)
+    setIsSending(false)
+    setActivityLog([])
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+  }
+
+  const resetTestState = () => {
+    setTestEmail('')
+    setTestError(null)
+    setTestSuccess(false)
+    setIsSendingTest(false)
+  }
+
+  const resetEditorState = () => {
+    setEditorMode('list')
+    setEditingTemplate(null)
+    setEditorName('')
+    setEditorSubject('')
+    setEditorHtml('')
+    setShowEditorPreview(false)
+    setIsSavingTemplate(false)
+    setEditorError(null)
+  }
+
+  const resetEmailDialog = () => {
+    setShowEmailDialog(false)
+    setSelectedTemplate(null)
+    resetCampaignState()
+    resetEditorState()
+  }
+
+  const getUniqueRecipients = () => {
+    const seen = new Set<string>()
+    const recipients: Array<{ email: string; first_name: string; last_name: string }> = []
+    for (const s of confirmedStudents) {
+      const email = s.email.toLowerCase().trim()
+      if (email && !seen.has(email)) {
+        seen.add(email)
+        const parts = s.parent_name.split(' ')
+        recipients.push({
+          email: s.email,
+          first_name: parts[0] || '',
+          last_name: parts.slice(1).join(' ') || '',
+        })
+      }
+    }
+    return recipients
+  }
+
+  const buildClassContext = () => {
+    if (!clase) return undefined
+    const dateObj = new Date(clase.date + 'T00:00:00')
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+    // Parse time string (HH:MM:SS) into a readable format
+    const [hours, minutes] = (clase.time || '').split(':').map(Number)
+    const timeDate = new Date(2000, 0, 1, hours || 0, minutes || 0)
+    const formattedTime = timeDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    return {
+      class_name: clase.title,
+      class_date: formattedDate,
+      class_time: formattedTime,
+      class_description: clase.description || '',
+      class_type: clase.class_type || '',
+      class_price: `$${clase.price.toFixed(2)}`,
+    }
+  }
+
+  const startCampaign = async (template: EmailTemplate) => {
+    setSelectedTemplate(template)
+    setIsSending(true)
+    setActivityLog([{ time: new Date().toLocaleTimeString(), message: 'Starting campaign...', type: 'info' }])
+
+    const recipients = getUniqueRecipients()
+    abortControllerRef.current = new AbortController()
 
     try {
-      const response = await fetch('/api/classes/send-email', {
+      const response = await fetch('/api/campaigns/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          classId: clase.id,
-          subject: emailSubject,
-          message: emailMessage,
+          templateId: template.id,
+          recipients,
+          classContext: buildClassContext(),
+        }),
+        signal: abortControllerRef.current.signal,
+      })
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) {
+        throw new Error('Failed to start campaign')
+      }
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const text = decoder.decode(value)
+        const lines = text.split('\n\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data: CampaignProgress = JSON.parse(line.slice(6))
+              setCampaignProgress(data)
+
+              if (data.status === 'running') {
+                setActivityLog(prev => [
+                  ...prev,
+                  {
+                    time: new Date().toLocaleTimeString(),
+                    message: `Processing batch ${data.currentBatch}/${data.totalBatches} (${data.sent + data.failed}/${data.total})`,
+                    type: 'info'
+                  }
+                ])
+              } else if (data.status === 'completed') {
+                setActivityLog(prev => [
+                  ...prev,
+                  {
+                    time: new Date().toLocaleTimeString(),
+                    message: `Campaign completed! ${data.sent} sent, ${data.failed} failed`,
+                    type: data.failed > 0 ? 'error' : 'success'
+                  }
+                ])
+              } else if (data.status === 'failed') {
+                setActivityLog(prev => [
+                  ...prev,
+                  {
+                    time: new Date().toLocaleTimeString(),
+                    message: `Campaign failed: ${data.errors[0]?.error || 'Unknown error'}`,
+                    type: 'error'
+                  }
+                ])
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        setActivityLog(prev => [
+          ...prev,
+          { time: new Date().toLocaleTimeString(), message: `Error: ${error.message}`, type: 'error' }
+        ])
+      }
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const sendTestEmail = async () => {
+    if (!selectedTemplate || !testEmail) return
+
+    setIsSendingTest(true)
+    setTestError(null)
+    setTestSuccess(false)
+
+    try {
+      const response = await fetch(`/api/emails/templates/${selectedTemplate.id}/send-test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, classContext: buildClassContext() }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send test email')
+      }
+
+      setTestSuccess(true)
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : 'Failed to send test email')
+    } finally {
+      setIsSendingTest(false)
+    }
+  }
+
+  const openNewTemplate = () => {
+    setEditingTemplate(null)
+    setEditorName('')
+    setEditorSubject('')
+    setEditorHtml(getDefaultTemplate())
+    setShowEditorPreview(false)
+    setEditorError(null)
+    setEditorMode('editor')
+  }
+
+  const openEditTemplate = (template: EmailTemplate) => {
+    setEditingTemplate(template)
+    setEditorName(template.name)
+    setEditorSubject(template.subject)
+    setEditorHtml(template.html_content)
+    setShowEditorPreview(false)
+    setEditorError(null)
+    setEditorMode('editor')
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!editorName.trim()) {
+      setEditorError('Template name is required')
+      return
+    }
+    if (!editorSubject.trim()) {
+      setEditorError('Subject line is required')
+      return
+    }
+    if (!editorHtml.trim()) {
+      setEditorError('HTML content is required')
+      return
+    }
+
+    setIsSavingTemplate(true)
+    setEditorError(null)
+
+    try {
+      const url = editingTemplate
+        ? `/api/emails/templates/${editingTemplate.id}`
+        : '/api/emails/templates'
+      const method = editingTemplate ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editorName.trim(),
+          subject: editorSubject.trim(),
+          html_content: editorHtml,
         }),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send emails')
+        throw new Error(data.error || 'Failed to save template')
       }
 
-      setEmailSuccess(`Successfully sent ${data.stats.sent} email(s)!`)
-
-      setTimeout(() => {
-        setShowEmailForm(false)
-        setEmailSubject('')
-        setEmailMessage('')
-        setSelectedTemplate('')
-        setEmailSuccess(null)
-      }, 3000)
-    } catch (err: any) {
-      console.error('Error sending emails:', err)
-      setEmailError(err.message || 'Failed to send emails')
+      await fetchTemplates()
+      resetEditorState()
+    } catch (error) {
+      setEditorError(error instanceof Error ? error.message : 'Failed to save template')
     } finally {
-      setSendingEmail(false)
+      setIsSavingTemplate(false)
     }
   }
 
-  const resetEmailForm = () => {
-    setShowEmailForm(false)
-    setEmailSubject('')
-    setEmailMessage('')
-    setSelectedTemplate('')
-    setEmailError(null)
-    setEmailSuccess(null)
+  const safeFormatDate = (date: string) => {
+    const d = new Date(date)
+    return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
   }
 
   const confirmedStudents = students.filter(s => s.booking_status === 'confirmed' || s.booking_status === 'pending')
@@ -454,28 +726,50 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
-        {/* Header */}
-        <DialogHeader className="flex-shrink-0 px-6 pt-6 pb-4">
-          <DialogTitle className="text-xl font-bold">{clase.title}</DialogTitle>
+        {/* Header - compact on mobile */}
+        <DialogHeader className="flex-shrink-0 px-4 pt-4 pb-2 sm:px-6 sm:pt-6 sm:pb-4">
+          <DialogTitle className="text-lg sm:text-xl font-bold">{clase.title}</DialogTitle>
           <DialogDescription asChild>
-            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
-                <p className="text-xs text-slate-500">Date</p>
-                <p className="text-sm font-medium text-slate-800">
+            <div>
+              {/* Mobile: compact inline stats */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-slate-500 sm:hidden">
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-3 w-3" />
                   {new Date(clase.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </p>
+                </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatTime(clase.time)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {totalChildren}/{clase.maxStudents}
+                </span>
+                <span className="flex items-center gap-1 text-green-700">
+                  <DollarSign className="h-3 w-3" />
+                  ${totalRevenue.toFixed(2)}
+                </span>
               </div>
-              <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
-                <p className="text-xs text-slate-500">Time</p>
-                <p className="text-sm font-medium text-slate-800">{formatTime(clase.time)}</p>
-              </div>
-              <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
-                <p className="text-xs text-slate-500">Enrolled</p>
-                <p className="text-sm font-medium text-slate-800">{totalChildren}/{clase.maxStudents}</p>
-              </div>
-              <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
-                <p className="text-xs text-slate-500">Revenue</p>
-                <p className="text-sm font-medium text-green-700">${totalRevenue.toFixed(2)}</p>
+              {/* Desktop: card stats */}
+              <div className="hidden sm:grid grid-cols-4 gap-3 mt-3">
+                <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
+                  <p className="text-xs text-slate-500">Date</p>
+                  <p className="text-sm font-medium text-slate-800">
+                    {new Date(clase.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
+                  <p className="text-xs text-slate-500">Time</p>
+                  <p className="text-sm font-medium text-slate-800">{formatTime(clase.time)}</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
+                  <p className="text-xs text-slate-500">Enrolled</p>
+                  <p className="text-sm font-medium text-slate-800">{totalChildren}/{clase.maxStudents}</p>
+                </div>
+                <div className="bg-slate-50 rounded-lg px-3 py-2 text-center">
+                  <p className="text-xs text-slate-500">Revenue</p>
+                  <p className="text-sm font-medium text-green-700">${totalRevenue.toFixed(2)}</p>
+                </div>
               </div>
             </div>
           </DialogDescription>
@@ -484,7 +778,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
         <div className="border-t" />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
@@ -666,19 +960,39 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 border-t px-6 py-3 flex justify-between items-center bg-slate-50/50">
+        <div className="flex-shrink-0 border-t px-4 py-2 sm:px-6 sm:py-3 flex justify-between items-center bg-slate-50/50">
           <div className="flex gap-2">
             {confirmedStudents.length > 0 && (
               <>
                 <Button
                   size="sm"
-                  onClick={() => setShowEmailForm(true)}
+                  onClick={handleOpenEmailDialog}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Email All
+                  <Mail className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Email All</span>
                 </Button>
-                <div className="relative">
+                {/* Mobile: direct download buttons */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="sm:hidden"
+                  onClick={handleDownloadCsv}
+                >
+                  <FileSpreadsheet className="h-4 w-4 text-green-600" />
+                  CSV
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="sm:hidden"
+                  onClick={handleDownloadPdf}
+                >
+                  <FileText className="h-4 w-4 text-red-600" />
+                  PDF
+                </Button>
+                {/* Desktop: dropdown menu */}
+                <div className="relative hidden sm:block">
                   <Button
                     size="sm"
                     variant="outline"
@@ -688,7 +1002,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                     Download List
                   </Button>
                   {showDownloadMenu && (
-                    <div className="absolute bottom-full left-0 mb-1 bg-white border rounded-lg shadow-lg py-1 w-44 z-50">
+                    <div className="absolute bottom-full left-0 mb-1 bg-white border rounded-lg shadow-lg py-1 w-44 z-[60]">
                       <button
                         className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
                         onClick={() => { handleDownloadCsv(); setShowDownloadMenu(false) }}
@@ -715,96 +1029,388 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
         </div>
       </DialogContent>
 
-      {/* Email Form Dialog */}
-      <Dialog open={showEmailForm} onOpenChange={resetEmailForm}>
-        <DialogContent className="max-w-xl">
+      {/* Email Templates Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={(open) => { if (!open) resetEmailDialog(); setShowEmailDialog(open) }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              Send Email to All Enrolled Students
+              Email All Enrolled Students
             </DialogTitle>
             <DialogDescription>
-              Send an email to all {confirmedStudents.length} enrolled student{confirmedStudents.length !== 1 ? 's' : ''} in {clase.title}
+              {campaignProgress
+                ? `Sending "${selectedTemplate?.name}" to class students`
+                : `Choose a template to send to ${getUniqueRecipients().length} parent${getUniqueRecipients().length !== 1 ? 's' : ''} (${confirmedStudents.length} student${confirmedStudents.length !== 1 ? 's' : ''})`
+              }
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="template">Email Template</Label>
-              <Select value={selectedTemplate} onValueChange={handleTemplateChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a template or write custom..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(EMAIL_TEMPLATES).map(([key, template]) => (
-                    <SelectItem key={key} value={key}>
-                      {template.name}
-                    </SelectItem>
+          {campaignProgress ? (
+            <div className="space-y-4">
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progress</span>
+                  <span>{campaignProgress.sent + campaignProgress.failed} / {campaignProgress.total}</span>
+                </div>
+                <Progress
+                  value={campaignProgress.total > 0 ? ((campaignProgress.sent + campaignProgress.failed) / campaignProgress.total) * 100 : 0}
+                />
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-slate-100 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600">{campaignProgress.sent}</p>
+                  <p className="text-xs text-slate-500">Sent</p>
+                </div>
+                <div className="text-center p-3 bg-slate-100 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600">{campaignProgress.failed}</p>
+                  <p className="text-xs text-slate-500">Failed</p>
+                </div>
+                <div className="text-center p-3 bg-slate-100 rounded-lg">
+                  <p className="text-2xl font-bold">{campaignProgress.currentBatch}/{campaignProgress.totalBatches}</p>
+                  <p className="text-xs text-slate-500">Batches</p>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className={`flex items-center gap-2 p-3 rounded-lg ${
+                campaignProgress.status === 'completed' ? 'bg-green-50 text-green-700' :
+                campaignProgress.status === 'failed' ? 'bg-red-50 text-red-700' :
+                'bg-blue-50 text-blue-700'
+              }`}>
+                {campaignProgress.status === 'completed' ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : campaignProgress.status === 'failed' ? (
+                  <XCircle className="h-5 w-5" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                )}
+                <span className="font-medium capitalize">{campaignProgress.status}</span>
+              </div>
+
+              {/* Activity Log */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Activity Log</p>
+                <div className="border rounded-lg max-h-40 overflow-y-auto">
+                  {activityLog.map((log, i) => (
+                    <div key={i} className={`px-3 py-2 text-sm border-b last:border-b-0 flex items-start gap-2 ${
+                      log.type === 'error' ? 'bg-red-50' :
+                      log.type === 'success' ? 'bg-green-50' : ''
+                    }`}>
+                      <span className="text-slate-400 text-xs whitespace-nowrap">{log.time}</span>
+                      <span>{log.message}</span>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject *</Label>
-              <Input
-                id="subject"
-                value={emailSubject}
-                onChange={(e) => setEmailSubject(e.target.value)}
-                placeholder="Enter email subject..."
+              {/* Errors */}
+              {campaignProgress.errors.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-red-600">Errors ({campaignProgress.errors.length})</p>
+                  <div className="border border-red-200 rounded-lg max-h-32 overflow-y-auto">
+                    {campaignProgress.errors.map((error, i) => (
+                      <div key={i} className="px-3 py-2 text-sm border-b last:border-b-0 bg-red-50">
+                        <span className="font-medium">{error.email}:</span> {error.error}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter>
+                {campaignProgress.status === 'completed' || campaignProgress.status === 'failed' ? (
+                  <Button onClick={resetEmailDialog}>Close</Button>
+                ) : (
+                  <Button variant="outline" disabled>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {editorMode === 'editor' ? (
+                /* Inline Template Editor */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={resetEditorState}
+                      className="flex items-center gap-1"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                    <h3 className="font-medium">
+                      {editingTemplate ? 'Edit Template' : 'New Template'}
+                    </h3>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Template Name</label>
+                      <Input
+                        value={editorName}
+                        onChange={(e) => setEditorName(e.target.value)}
+                        placeholder="e.g., Welcome Email"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Subject Line</label>
+                      <Input
+                        value={editorSubject}
+                        onChange={(e) => setEditorSubject(e.target.value)}
+                        placeholder="e.g., Welcome to our newsletter!"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">HTML Content</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowEditorPreview(false)}
+                          className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors ${
+                            !showEditorPreview
+                              ? 'bg-primary text-white'
+                              : 'text-muted-foreground hover:bg-secondary'
+                          }`}
+                        >
+                          <Code className="h-4 w-4" />
+                          Code
+                        </button>
+                        <button
+                          onClick={() => setShowEditorPreview(true)}
+                          className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors ${
+                            showEditorPreview
+                              ? 'bg-primary text-white'
+                              : 'text-muted-foreground hover:bg-secondary'
+                          }`}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      Available variables: {'{{first_name}}'}, {'{{last_name}}'}, {'{{email}}'}, {'{{full_name}}'}, {'{{class_name}}'}, {'{{class_date}}'}, {'{{class_time}}'}, {'{{class_description}}'}, {'{{class_type}}'}, {'{{class_price}}'}
+                    </div>
+
+                    {showEditorPreview ? (
+                      <div className="border rounded-lg p-4 min-h-[300px] bg-white overflow-auto">
+                        <div dangerouslySetInnerHTML={{ __html: editorHtml }} />
+                      </div>
+                    ) : (
+                      <textarea
+                        value={editorHtml}
+                        onChange={(e) => setEditorHtml(e.target.value)}
+                        className="w-full h-[300px] p-4 font-mono text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                        placeholder="Enter your HTML email template..."
+                      />
+                    )}
+                  </div>
+
+                  {editorError && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      <p className="text-sm">{editorError}</p>
+                    </div>
+                  )}
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={resetEditorState}>Cancel</Button>
+                    <Button
+                      onClick={handleSaveTemplate}
+                      disabled={isSavingTemplate}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isSavingTemplate ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          {editingTemplate ? 'Update Template' : 'Save Template'}
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              ) : (
+                /* Template List */
+                <>
+                  <Button
+                    size="sm"
+                    onClick={openNewTemplate}
+                    className="w-full flex items-center justify-center gap-2 border-dashed border-2 bg-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                    variant="outline"
+                  >
+                    <Plus className="h-4 w-4" />
+                    New Template
+                  </Button>
+
+                  {loadingTemplates ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                      <span className="ml-3 text-slate-500">Loading templates...</span>
+                    </div>
+                  ) : templates.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <Mail className="h-10 w-10 mx-auto mb-3" />
+                      <p className="font-medium">No email templates yet</p>
+                      <p className="text-sm mt-1">Click &quot;New Template&quot; above to create one.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {templates.map((template) => (
+                        <div
+                          key={template.id}
+                          className="border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate">{template.name}</h3>
+                            <p className="text-sm text-slate-500 truncate">
+                              Subject: {template.subject}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              Updated: {safeFormatDate(template.updated_at)}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1"
+                              onClick={() => startCampaign(template)}
+                              disabled={isSending}
+                            >
+                              <Send className="h-3 w-3" />
+                              Send
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openEditTemplate(template)}
+                              className="flex items-center gap-1"
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setSelectedTemplate(template); setShowPreviewModal(true) }}
+                              className="flex items-center gap-1"
+                            >
+                              <Eye className="h-3 w-3" />
+                              Preview
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => { setSelectedTemplate(template); setShowTestModal(true) }}
+                              className="flex items-center gap-1"
+                            >
+                              <Mail className="h-3 w-3" />
+                              Test
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={resetEmailDialog}>Close</Button>
+                  </DialogFooter>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Preview: {selectedTemplate?.name}</DialogTitle>
+            <DialogDescription>
+              Subject: {selectedTemplate?.subject}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="border rounded-lg p-4 bg-white min-h-[400px] overflow-auto">
+            <div dangerouslySetInnerHTML={{ __html: selectedTemplate?.html_content || '' }} />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowPreviewModal(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Email Modal */}
+      <Dialog open={showTestModal} onOpenChange={(open) => { if (!open) resetTestState(); setShowTestModal(open) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Test Email</DialogTitle>
+            <DialogDescription>
+              Send a test email to preview &quot;{selectedTemplate?.name}&quot;
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Email Address</label>
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="test@example.com"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message">Message *</Label>
-              <Textarea
-                id="message"
-                value={emailMessage}
-                onChange={(e) => setEmailMessage(e.target.value)}
-                placeholder="Enter your message..."
-                rows={8}
-              />
-              <p className="text-xs text-muted-foreground">
-                Each email will be personalized with the student's name.
-              </p>
-            </div>
-
-            {emailError && (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-md">
+            {testError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600">
                 <AlertCircle className="h-4 w-4" />
-                {emailError}
+                <p className="text-sm">{testError}</p>
               </div>
             )}
-            {emailSuccess && (
-              <div className="flex items-center gap-2 text-green-600 bg-green-50 p-3 rounded-md">
+            {testSuccess && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700">
                 <CheckCircle2 className="h-4 w-4" />
-                {emailSuccess}
+                <p className="text-sm">Test email sent successfully!</p>
               </div>
             )}
           </div>
-
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={resetEmailForm}>
-              Cancel
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { resetTestState(); setShowTestModal(false) }}>
+              Close
             </Button>
             <Button
-              onClick={handleSendEmail}
-              disabled={sendingEmail || !emailSubject.trim() || !emailMessage.trim()}
+              onClick={sendTestEmail}
+              disabled={isSendingTest || !testEmail || testSuccess}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {sendingEmail ? (
+              {isSendingTest ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
-                  Send to {confirmedStudents.length} Student{confirmedStudents.length !== 1 ? 's' : ''}
+                  <Mail className="h-4 w-4 mr-2" />
+                  Send Test
                 </>
               )}
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </Dialog>
