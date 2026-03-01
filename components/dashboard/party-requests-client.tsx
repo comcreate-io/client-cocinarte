@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Table,
   TableBody,
@@ -23,7 +25,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   CheckCircle, XCircle, Eye, Calendar, Users, Mail, Phone, Copy, Loader2,
-  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download
+  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download, Pencil
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -88,6 +90,18 @@ interface GuestChildDetails {
   signed_at: string
 }
 
+interface EditFormData {
+  package: string
+  preferred_date: string
+  number_of_children: number
+  child_name_age: string
+  parent_name: string
+  email: string
+  phone: string
+  special_requests: string
+  admin_notes: string
+}
+
 export function PartyRequestsClient() {
   const [requests, setRequests] = useState<PartyRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<PartyRequest[]>([])
@@ -108,6 +122,9 @@ export function PartyRequestsClient() {
   const [expandedGuests, setExpandedGuests] = useState<Set<string>>(new Set())
   const [childDetails, setChildDetails] = useState<Record<string, GuestChildDetails>>({})
   const [childDetailsLoading, setChildDetailsLoading] = useState<string | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editFormData, setEditFormData] = useState<EditFormData | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const supabase = createClient()
 
@@ -167,6 +184,8 @@ export function PartyRequestsClient() {
     setSelectedGuests([])
     setExpandedGuests(new Set())
     setChildDetails({})
+    setIsEditing(false)
+    setEditFormData(null)
     setIsDetailsDialogOpen(true)
 
     if (request.status === 'approved') {
@@ -291,6 +310,71 @@ export function PartyRequestsClient() {
     a.download = `party-guests-${selectedRequest.parent_name.replace(/\s+/g, '-').toLowerCase()}-${partyDate}.csv`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const handleStartEdit = () => {
+    if (!selectedRequest) return
+    setEditFormData({
+      package: selectedRequest.package,
+      preferred_date: selectedRequest.preferred_date,
+      number_of_children: selectedRequest.number_of_children,
+      child_name_age: selectedRequest.child_name_age || '',
+      parent_name: selectedRequest.parent_name,
+      email: selectedRequest.email,
+      phone: selectedRequest.phone,
+      special_requests: selectedRequest.special_requests || '',
+      admin_notes: selectedRequest.admin_notes || '',
+    })
+    setIsEditing(true)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false)
+    setEditFormData(null)
+  }
+
+  const handleSaveEdit = async () => {
+    if (!selectedRequest || !editFormData) return
+
+    setSaving(true)
+    setError('')
+
+    try {
+      const { error: dbError } = await supabase
+        .from('party_requests')
+        .update({
+          package: editFormData.package,
+          preferred_date: editFormData.preferred_date,
+          number_of_children: editFormData.number_of_children,
+          child_name_age: editFormData.child_name_age || null,
+          parent_name: editFormData.parent_name,
+          email: editFormData.email,
+          phone: editFormData.phone,
+          special_requests: editFormData.special_requests || null,
+          admin_notes: editFormData.admin_notes || null,
+        })
+        .eq('id', selectedRequest.id)
+
+      if (dbError) throw dbError
+
+      // Update selectedRequest with new values
+      setSelectedRequest({
+        ...selectedRequest,
+        ...editFormData,
+        child_name_age: editFormData.child_name_age || null,
+        special_requests: editFormData.special_requests || null,
+        admin_notes: editFormData.admin_notes || null,
+      })
+
+      await fetchRequests()
+      setIsEditing(false)
+      setEditFormData(null)
+      setSuccessMessage('Party request updated successfully!')
+    } catch (err: any) {
+      setError(err.message || 'Failed to save changes')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleOpenActionDialog = (request: PartyRequest, action: 'approve' | 'decline') => {
@@ -537,15 +621,36 @@ export function PartyRequestsClient() {
       </div>
 
       {/* Details Dialog */}
-      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+      <Dialog open={isDetailsDialogOpen} onOpenChange={(open) => {
+        setIsDetailsDialogOpen(open)
+        if (!open) {
+          setIsEditing(false)
+          setEditFormData(null)
+        }
+      }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
-          <DialogHeader>
+          <DialogHeader className="pr-10">
             <DialogTitle>Party Request Details</DialogTitle>
             <DialogDescription>
               Submitted on {selectedRequest && formatDateTime(selectedRequest.created_at)}
             </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
+            <div className="flex justify-end -mt-2">
+              {!isEditing ? (
+                <Button variant="outline" size="sm" onClick={handleStartEdit}>
+                  <Pencil className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                  <XCircle className="h-4 w-4 mr-1" />
+                  Cancel Edit
+                </Button>
+              )}
+            </div>
+          )}
+          {selectedRequest && !isEditing && (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -860,10 +965,206 @@ export function PartyRequestsClient() {
               )}
             </div>
           )}
+
+          {/* Edit Mode Form */}
+          {selectedRequest && isEditing && editFormData && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold text-sm mb-1">Status</h4>
+                  {getStatusBadge(selectedRequest.status)}
+                  <p className="text-xs text-muted-foreground mt-1">Use approve/decline to change status</p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-package">Package</Label>
+                  <Select
+                    value={editFormData.package}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, package: value })}
+                  >
+                    <SelectTrigger id="edit-package">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="art-canvas">Art: Canvas Painting</SelectItem>
+                      <SelectItem value="mini-fiesta">Mini Fiesta</SelectItem>
+                      <SelectItem value="deluxe-fiesta">Deluxe Fiesta</SelectItem>
+                      <SelectItem value="premium-fiesta">Premium Fiesta</SelectItem>
+                      <SelectItem value="diy-party">DIY Party</SelectItem>
+                      <SelectItem value="vip-package">VIP Package</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Party Details
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-date">Preferred Date</Label>
+                    <Input
+                      id="edit-date"
+                      type="date"
+                      value={editFormData.preferred_date}
+                      onChange={(e) => setEditFormData({ ...editFormData, preferred_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-children">Number of Children</Label>
+                    <Input
+                      id="edit-children"
+                      type="number"
+                      min={1}
+                      value={editFormData.number_of_children}
+                      onChange={(e) => setEditFormData({ ...editFormData, number_of_children: parseInt(e.target.value) || 1 })}
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-1.5">
+                    <Label htmlFor="edit-birthday-child">Birthday Child</Label>
+                    <Input
+                      id="edit-birthday-child"
+                      type="text"
+                      value={editFormData.child_name_age}
+                      onChange={(e) => setEditFormData({ ...editFormData, child_name_age: e.target.value })}
+                      placeholder="e.g. Emma, age 7"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Contact Information
+                </h3>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-parent">Parent/Guardian Name</Label>
+                    <Input
+                      id="edit-parent"
+                      type="text"
+                      value={editFormData.parent_name}
+                      onChange={(e) => setEditFormData({ ...editFormData, parent_name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-email">Email</Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-phone">Phone</Label>
+                    <Input
+                      id="edit-phone"
+                      type="text"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t pt-4 space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-special">Special Requests</Label>
+                  <Textarea
+                    id="edit-special"
+                    value={editFormData.special_requests}
+                    onChange={(e) => setEditFormData({ ...editFormData, special_requests: e.target.value })}
+                    placeholder="Any special requests..."
+                    rows={3}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-admin-notes">Admin Notes</Label>
+                  <Textarea
+                    id="edit-admin-notes"
+                    value={editFormData.admin_notes}
+                    onChange={(e) => setEditFormData({ ...editFormData, admin_notes: e.target.value })}
+                    placeholder="Internal admin notes..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Show guest enrollment read-only even in edit mode */}
+              {selectedRequest.status === 'approved' && (
+                <div className="border-t pt-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Guest Enrollment Status
+                    </h3>
+                  </div>
+                  {guestsLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading guests...
+                    </div>
+                  ) : selectedGuests.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No guests added yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedGuests.map((guest) => (
+                        <div key={guest.id} className="bg-muted rounded p-2 text-sm">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-medium">{guest.child_name}</span>
+                              <span className="text-muted-foreground text-xs ml-1">({guest.parent_name})</span>
+                            </div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                guest.form_completed_at
+                                  ? 'bg-green-50 text-green-700 border-green-300'
+                                  : guest.email_sent_at
+                                  ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                  : 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                              }
+                            >
+                              {guest.form_completed_at ? 'Completed' : guest.email_sent_at ? 'Email Sent' : 'Pending'}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {selectedGuests.filter(g => g.form_completed_at).length} of {selectedGuests.length} forms completed
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
-              Close
-            </Button>
+            {isEditing ? (
+              <div className="flex gap-2 w-full justify-end">
+                <Button variant="outline" onClick={handleCancelEdit} disabled={saving}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit} disabled={saving}>
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+                Close
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
