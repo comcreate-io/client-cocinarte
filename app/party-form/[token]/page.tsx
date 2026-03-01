@@ -62,7 +62,6 @@ export default function PartyFormPage() {
   // Form fields - Consent
   const [liabilityConsent, setLiabilityConsent] = useState(false)
   const [socialMediaConsent, setSocialMediaConsent] = useState(false)
-  const [mediaPermission, setMediaPermission] = useState(false)
   const [parentNameSigned, setParentNameSigned] = useState('')
   const [childNameSigned, setChildNameSigned] = useState('')
   const [signatureDataUrl, setSignatureDataUrl] = useState<string | null>(null)
@@ -126,8 +125,7 @@ export default function PartyFormPage() {
     setEmergencyContactName(child.emergency_contact_name)
     setEmergencyContactPhone(child.emergency_contact_phone)
     setEmergencyContactRelationship(child.emergency_contact_relationship)
-    setSocialMediaConsent(child.social_media_consent)
-    setMediaPermission(child.media_permission)
+    setSocialMediaConsent(child.media_permission)
     setShowReuse(false)
   }
 
@@ -176,7 +174,7 @@ export default function PartyFormPage() {
         parent_name_signed: parentNameSigned,
         child_name_signed: childNameSigned,
         signature_data_url: signatureDataUrl,
-        media_permission: mediaPermission,
+        media_permission: socialMediaConsent,
       }
 
       const res = await fetch('/api/party-form/complete-form', {
@@ -659,10 +657,7 @@ export default function PartyFormPage() {
               <Checkbox
                 id="socialMediaConsent"
                 checked={socialMediaConsent}
-                onCheckedChange={(checked) => {
-                  setSocialMediaConsent(checked === true)
-                  setMediaPermission(checked === true)
-                }}
+                onCheckedChange={(checked) => setSocialMediaConsent(checked === true)}
               />
               <Label htmlFor="socialMediaConsent" className="text-sm font-medium leading-none cursor-pointer">
                 I give permission for my child to participate in photos and/or videos
