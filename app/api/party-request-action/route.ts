@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 import nodemailer from 'nodemailer'
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,75 +50,93 @@ export async function POST(request: NextRequest) {
     const isApproved = action === 'approve'
     const parentFirstName = partyRequest.parent_name.split(' ')[0]
 
+    // Fetch dashboard token for approved requests
+    let dashboardUrl = ''
+    if (isApproved) {
+      const { data: prData } = await supabase
+        .from('party_requests')
+        .select('dashboard_token')
+        .eq('id', requestId)
+        .single()
+
+      if (prData?.dashboard_token) {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://cocinartepdx.com'
+        dashboardUrl = `${baseUrl}/party-dashboard/${prData.dashboard_token}`
+      }
+    }
+
     // Email content for approval
     const approvalEmailContent = {
       subject: '🎉 Your Birthday Party Request Has Been Approved!',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
-          <div style="background-color: #ffffff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #22c55e; text-align: center; margin-top: 0;">
-              🎉 Party Request Approved! 🎉
-            </h2>
-
-            <p style="color: #1e293b; font-size: 16px; line-height: 1.6;">
-              Hi ${parentFirstName},
-            </p>
-
-            <p style="color: #1e293b; font-size: 16px; line-height: 1.6;">
-              Great news! We're excited to let you know that your birthday party request has been approved!
-            </p>
-
-            <div style="background: linear-gradient(to right, #dcfce7, #bbf7d0); padding: 20px; border-radius: 8px; margin: 25px 0;">
-              <h3 style="color: #15803d; margin-top: 0; margin-bottom: 15px;">Your Party Details</h3>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #15803d; font-weight: bold;">Date:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${formattedDate}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #15803d; font-weight: bold;">Package:</td>
-                  <td style="padding: 8px 0; color: #1e293b; font-weight: bold;">${packageDisplayName}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #15803d; font-weight: bold;">Number of Children:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${partyRequest.number_of_children} kids</td>
-                </tr>
-              </table>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Arial', 'Helvetica', sans-serif; background-color: #F9FAFB;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <!-- Header -->
+            <div style="background: #F0614F; color: white; padding: 35px 20px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="https://www.cocinartepdx.com/cocinarte/cocinarteLogo.png" alt="Cocinarte" style="height: 50px; margin: 0 auto 15px auto; display: block;" />
+              <h1 style="margin: 0; font-size: 30px; font-weight: bold;">🎉 Party Approved! 🎉</h1>
+              <p style="margin: 12px 0 0 0; font-size: 16px; opacity: 0.95;">Your birthday party request has been confirmed</p>
             </div>
 
-            <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3b82f6;">
-              <h3 style="color: #1e40af; margin-top: 0; margin-bottom: 10px;">Next Steps</h3>
-              <ul style="color: #1e293b; line-height: 1.8; margin: 0; padding-left: 20px;">
-                <li>We'll contact you within 24 hours to finalize details</li>
-                <li>Discuss any special requests or dietary restrictions</li>
-                <li>Go over payment and deposit information</li>
-                <li>Answer any questions you may have</li>
-              </ul>
-            </div>
+            <!-- Content -->
+            <div style="background: white; padding: 30px 20px; border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Hi ${parentFirstName},
+              </p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Great news! We're excited to let you know that your birthday party request has been approved!
+              </p>
 
-            <p style="color: #1e293b; font-size: 16px; line-height: 1.6;">
-              We can't wait to help make this birthday celebration extra special for your child!
-            </p>
+              <!-- Party Details -->
+              <div style="background: #F0F9FF; padding: 22px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #00ADEE;">
+                <h3 style="color: #00ADEE; margin: 0 0 15px 0; font-size: 18px;">🎂 Your Party Details</h3>
+                <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Date:</strong> ${formattedDate}</p>
+                <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Package:</strong> ${packageDisplayName}</p>
+                <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Number of Children:</strong> ${partyRequest.number_of_children} kids</p>
+              </div>
 
-            <div style="text-align: center; margin: 30px 0;">
-              <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
-                Have questions? Reach out to us!
-              </p>
-              <p style="color: #f97316; font-size: 18px; font-weight: bold; margin: 10px 0;">
-                👨‍🍳 The Cocinarte Team 👨‍🍳
-              </p>
-            </div>
+              <!-- Next Steps -->
+              <div style="background: #FEF3C7; padding: 22px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #FCB414;">
+                <h3 style="color: #92400E; margin: 0 0 12px 0; font-size: 17px;">📋 Next Steps: Set Up Your Guest List</h3>
+                <p style="color: #374151; line-height: 1.6; margin: 0 0 15px 0; font-size: 15px;">
+                  Use your Party Dashboard to add your guest list and track enrollment forms. Each guest's parent will receive an email with a form to complete.
+                </p>
+                ${dashboardUrl ? `
+                <div style="text-align: center;">
+                  <a href="${dashboardUrl}" style="background: #F0614F; color: white; padding: 16px 36px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block; box-shadow: 0 4px 15px rgba(240, 97, 79, 0.3);">
+                    Open Your Party Dashboard
+                  </a>
+                </div>
+                ` : ''}
+              </div>
 
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
-              <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
-                Email: <a href="mailto:info@cocinartepdx.com" style="color: #f97316; text-decoration: none;">info@cocinartepdx.com</a>
-              </p>
-              <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
-                Phone: <a href="tel:+15039169758" style="color: #f97316; text-decoration: none;">+1 (503) 916-9758</a>
-              </p>
+              <!-- Excitement message -->
+              <div style="background: #FCB414; padding: 20px; border-radius: 8px; margin: 25px 0;">
+                <h4 style="color: white; margin: 0 0 10px 0; font-size: 16px;">🎉 We Can't Wait!</h4>
+                <p style="color: white; margin: 0; font-size: 15px; line-height: 1.6;">
+                  We're going to make this birthday celebration extra special. Get ready for a cooking adventure your child and their friends will love!
+                </p>
+              </div>
+
+              <!-- Footer -->
+              <div style="text-align: center; margin-top: 30px; padding: 20px; background: #F0F9FF; border-radius: 8px; border: 1px solid #BFDBFE;">
+                <p style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">Questions? We're here to help!</p>
+                <p style="color: #374151; margin: 0; font-size: 15px;">
+                  📧 <a href="mailto:info@cocinartepdx.com" style="color: #F0614F; text-decoration: none; font-weight: bold;">info@cocinartepdx.com</a>
+                  <br>
+                  📞 <a href="tel:+15039169758" style="color: #F0614F; text-decoration: none; font-weight: bold;">+1 (503) 916-9758</a>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </body>
+        </html>
       `,
       text: `
 🎉 PARTY REQUEST APPROVED! 🎉
@@ -127,11 +151,10 @@ Date: ${formattedDate}
 Package: ${packageDisplayName}
 Number of Children: ${partyRequest.number_of_children} kids
 
-NEXT STEPS:
-• We'll contact you within 24 hours to finalize details
-• Discuss any special requests or dietary restrictions
-• Go over payment and deposit information
-• Answer any questions you may have
+NEXT STEPS: SET UP YOUR GUEST LIST
+Use your Party Dashboard to add your guest list and track enrollment forms.
+Each guest's parent will receive an email with a form to complete.
+${dashboardUrl ? `\nOpen Your Party Dashboard: ${dashboardUrl}` : ''}
 
 We can't wait to help make this birthday celebration extra special for your child!
 
@@ -145,65 +168,68 @@ Phone: +1 (503) 916-9758
 
     // Email content for decline
     const declineEmailContent = {
-      subject: 'Regarding Your Birthday Party Request',
+      subject: 'Regarding Your Birthday Party Request at Cocinarte',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
-          <div style="background-color: #ffffff; border-radius: 10px; padding: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <h2 style="color: #64748b; text-align: center; margin-top: 0;">
-              Regarding Your Birthday Party Request
-            </h2>
-
-            <p style="color: #1e293b; font-size: 16px; line-height: 1.6;">
-              Hi ${parentFirstName},
-            </p>
-
-            <p style="color: #1e293b; font-size: 16px; line-height: 1.6;">
-              Thank you for your interest in hosting a birthday party at Cocinarte. Unfortunately, we're unable to accommodate your request for the following date:
-            </p>
-
-            <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f59e0b;">
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr>
-                  <td style="padding: 8px 0; color: #78350f; font-weight: bold;">Requested Date:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${formattedDate}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #78350f; font-weight: bold;">Package:</td>
-                  <td style="padding: 8px 0; color: #1e293b;">${packageDisplayName}</td>
-                </tr>
-              </table>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Arial', 'Helvetica', sans-serif; background-color: #F9FAFB;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <!-- Header -->
+            <div style="background: #1E3A8A; color: white; padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0;">
+              <img src="https://www.cocinartepdx.com/cocinarte/cocinarteLogo.png" alt="Cocinarte" style="height: 50px; margin: 0 auto 15px auto; display: block;" />
+              <h1 style="margin: 0; font-size: 24px; font-weight: bold;">Regarding Your Party Request</h1>
             </div>
 
-            <p style="color: #1e293b; font-size: 16px; line-height: 1.6;">
-              This may be due to availability constraints or scheduling conflicts on the requested date.
-            </p>
+            <!-- Content -->
+            <div style="background: white; padding: 30px 20px; border: 1px solid #E5E7EB; border-top: none; border-radius: 0 0 10px 10px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Hi ${parentFirstName},
+              </p>
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">
+                Thank you for your interest in hosting a birthday party at Cocinarte. Unfortunately, we're unable to accommodate your request for the following date:
+              </p>
 
-            <div style="background-color: #dbeafe; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #3b82f6;">
-              <h3 style="color: #1e40af; margin-top: 0; margin-bottom: 10px;">Alternative Options</h3>
-              <p style="color: #1e293b; line-height: 1.6; margin: 0;">
-                We'd still love to help celebrate your child's special day! Please reach out to us to discuss alternative dates or party options that might work better.
-              </p>
-            </div>
+              <!-- Request Details -->
+              <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #FCB414;">
+                <h3 style="color: #92400E; margin: 0 0 12px 0; font-size: 16px;">📅 Requested Details</h3>
+                <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #78350f;">Date:</strong> ${formattedDate}</p>
+                <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #78350f;">Package:</strong> ${packageDisplayName}</p>
+              </div>
 
-            <div style="text-align: center; margin: 30px 0;">
-              <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
-                Questions or want to explore other options?
+              <p style="color: #374151; font-size: 15px; line-height: 1.6;">
+                This may be due to availability constraints or scheduling conflicts on the requested date.
               </p>
-              <p style="color: #f97316; font-size: 18px; font-weight: bold; margin: 10px 0;">
-                The Cocinarte Team
-              </p>
-            </div>
 
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
-              <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
-                Email: <a href="mailto:info@cocinartepdx.com" style="color: #f97316; text-decoration: none;">info@cocinartepdx.com</a>
-              </p>
-              <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
-                Phone: <a href="tel:+15039169758" style="color: #f97316; text-decoration: none;">+1 (503) 916-9758</a>
-              </p>
+              <!-- Alternative Options -->
+              <div style="background: #F0F9FF; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #00ADEE;">
+                <h3 style="color: #00ADEE; margin: 0 0 10px 0; font-size: 16px;">🍳 We'd Still Love to Have You!</h3>
+                <p style="color: #374151; line-height: 1.6; margin: 0 0 15px 0; font-size: 15px;">
+                  We'd love to help celebrate your child's special day! Please reach out to us to discuss alternative dates or party options that might work better.
+                </p>
+                <div style="text-align: center;">
+                  <a href="mailto:info@cocinartepdx.com" style="background: #F0614F; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: bold; display: inline-block;">
+                    Contact Us
+                  </a>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div style="text-align: center; margin-top: 30px; padding: 20px; background: #F0F9FF; border-radius: 8px; border: 1px solid #BFDBFE;">
+                <p style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 15px; font-weight: bold;">Questions? We're here to help!</p>
+                <p style="color: #374151; margin: 0; font-size: 14px;">
+                  📧 <a href="mailto:info@cocinartepdx.com" style="color: #F0614F; text-decoration: none; font-weight: bold;">info@cocinartepdx.com</a>
+                  <br>
+                  📞 <a href="tel:+15039169758" style="color: #F0614F; text-decoration: none; font-weight: bold;">+1 (503) 916-9758</a>
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </body>
+        </html>
       `,
       text: `
 REGARDING YOUR BIRTHDAY PARTY REQUEST
@@ -219,8 +245,8 @@ Package: ${packageDisplayName}
 
 This may be due to availability constraints or scheduling conflicts on the requested date.
 
-ALTERNATIVE OPTIONS:
-We'd still love to help celebrate your child's special day! Please reach out to us to discuss alternative dates or party options that might work better.
+WE'D STILL LOVE TO HAVE YOU!
+We'd love to help celebrate your child's special day! Please reach out to us to discuss alternative dates or party options that might work better.
 
 The Cocinarte Team
 

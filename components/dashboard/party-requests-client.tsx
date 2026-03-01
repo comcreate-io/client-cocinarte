@@ -21,7 +21,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { CheckCircle, XCircle, Eye, Calendar, Users, Mail, Phone } from 'lucide-react'
+import {
+  CheckCircle, XCircle, Eye, Calendar, Users, Mail, Phone, Copy, Loader2,
+  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download
+} from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
   Select,
@@ -43,8 +46,46 @@ interface PartyRequest {
   special_requests: string | null
   status: 'pending' | 'approved' | 'declined'
   admin_notes: string | null
+  dashboard_token: string
   created_at: string
   updated_at: string
+}
+
+interface PartyGuestInfo {
+  id: string
+  child_name: string
+  parent_name: string
+  parent_email: string
+  form_completed_at: string | null
+  email_sent_at: string | null
+  guest_child_id: string | null
+}
+
+interface GuestChildDetails {
+  id: string
+  child_full_name: string
+  child_age: number
+  child_preferred_name: string | null
+  has_cooking_experience: boolean
+  cooking_experience_details: string | null
+  allergies: string | null
+  dietary_restrictions: string | null
+  medical_conditions: string | null
+  emergency_medications: string | null
+  additional_notes: string | null
+  authorized_pickup_persons: string | null
+  custody_restrictions: string | null
+  media_permission: boolean
+  guest_parent_name: string
+  guest_parent_phone: string
+  emergency_contact_name: string
+  emergency_contact_phone: string
+  emergency_contact_relationship: string
+  liability_consent: boolean
+  social_media_consent: boolean
+  parent_name_signed: string
+  child_name_signed: string
+  signed_at: string
 }
 
 export function PartyRequestsClient() {
@@ -60,6 +101,13 @@ export function PartyRequestsClient() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [guestCounts, setGuestCounts] = useState<Record<string, { total: number; completed: number }>>({})
+  const [selectedGuests, setSelectedGuests] = useState<PartyGuestInfo[]>([])
+  const [guestsLoading, setGuestsLoading] = useState(false)
+  const [copiedDashboardLink, setCopiedDashboardLink] = useState<string | null>(null)
+  const [expandedGuests, setExpandedGuests] = useState<Set<string>>(new Set())
+  const [childDetails, setChildDetails] = useState<Record<string, GuestChildDetails>>({})
+  const [childDetailsLoading, setChildDetailsLoading] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -74,6 +122,27 @@ export function PartyRequestsClient() {
       if (error) throw error
       setRequests(data || [])
       setFilteredRequests(data || [])
+
+      // Fetch guest counts for approved requests
+      const approvedIds = (data || []).filter(r => r.status === 'approved').map(r => r.id)
+      if (approvedIds.length > 0) {
+        const { data: guests } = await supabase
+          .from('party_guests')
+          .select('party_request_id, form_completed_at')
+          .in('party_request_id', approvedIds)
+
+        const counts: Record<string, { total: number; completed: number }> = {}
+        for (const g of (guests || [])) {
+          if (!counts[g.party_request_id]) {
+            counts[g.party_request_id] = { total: 0, completed: 0 }
+          }
+          counts[g.party_request_id].total++
+          if (g.form_completed_at) {
+            counts[g.party_request_id].completed++
+          }
+        }
+        setGuestCounts(counts)
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to fetch party requests')
     } finally {
@@ -93,9 +162,135 @@ export function PartyRequestsClient() {
     }
   }, [statusFilter, requests])
 
-  const handleViewDetails = (request: PartyRequest) => {
+  const handleViewDetails = async (request: PartyRequest) => {
     setSelectedRequest(request)
+    setSelectedGuests([])
+    setExpandedGuests(new Set())
+    setChildDetails({})
     setIsDetailsDialogOpen(true)
+
+    if (request.status === 'approved') {
+      setGuestsLoading(true)
+      try {
+        const { data } = await supabase
+          .from('party_guests')
+          .select('id, child_name, parent_name, parent_email, form_completed_at, email_sent_at, guest_child_id')
+          .eq('party_request_id', request.id)
+          .order('created_at', { ascending: true })
+
+        const guests = data || []
+        setSelectedGuests(guests)
+
+        // Pre-fetch child details for all completed guests
+        const childIds = guests
+          .filter(g => g.guest_child_id)
+          .map(g => g.guest_child_id as string)
+
+        if (childIds.length > 0) {
+          const { data: children } = await supabase
+            .from('guest_children')
+            .select('id, child_full_name, child_age, child_preferred_name, has_cooking_experience, cooking_experience_details, allergies, dietary_restrictions, medical_conditions, emergency_medications, additional_notes, authorized_pickup_persons, custody_restrictions, media_permission, guest_parent_name, guest_parent_phone, emergency_contact_name, emergency_contact_phone, emergency_contact_relationship, liability_consent, social_media_consent, parent_name_signed, child_name_signed, signed_at')
+            .in('id', childIds)
+
+          if (children) {
+            const details: Record<string, GuestChildDetails> = {}
+            for (const child of children) {
+              details[child.id] = child
+            }
+            setChildDetails(details)
+          }
+        }
+      } catch {
+        // Non-blocking
+      } finally {
+        setGuestsLoading(false)
+      }
+    }
+  }
+
+  const toggleGuestExpanded = (guestId: string) => {
+    setExpandedGuests(prev => {
+      const next = new Set(prev)
+      if (next.has(guestId)) {
+        next.delete(guestId)
+      } else {
+        next.add(guestId)
+      }
+      return next
+    })
+  }
+
+  const getChildForGuest = (guest: PartyGuestInfo): GuestChildDetails | null => {
+    if (!guest.guest_child_id) return null
+    return childDetails[guest.guest_child_id] || null
+  }
+
+  const handleCopyDashboardLink = (request: PartyRequest) => {
+    const url = `${window.location.origin}/party-dashboard/${request.dashboard_token}`
+    navigator.clipboard.writeText(url)
+    setCopiedDashboardLink(request.id)
+    setTimeout(() => setCopiedDashboardLink(null), 2000)
+  }
+
+  const handleDownloadGuestList = () => {
+    if (!selectedRequest || selectedGuests.length === 0) return
+
+    const headers = [
+      'Child Name', 'Age', 'Preferred Name', 'Parent Name', 'Parent Email', 'Parent Phone',
+      'Status', 'Allergies', 'Dietary Restrictions', 'Medical Conditions', 'Emergency Medications',
+      'Photo Permission', 'Social Media Consent', 'Emergency Contact', 'Emergency Phone',
+      'Emergency Relationship', 'Authorized Pickup', 'Custody Restrictions', 'Cooking Experience',
+      'Additional Notes', 'Signed By', 'Signed Date'
+    ]
+
+    const escCsv = (val: string | null | undefined | boolean | number) => {
+      if (val === null || val === undefined) return ''
+      const s = String(val)
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return `"${s.replace(/"/g, '""')}"`
+      }
+      return s
+    }
+
+    const rows = selectedGuests.map(guest => {
+      const child = getChildForGuest(guest)
+      const status = guest.form_completed_at ? 'Completed' : guest.email_sent_at ? 'Email Sent' : 'Pending'
+
+      return [
+        escCsv(guest.child_name),
+        escCsv(child?.child_age),
+        escCsv(child?.child_preferred_name),
+        escCsv(guest.parent_name),
+        escCsv(guest.parent_email),
+        escCsv(child?.guest_parent_phone),
+        escCsv(status),
+        escCsv(child?.allergies),
+        escCsv(child?.dietary_restrictions),
+        escCsv(child?.medical_conditions),
+        escCsv(child?.emergency_medications),
+        escCsv(child?.media_permission ? 'Yes' : child ? 'No' : ''),
+        escCsv(child?.social_media_consent ? 'Yes' : child ? 'No' : ''),
+        escCsv(child?.emergency_contact_name),
+        escCsv(child?.emergency_contact_phone),
+        escCsv(child?.emergency_contact_relationship),
+        escCsv(child?.authorized_pickup_persons),
+        escCsv(child?.custody_restrictions),
+        escCsv(child?.has_cooking_experience ? 'Yes' : child ? 'No' : ''),
+        escCsv(child?.additional_notes),
+        escCsv(child?.parent_name_signed),
+        escCsv(child?.signed_at ? new Date(child.signed_at).toLocaleDateString() : ''),
+      ].join(',')
+    })
+
+    const csv = [headers.join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const partyDate = new Date(selectedRequest.preferred_date).toISOString().split('T')[0]
+    a.href = url
+    a.download = `party-guests-${selectedRequest.parent_name.replace(/\s+/g, '-').toLowerCase()}-${partyDate}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleOpenActionDialog = (request: PartyRequest, action: 'approve' | 'decline') => {
@@ -242,8 +437,8 @@ export function PartyRequestsClient() {
       )}
 
       {/* Table */}
-      <div className="border rounded-lg">
-        <Table>
+      <div className="border rounded-lg overflow-x-auto">
+        <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
               <TableHead>Parent Name</TableHead>
@@ -268,7 +463,14 @@ export function PartyRequestsClient() {
                   <TableCell className="font-medium">{request.parent_name}</TableCell>
                   <TableCell>{getPackageDisplayName(request.package)}</TableCell>
                   <TableCell>{formatDate(request.preferred_date)}</TableCell>
-                  <TableCell>{request.number_of_children}</TableCell>
+                  <TableCell>
+                    <span>{request.number_of_children}</span>
+                    {request.status === 'approved' && guestCounts[request.id] && (
+                      <span className="block text-xs text-muted-foreground">
+                        {guestCounts[request.id].completed}/{guestCounts[request.id].total} forms done
+                      </span>
+                    )}
+                  </TableCell>
                   <TableCell>{getStatusBadge(request.status)}</TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {formatDateTime(request.created_at)}
@@ -283,6 +485,25 @@ export function PartyRequestsClient() {
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </Button>
+                      {request.status === 'approved' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleCopyDashboardLink(request)}
+                        >
+                          {copiedDashboardLink === request.id ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
+                              Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-4 w-4 mr-1" />
+                              Dashboard
+                            </>
+                          )}
+                        </Button>
+                      )}
                       {request.status === 'pending' && (
                         <>
                           <Button
@@ -316,7 +537,7 @@ export function PartyRequestsClient() {
 
       {/* Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle>Party Request Details</DialogTitle>
             <DialogDescription>
@@ -399,6 +620,241 @@ export function PartyRequestsClient() {
                   <p className="text-sm whitespace-pre-wrap bg-muted p-3 rounded">
                     {selectedRequest.admin_notes}
                   </p>
+                </div>
+              )}
+
+              {selectedRequest.status === 'approved' && (
+                <div className="border-t pt-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-2">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Guest Enrollment Status
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {selectedGuests.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleDownloadGuestList}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Download List
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyDashboardLink(selectedRequest)}
+                      >
+                        {copiedDashboardLink === selectedRequest.id ? (
+                          <>
+                            <CheckCircle className="h-3 w-3 mr-1 text-green-600" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3 mr-1" />
+                            Copy Dashboard Link
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  {guestsLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading guests...
+                    </div>
+                  ) : selectedGuests.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No guests added yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {selectedGuests.map((guest) => {
+                        const child = getChildForGuest(guest)
+                        const isExpanded = expandedGuests.has(guest.id)
+                        const hasAllergies = child && (child.allergies || child.dietary_restrictions || child.medical_conditions || child.emergency_medications)
+
+                        return (
+                          <div key={guest.id} className="bg-muted rounded overflow-hidden">
+                            {/* Guest summary row */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2 text-sm gap-1 sm:gap-2">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className="font-medium">{guest.child_name}</span>
+                                  <span className="text-muted-foreground text-xs">({guest.parent_name})</span>
+                                </div>
+                                <span className="block text-muted-foreground text-xs truncate">{guest.parent_email}</span>
+                                {/* Inline badges for completed guests */}
+                                {child && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {child.media_permission ? (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-green-50 text-green-700 border-green-300">
+                                        <Camera className="h-2.5 w-2.5 mr-0.5" />
+                                        Photo OK
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-slate-50 text-slate-500 border-slate-300">
+                                        <CameraOff className="h-2.5 w-2.5 mr-0.5" />
+                                        No Photo
+                                      </Badge>
+                                    )}
+                                    {hasAllergies && (
+                                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-amber-50 text-amber-700 border-amber-300">
+                                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                                        {child.allergies ? 'Allergies' : child.dietary_restrictions ? 'Dietary' : child.medical_conditions ? 'Medical' : 'Meds'}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1.5 self-start sm:self-auto flex-shrink-0">
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    guest.form_completed_at
+                                      ? 'bg-green-50 text-green-700 border-green-300'
+                                      : guest.email_sent_at
+                                      ? 'bg-blue-50 text-blue-700 border-blue-300'
+                                      : 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                                  }
+                                >
+                                  {guest.form_completed_at ? 'Completed' : guest.email_sent_at ? 'Email Sent' : 'Pending'}
+                                </Badge>
+                                {guest.form_completed_at && child && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs"
+                                    onClick={() => toggleGuestExpanded(guest.id)}
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-3.5 w-3.5 mr-0.5" />
+                                    ) : (
+                                      <ChevronDown className="h-3.5 w-3.5 mr-0.5" />
+                                    )}
+                                    {isExpanded ? 'Less' : 'More'}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Expanded child details */}
+                            {isExpanded && child && (
+                              <div className="border-t px-3 py-3 space-y-3 text-sm bg-white">
+                                {/* Child Info */}
+                                <div>
+                                  <h5 className="font-semibold text-xs uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
+                                    <Baby className="h-3 w-3" /> Child Info
+                                  </h5>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-sm">
+                                    <div><span className="text-muted-foreground">Name:</span> {child.child_full_name}</div>
+                                    <div><span className="text-muted-foreground">Age:</span> {child.child_age}</div>
+                                    {child.child_preferred_name && (
+                                      <div><span className="text-muted-foreground">Goes by:</span> {child.child_preferred_name}</div>
+                                    )}
+                                    <div><span className="text-muted-foreground">Cooking exp:</span> {child.has_cooking_experience ? 'Yes' : 'No'}</div>
+                                    {child.has_cooking_experience && child.cooking_experience_details && (
+                                      <div className="col-span-2"><span className="text-muted-foreground">Details:</span> {child.cooking_experience_details}</div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Health & Safety */}
+                                {hasAllergies && (
+                                  <div>
+                                    <h5 className="font-semibold text-xs uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
+                                      <AlertTriangle className="h-3 w-3" /> Health & Safety
+                                    </h5>
+                                    <div className="space-y-1 text-sm">
+                                      {child.allergies && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                                          <span className="font-medium text-amber-800">Allergies:</span>{' '}
+                                          <span className="text-amber-700">{child.allergies}</span>
+                                        </div>
+                                      )}
+                                      {child.dietary_restrictions && (
+                                        <div className="bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                                          <span className="font-medium text-amber-800">Dietary:</span>{' '}
+                                          <span className="text-amber-700">{child.dietary_restrictions}</span>
+                                        </div>
+                                      )}
+                                      {child.medical_conditions && (
+                                        <div className="bg-red-50 border border-red-200 rounded px-2 py-1">
+                                          <span className="font-medium text-red-800">Medical:</span>{' '}
+                                          <span className="text-red-700">{child.medical_conditions}</span>
+                                        </div>
+                                      )}
+                                      {child.emergency_medications && (
+                                        <div className="bg-red-50 border border-red-200 rounded px-2 py-1">
+                                          <span className="font-medium text-red-800">Medications:</span>{' '}
+                                          <span className="text-red-700">{child.emergency_medications}</span>
+                                        </div>
+                                      )}
+                                      {child.additional_notes && (
+                                        <div><span className="text-muted-foreground">Notes:</span> {child.additional_notes}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Parent & Emergency Contact */}
+                                <div>
+                                  <h5 className="font-semibold text-xs uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
+                                    <User className="h-3 w-3" /> Parent & Emergency
+                                  </h5>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                                    <div><span className="text-muted-foreground">Parent:</span> {child.guest_parent_name}</div>
+                                    <div><span className="text-muted-foreground">Phone:</span> {child.guest_parent_phone}</div>
+                                    <div><span className="text-muted-foreground">Emergency:</span> {child.emergency_contact_name} ({child.emergency_contact_relationship})</div>
+                                    <div><span className="text-muted-foreground">Emerg. phone:</span> {child.emergency_contact_phone}</div>
+                                    {child.authorized_pickup_persons && (
+                                      <div className="col-span-1 sm:col-span-2"><span className="text-muted-foreground">Pickup:</span> {child.authorized_pickup_persons}</div>
+                                    )}
+                                    {child.custody_restrictions && (
+                                      <div className="col-span-1 sm:col-span-2"><span className="text-muted-foreground">Custody:</span> {child.custody_restrictions}</div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Consent */}
+                                <div>
+                                  <h5 className="font-semibold text-xs uppercase text-muted-foreground mb-1.5 flex items-center gap-1">
+                                    <Shield className="h-3 w-3" /> Consent
+                                  </h5>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                                      <CheckCircle className="h-3 w-3 mr-1" /> Liability Signed
+                                    </Badge>
+                                    {child.media_permission ? (
+                                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                                        <Camera className="h-3 w-3 mr-1" /> Photo/Video OK
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-xs bg-slate-50 text-slate-600 border-slate-300">
+                                        <CameraOff className="h-3 w-3 mr-1" /> No Photo/Video
+                                      </Badge>
+                                    )}
+                                    {child.social_media_consent && (
+                                      <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-300">
+                                        Social Media OK
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1.5">
+                                    Signed by {child.parent_name_signed} for {child.child_name_signed} on{' '}
+                                    {new Date(child.signed_at).toLocaleDateString()}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {selectedGuests.filter(g => g.form_completed_at).length} of {selectedGuests.length} forms completed
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
