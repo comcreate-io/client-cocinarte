@@ -126,6 +126,7 @@ export default function PartyFormPage() {
     setEmergencyContactName(child.emergency_contact_name)
     setEmergencyContactPhone(child.emergency_contact_phone)
     setEmergencyContactRelationship(child.emergency_contact_relationship)
+    setSocialMediaConsent(child.social_media_consent)
     setMediaPermission(child.media_permission)
     setShowReuse(false)
   }
@@ -211,6 +212,7 @@ export default function PartyFormPage() {
 
   const getPackageDisplayName = (pkg: string) => {
     const packageNames: { [key: string]: string } = {
+      'art-canvas': 'Art: Canvas Painting',
       'diy-party': 'DIY Party',
       'mini-fiesta': 'Mini Fiesta',
       'deluxe-fiesta': 'Deluxe Fiesta',

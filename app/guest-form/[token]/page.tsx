@@ -128,6 +128,7 @@ export default function GuestFormPage() {
     setEmergencyContactName(child.emergency_contact_name)
     setEmergencyContactPhone(child.emergency_contact_phone)
     setEmergencyContactRelationship(child.emergency_contact_relationship)
+    setSocialMediaConsent(child.social_media_consent)
     setMediaPermission(child.media_permission)
     // Do NOT reuse consent/signature — must always re-sign
     setShowReuse(false)

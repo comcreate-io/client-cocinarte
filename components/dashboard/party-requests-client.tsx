@@ -366,6 +366,7 @@ export function PartyRequestsClient() {
 
   const getPackageDisplayName = (pkg: string) => {
     const packageNames: { [key: string]: string } = {
+      'art-canvas': 'Art: Canvas Painting',
       'diy-party': 'DIY Party',
       'mini-fiesta': 'Mini Fiesta',
       'deluxe-fiesta': 'Deluxe Fiesta',

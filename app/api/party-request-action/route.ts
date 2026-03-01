@@ -31,6 +31,7 @@ export async function POST(request: NextRequest) {
     })
 
     const packageNames: { [key: string]: string } = {
+      'art-canvas': 'Art: Canvas Painting',
       'diy-party': 'DIY Party',
       'mini-fiesta': 'Mini Fiesta',
       'deluxe-fiesta': 'Deluxe Fiesta',

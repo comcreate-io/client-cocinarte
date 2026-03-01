@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
     const formUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cocinartepdx.com'}/party-form/${guest.form_token}`
 
     const packageNames: { [key: string]: string } = {
+      'art-canvas': 'Art: Canvas Painting',
       'diy-party': 'DIY Party',
       'mini-fiesta': 'Mini Fiesta',
       'deluxe-fiesta': 'Deluxe Fiesta',
