@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift, Shield, FileCheck } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
@@ -74,7 +75,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
   // Coupon states
   const [couponCode, setCouponCode] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null)
+  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number, discountType: 'percentage' | 'fixed', discountAmount: number | null} | null>(null)
   const [couponValidating, setCouponValidating] = useState(false)
   const [couponError, setCouponError] = useState('')
   const [couponSuccess, setCouponSuccess] = useState('')
@@ -106,6 +107,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     childNameSigned: string
     signatureDataUrl: string
   } | null>(null)
+
+  // Booking comments state
+  const [bookingComments, setBookingComments] = useState('')
 
   // Extra children pricing for Mommy & Me classes
   const EXTRA_CHILD_COST = 70 // Cost per extra child
@@ -270,8 +274,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
           // Apply coupon if any
           if (appliedCoupon) {
-            const discount = (finalAmount * appliedCoupon.discount) / 100
-            finalAmount = finalAmount - discount
+            if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+              finalAmount = Math.max(0, finalAmount - appliedCoupon.discountAmount)
+            } else {
+              const discount = (finalAmount * appliedCoupon.discount) / 100
+              finalAmount = finalAmount - discount
+            }
           }
 
           // Apply gift card if enabled
@@ -383,10 +391,30 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             const isMomMeClass = isMommyAndMeClass(classes.find(c => c.id === selectedClassId))
 
             if (parentData.children.length === 1 && !isMomMeClass) {
-              // Only one child and NOT a Mommy & Me class, auto-select and proceed to payment
-              setSelectedChildId(parentData.children[0].id)
-              setSelectedChildIds([parentData.children[0].id])
-              setAuthStep('payment')
+              // Only one child and NOT a Mommy & Me class
+              // Check if already booked before auto-selecting
+              await loadBookingsForChildren(parentData.children)
+              const { createClient } = await import('@/lib/supabase/client')
+              const supabase = createClient()
+              const childId = parentData.children[0].id
+              const { data: existingBookings } = await supabase
+                .from('bookings')
+                .select('id, booking_status, payment_status')
+                .eq('child_id', childId)
+                .eq('class_id', selectedClassId)
+                .not('booking_status', 'eq', 'cancelled')
+                .not('payment_status', 'in', '("failed","canceled")')
+                .limit(1)
+
+              if (existingBookings && existingBookings.length > 0) {
+                // Child is already booked, show child-selection screen with "Already Booked" indicator
+                setAuthStep('child-selection')
+              } else {
+                // Not booked, auto-select and proceed to payment
+                setSelectedChildId(childId)
+                setSelectedChildIds([childId])
+                setAuthStep('payment')
+              }
             } else {
               // Multiple children OR Mommy & Me class, show selection screen
               // For Mommy & Me, they need to select which children are attending (up to 3)
@@ -432,11 +460,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       )
 
       if (result.valid && result.coupon) {
+        const coupon = result.coupon
         setAppliedCoupon({
-          code: result.coupon.code,
-          discount: result.coupon.discount_percentage
+          code: coupon.code,
+          discount: coupon.discount_percentage || 0,
+          discountType: coupon.discount_type || 'percentage',
+          discountAmount: coupon.discount_amount,
         })
-        setCouponSuccess(`${result.coupon.discount_percentage}% discount applied!`)
+        const successMsg = coupon.discount_type === 'fixed'
+          ? `$${coupon.discount_amount} discount applied!`
+          : `${coupon.discount_percentage}% discount applied!`
+        setCouponSuccess(successMsg)
         setCouponCode('')
       } else {
         setCouponError(result.error || 'Invalid coupon code')
@@ -471,8 +505,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
     // Apply coupon discount first
     if (appliedCoupon) {
-      const discount = (price * appliedCoupon.discount) / 100
-      price = price - discount
+      if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+        price = Math.max(0, price - appliedCoupon.discountAmount)
+      } else {
+        const discount = (price * appliedCoupon.discount) / 100
+        price = price - discount
+      }
     }
 
     // Then apply gift card if enabled
@@ -494,6 +532,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     }
 
     if (!appliedCoupon) return basePrice
+    if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+      return Math.max(0, basePrice - appliedCoupon.discountAmount)
+    }
     const discount = (basePrice * appliedCoupon.discount) / 100
     return basePrice - discount
   }
@@ -504,6 +545,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     // Add extra children cost for Mommy & Me classes
     if (isCurrentClassMommyAndMe && extraChildren > 0) {
       basePrice += getExtraChildrenCost()
+    }
+    if (appliedCoupon.discountType === 'fixed' && appliedCoupon.discountAmount != null) {
+      return Math.min(appliedCoupon.discountAmount, basePrice)
     }
     return (basePrice * appliedCoupon.discount) / 100
   }
@@ -622,6 +666,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     // Reset child selection when going back
     setSelectedChildId(null)
     setSelectedChildIds([])
+    setBookingComments('')
   }
 
   const handlePaymentSuccess = async () => {
@@ -763,7 +808,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       console.log('Creating booking record...')
       const bookingsService = new BookingsClientService()
       const discountNote = appliedCoupon
-        ? ` Coupon ${appliedCoupon.code} applied (${appliedCoupon.discount}% off, saved $${getDiscountAmount().toFixed(2)}).`
+        ? ` Coupon ${appliedCoupon.code} applied (${appliedCoupon.discountType === 'fixed' ? `$${appliedCoupon.discountAmount} off` : `${appliedCoupon.discount}% off`}, saved $${getDiscountAmount().toFixed(2)}).`
         : ''
       const giftCardNote = useGiftCard && giftCardAmountToUse > 0
         ? ` Gift card used: $${giftCardAmountToUse.toFixed(2)}.`
@@ -801,6 +846,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
         gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
         parent_id: parentWithChildren?.id || undefined,
+        booking_comments: bookingComments || undefined,
         notes: isFreeBooking
           ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${extraChildrenNote}`
           : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}${extraChildrenNote}`
@@ -1432,7 +1478,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           // Check if this child is already booked for the selected class
           const existingBooking = childrenBookings[child.id]?.find(
             (booking: any) => booking.class_id === selectedClassId &&
-            (booking.status === 'confirmed' || booking.status === 'pending' || !booking.status)
+            (booking.booking_status === 'confirmed' || booking.booking_status === 'pending' || !booking.booking_status)
           )
           const isAlreadyBooked = !!existingBooking
           const isSelected = isChildSelected(child.id)
@@ -1537,6 +1583,21 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           </div>
         </div>
       )}
+
+      {/* Comments */}
+      <div className="space-y-2">
+        <Label htmlFor="booking-comments" className="text-sm font-medium text-slate-700">
+          Comments (optional)
+        </Label>
+        <Textarea
+          id="booking-comments"
+          value={bookingComments}
+          onChange={(e) => setBookingComments(e.target.value)}
+          placeholder="Any allergies, dietary needs, or special requests..."
+          rows={3}
+          className="resize-none"
+        />
+      </div>
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
@@ -1696,7 +1757,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                           <div className="flex items-center justify-between text-sm">
                             <span className="text-green-600 font-medium flex items-center gap-1">
                               <Ticket className="h-3 w-3" />
-                              Discount ({appliedCoupon.discount}%)
+                              Discount ({appliedCoupon.discountType === 'fixed' ? `$${appliedCoupon.discountAmount}` : `${appliedCoupon.discount}%`})
                             </span>
                             <span className="text-green-600 font-medium">-${getDiscountAmount().toFixed(2)}</span>
                           </div>
@@ -1770,7 +1831,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                       <Ticket className="h-4 w-4 text-green-600" />
                       <span className="font-semibold text-green-800">{appliedCoupon.code}</span>
                       <Badge variant="secondary" className="bg-green-100 text-green-800">
-                        {appliedCoupon.discount}% OFF
+                        {appliedCoupon.discountType === 'fixed' ? `$${appliedCoupon.discountAmount} OFF` : `${appliedCoupon.discount}% OFF`}
                       </Badge>
                     </div>
                     <Button
@@ -1982,8 +2043,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             )
           `)
           .eq('child_id', child.id)
+          .not('booking_status', 'eq', 'cancelled')
+          .not('payment_status', 'in', '("failed","canceled")')
           .order('created_at', { ascending: false })
-          .limit(5)
 
         if (error) {
           console.error(`Error loading bookings for child ${child.id}:`, error)

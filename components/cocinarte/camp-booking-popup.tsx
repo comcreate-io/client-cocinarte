@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Clock, ChefHat, Flower2, AlertCircle, ArrowLeft, CheckCircle, CreditCard, User, Mail, Lock, Eye, EyeOff } from "lucide-react"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
@@ -69,6 +70,12 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
   const [bookingComplete, setBookingComplete] = useState(false)
   const [bookedClasses, setBookedClasses] = useState<Clase[]>([])
 
+  // Booking comments state
+  const [bookingComments, setBookingComments] = useState('')
+
+  // Children bookings state (for duplicate check)
+  const [childrenBookings, setChildrenBookings] = useState<{ [key: string]: any[] }>({})
+
   // Fetch camp classes from database
   useEffect(() => {
     const fetchCampClasses = async () => {
@@ -113,6 +120,8 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
       setConfirmPassword('')
       setBookingComplete(false)
       setBookedClasses([])
+      setChildrenBookings({})
+      setBookingComments('')
     }
   }, [isOpen])
 
@@ -124,6 +133,11 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
           const parentsService = new ParentsClientService()
           const parent = await parentsService.getParentWithChildrenByUserId(user.id)
           setParentWithChildren(parent)
+
+          // Load bookings for children to check for duplicates
+          if (parent && parent.children) {
+            await loadBookingsForChildren(parent.children)
+          }
         } catch (error) {
           // Error loading children
         }
@@ -250,6 +264,35 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
     setAuthLoading(false)
   }
 
+  const loadBookingsForChildren = async (children: Child[]) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const bookingsMap: { [key: string]: any[] } = {}
+
+      for (const child of children) {
+        const { data: bookings, error } = await supabase
+          .from('bookings')
+          .select('*, clases:class_id (id, title, date, time, price)')
+          .eq('child_id', child.id)
+          .not('booking_status', 'eq', 'cancelled')
+          .not('payment_status', 'in', '("failed","canceled")')
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          console.error(`Error loading bookings for child ${child.id}:`, error)
+        }
+
+        bookingsMap[child.id] = bookings || []
+      }
+
+      setChildrenBookings(bookingsMap)
+    } catch (error) {
+      console.error('Failed to load bookings:', error)
+    }
+  }
+
   const handleSelectChild = (childId: string) => {
     setSelectedChildId(childId)
   }
@@ -296,6 +339,7 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
           payment_status: 'completed',
           booking_status: 'confirmed',
           stripe_payment_intent_id: paymentIntentId,
+          booking_comments: bookingComments || undefined,
           notes: `Spring Break Camp booking for ${childName} - ${clase.title} on ${clase.date}.`
         })
         if (!firstBookingId) firstBookingId = booking.id
@@ -713,35 +757,67 @@ export default function CampBookingPopup({ isOpen, onClose }: CampBookingPopupPr
 
               {parentWithChildren?.children && parentWithChildren.children.length > 0 ? (
                 <div className="space-y-2">
-                  {parentWithChildren.children.map((child) => (
-                    <div
-                      key={child.id}
-                      className={`border rounded-lg sm:rounded-xl p-3 sm:p-4 cursor-pointer transition-all ${
-                        selectedChildId === child.id
-                          ? 'border-[#F0614F] bg-[#F0614F]/5'
-                          : 'border-gray-200 hover:border-[#F0614F]/50'
-                      }`}
-                      onClick={() => handleSelectChild(child.id)}
-                    >
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
-                          selectedChildId === child.id ? 'border-[#F0614F] bg-[#F0614F]' : 'border-gray-300'
-                        }`}>
-                          {selectedChildId === child.id && <div className="w-2 h-2 bg-white rounded-full" />}
-                        </div>
-                        <div>
-                          <p className="font-semibold text-slate text-sm sm:text-base">{child.child_full_name}</p>
-                          {child.child_age && <p className="text-xs sm:text-sm text-slate-medium">Age: {child.child_age}</p>}
+                  {parentWithChildren.children.map((child) => {
+                    // Check if this child is already booked for any of the selected camp classes
+                    const selectedClassIds = selectedClasses.map(c => c.id)
+                    const isAlreadyBooked = childrenBookings[child.id]?.some(
+                      (booking: any) => selectedClassIds.includes(booking.class_id) &&
+                      (booking.booking_status === 'confirmed' || booking.booking_status === 'pending' || !booking.booking_status)
+                    ) || false
+
+                    return (
+                      <div
+                        key={child.id}
+                        className={`border rounded-lg sm:rounded-xl p-3 sm:p-4 transition-all ${
+                          isAlreadyBooked
+                            ? 'border-gray-300 bg-gray-50/50 opacity-60 cursor-not-allowed'
+                            : selectedChildId === child.id
+                              ? 'border-[#F0614F] bg-[#F0614F]/5 cursor-pointer'
+                              : 'border-gray-200 hover:border-[#F0614F]/50 cursor-pointer'
+                        }`}
+                        onClick={() => !isAlreadyBooked && handleSelectChild(child.id)}
+                      >
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                            isAlreadyBooked ? 'border-gray-300 bg-gray-200' :
+                            selectedChildId === child.id ? 'border-[#F0614F] bg-[#F0614F]' : 'border-gray-300'
+                          }`}>
+                            {selectedChildId === child.id && !isAlreadyBooked && <div className="w-2 h-2 bg-white rounded-full" />}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate text-sm sm:text-base">{child.child_full_name}</p>
+                            {child.child_age && <p className="text-xs sm:text-sm text-slate-medium">Age: {child.child_age}</p>}
+                          </div>
+                          {isAlreadyBooked && (
+                            <Badge className="bg-orange-500">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Already Booked
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-4">
                   <p className="text-slate-medium text-sm">No children found. Please add a child to your account first.</p>
                 </div>
               )}
+
+              <div className="space-y-2 mt-3 sm:mt-4">
+                <Label htmlFor="camp-booking-comments" className="text-sm font-medium text-slate-700">
+                  Comments (optional)
+                </Label>
+                <Textarea
+                  id="camp-booking-comments"
+                  value={bookingComments}
+                  onChange={(e) => setBookingComments(e.target.value)}
+                  placeholder="Any allergies, dietary needs, or special requests..."
+                  rows={3}
+                  className="resize-none"
+                />
+              </div>
 
               <Button
                 className="w-full bg-[#F0614F] hover:bg-[#F48E77] text-white py-4 sm:py-6 text-base sm:text-lg rounded-lg sm:rounded-xl disabled:opacity-50 mt-3 sm:mt-4"

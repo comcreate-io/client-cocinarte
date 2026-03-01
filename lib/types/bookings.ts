@@ -14,6 +14,7 @@ export interface Booking {
   parent_id?: string; // Reference to parent for gift card refunds
   extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
   notes?: string;
+  booking_comments?: string;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +33,7 @@ export interface CreateBookingData {
   parent_id?: string; // Reference to parent for gift card refunds
   extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
   notes?: string;
+  booking_comments?: string;
 }
 
 export interface UpdateBookingData extends Partial<CreateBookingData> {

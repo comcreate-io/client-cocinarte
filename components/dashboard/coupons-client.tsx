@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Plus, Mail, Trash2, Copy, CheckCircle2, Percent, BookOpen } from 'lucide-react'
+import { Plus, Mail, Trash2, Copy, CheckCircle2, Percent, BookOpen, DollarSign, Calendar, Hash } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -31,7 +31,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CouponsClientService } from '@/lib/supabase/coupons-client'
-import { Coupon } from '@/lib/types/coupons'
+import { Coupon, DiscountType } from '@/lib/types/coupons'
 
 interface ClassOption {
   id: string
@@ -58,14 +58,35 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
 
   // Create form state
+  const [discountType, setDiscountType] = useState<DiscountType>('percentage')
   const [discountPercentage, setDiscountPercentage] = useState<number>(10)
+  const [discountAmount, setDiscountAmount] = useState<number>(5)
   const [selectedClassId, setSelectedClassId] = useState<string>('universal')
+  const [expiresAt, setExpiresAt] = useState<string>('')
+  const [maxUses, setMaxUses] = useState<number>(1)
 
   // Send email form state
   const [recipientEmail, setRecipientEmail] = useState('')
   const [recipientName, setRecipientName] = useState('')
 
   const couponsService = new CouponsClientService()
+
+  const getDiscountDisplay = (coupon: Coupon) => {
+    if (coupon.discount_type === 'fixed' && coupon.discount_amount != null) {
+      return `$${coupon.discount_amount} OFF`
+    }
+    return `${coupon.discount_percentage}% OFF`
+  }
+
+  const getDiscountIcon = (coupon: Coupon) => {
+    return coupon.discount_type === 'fixed' ? DollarSign : Percent
+  }
+
+  const getCouponStatus = (coupon: Coupon) => {
+    if (coupon.use_count >= coupon.max_uses) return 'used'
+    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) return 'expired'
+    return 'available'
+  }
 
   const handleCreateCoupon = async () => {
     setLoading(true)
@@ -74,15 +95,23 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
 
     try {
       const newCoupon = await couponsService.createCoupon({
-        discount_percentage: discountPercentage,
+        discount_type: discountType,
+        discount_percentage: discountType === 'percentage' ? discountPercentage : undefined,
+        discount_amount: discountType === 'fixed' ? discountAmount : undefined,
         class_id: selectedClassId === 'universal' ? undefined : selectedClassId,
-        created_by: userEmail
+        created_by: userEmail,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        max_uses: maxUses,
       })
 
       setCoupons([newCoupon, ...coupons])
       setIsCreateDialogOpen(false)
+      setDiscountType('percentage')
       setDiscountPercentage(10)
+      setDiscountAmount(5)
       setSelectedClassId('universal')
+      setExpiresAt('')
+      setMaxUses(1)
       setSuccessMessage(`Coupon ${newCoupon.code} created successfully!`)
     } catch (err: any) {
       setError(err.message || 'Failed to create coupon')
@@ -120,10 +149,14 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
         },
         body: JSON.stringify({
           couponCode: selectedCoupon.code,
+          discountType: selectedCoupon.discount_type,
           discountPercentage: selectedCoupon.discount_percentage,
+          discountAmount: selectedCoupon.discount_amount,
           recipientEmail,
           recipientName: recipientName || undefined,
-          classDetails
+          classDetails,
+          expiresAt: selectedCoupon.expires_at,
+          maxUses: selectedCoupon.max_uses,
         }),
       })
 
@@ -181,6 +214,14 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
     setIsSendEmailDialogOpen(true)
   }
 
+  const isCreateDisabled = () => {
+    if (loading) return true
+    if (discountType === 'percentage' && (discountPercentage < 1 || discountPercentage > 100)) return true
+    if (discountType === 'fixed' && discountAmount <= 0) return true
+    if (maxUses < 1) return true
+    return false
+  }
+
   return (
     <div className="space-y-4">
       {/* Alerts */}
@@ -213,111 +254,135 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
               <TableHead>Code</TableHead>
               <TableHead>Discount</TableHead>
               <TableHead>Valid For</TableHead>
+              <TableHead>Uses</TableHead>
+              <TableHead>Expires</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Sent To</TableHead>
               <TableHead>Created</TableHead>
-              <TableHead>Used</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {coupons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                <TableCell colSpan={9} className="text-center text-muted-foreground">
                   No coupons created yet. Create your first coupon!
                 </TableCell>
               </TableRow>
             ) : (
-              coupons.map((coupon) => (
-                <TableRow key={coupon.id}>
-                  <TableCell className="font-mono font-bold">
-                    <div className="flex items-center gap-2">
-                      {coupon.code}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleCopyCode(coupon.code)}
-                        className="h-6 w-6 p-0"
-                      >
-                        {copiedCode === coupon.code ? (
-                          <CheckCircle2 className="h-3 w-3 text-green-600" />
-                        ) : (
-                          <Copy className="h-3 w-3" />
-                        )}
-                      </Button>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="flex items-center gap-1 w-fit">
-                      <Percent className="h-3 w-3" />
-                      {coupon.discount_percentage}% OFF
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {coupon.class_id ? (
+              coupons.map((coupon) => {
+                const status = getCouponStatus(coupon)
+                const DiscountIcon = getDiscountIcon(coupon)
+                return (
+                  <TableRow key={coupon.id}>
+                    <TableCell className="font-mono font-bold">
+                      <div className="flex items-center gap-2">
+                        {coupon.code}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyCode(coupon.code)}
+                          className="h-6 w-6 p-0"
+                        >
+                          {copiedCode === coupon.code ? (
+                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                          ) : (
+                            <Copy className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="flex items-center gap-1 w-fit">
+                        <DiscountIcon className="h-3 w-3" />
+                        {getDiscountDisplay(coupon)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {coupon.class_id ? (
+                        <div className="text-sm">
+                          <div className="flex items-center gap-1">
+                            <BookOpen className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-medium">
+                              {availableClasses.find(c => c.id === coupon.class_id)?.title || 'Specific Class'}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {availableClasses.find(c => c.id === coupon.class_id)?.date &&
+                              new Date(availableClasses.find(c => c.id === coupon.class_id)!.date).toLocaleDateString()
+                            }
+                          </div>
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">All Classes</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div className="text-sm">
+                        <span className="font-medium">{coupon.use_count}</span>
+                        <span className="text-muted-foreground"> / {coupon.max_uses}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {coupon.expires_at ? (
                         <div className="flex items-center gap-1">
-                          <BookOpen className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-medium">
-                            {availableClasses.find(c => c.id === coupon.class_id)?.title || 'Specific Class'}
-                          </span>
+                          <Calendar className="h-3 w-3" />
+                          {new Date(coupon.expires_at).toLocaleDateString()}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {availableClasses.find(c => c.id === coupon.class_id)?.date &&
-                            new Date(availableClasses.find(c => c.id === coupon.class_id)!.date).toLocaleDateString()
-                          }
+                      ) : (
+                        <span>No expiry</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={
+                        status === 'used' ? "destructive" :
+                        status === 'expired' ? "outline" :
+                        "default"
+                      }>
+                        {status === 'used' ? 'Fully Used' :
+                         status === 'expired' ? 'Expired' :
+                         'Available'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {coupon.recipient_email ? (
+                        <div className="text-sm">
+                          <div>{coupon.recipient_email}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {coupon.sent_at && new Date(coupon.sent_at).toLocaleDateString()}
+                          </div>
                         </div>
+                      ) : (
+                        <span className="text-muted-foreground">Not sent</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(coupon.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openSendEmailDialog(coupon)}
+                          disabled={status !== 'available' || loading}
+                        >
+                          <Mail className="h-3 w-3 mr-1" />
+                          Send
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteCoupon(coupon.id)}
+                          disabled={loading}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </div>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">All Classes</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={coupon.is_used ? "destructive" : "default"}>
-                      {coupon.is_used ? 'Used' : 'Available'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {coupon.recipient_email ? (
-                      <div className="text-sm">
-                        <div>{coupon.recipient_email}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {coupon.sent_at && new Date(coupon.sent_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground">Not sent</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(coupon.created_at).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {coupon.used_at ? new Date(coupon.used_at).toLocaleDateString() : '-'}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openSendEmailDialog(coupon)}
-                        disabled={coupon.is_used || loading}
-                      >
-                        <Mail className="h-3 w-3 mr-1" />
-                        Send
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteCoupon(coupon.id)}
-                        disabled={coupon.is_used || loading}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </TableCell>
+                  </TableRow>
+                )
+              })
             )}
           </TableBody>
         </Table>
@@ -358,22 +423,103 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
                 Leave blank to create a universal coupon valid for all classes
               </p>
             </div>
+
+            {/* Discount Type */}
             <div className="space-y-2">
-              <Label htmlFor="discount">Discount Percentage</Label>
+              <Label>Discount Type</Label>
+              <Select value={discountType} onValueChange={(val) => setDiscountType(val as DiscountType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percentage">
+                    <div className="flex items-center gap-2">
+                      <Percent className="h-3 w-3" />
+                      <span>Percentage (%)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="fixed">
+                    <div className="flex items-center gap-2">
+                      <DollarSign className="h-3 w-3" />
+                      <span>Fixed Amount ($)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Discount Value */}
+            {discountType === 'percentage' ? (
+              <div className="space-y-2">
+                <Label htmlFor="discount">Discount Percentage</Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="discount"
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={discountPercentage}
+                    onChange={(e) => setDiscountPercentage(parseInt(e.target.value) || 0)}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter a discount percentage between 1% and 100%
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="discount-amount">Discount Amount</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">$</span>
+                  <Input
+                    id="discount-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={discountAmount}
+                    onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                    className="w-32"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter a fixed dollar amount to discount
+                </p>
+              </div>
+            )}
+
+            {/* Expiration Date */}
+            <div className="space-y-2">
+              <Label htmlFor="expires-at">Expiration Date (Optional)</Label>
+              <Input
+                id="expires-at"
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave blank for a coupon that never expires
+              </p>
+            </div>
+
+            {/* Max Uses */}
+            <div className="space-y-2">
+              <Label htmlFor="max-uses">Maximum Uses</Label>
               <div className="flex items-center gap-2">
                 <Input
-                  id="discount"
+                  id="max-uses"
                   type="number"
                   min="1"
-                  max="100"
-                  value={discountPercentage}
-                  onChange={(e) => setDiscountPercentage(parseInt(e.target.value) || 0)}
+                  value={maxUses}
+                  onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
                   className="w-24"
                 />
-                <span className="text-sm text-muted-foreground">%</span>
+                <span className="text-sm text-muted-foreground">times</span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Enter a discount percentage between 1% and 100%
+                How many times this coupon can be redeemed (1 = single-use)
               </p>
             </div>
           </div>
@@ -387,7 +533,7 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
             </Button>
             <Button
               onClick={handleCreateCoupon}
-              disabled={loading || discountPercentage < 1 || discountPercentage > 100}
+              disabled={isCreateDisabled()}
             >
               {loading ? 'Creating...' : 'Create Coupon'}
             </Button>
@@ -401,7 +547,7 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
           <DialogHeader>
             <DialogTitle>Send Coupon via Email</DialogTitle>
             <DialogDescription>
-              Send coupon {selectedCoupon?.code} ({selectedCoupon?.discount_percentage}% OFF) to a recipient
+              Send coupon {selectedCoupon?.code} ({selectedCoupon && getDiscountDisplay(selectedCoupon)}) to a recipient
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

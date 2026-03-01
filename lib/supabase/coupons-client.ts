@@ -20,14 +20,26 @@ export class CouponsClientService {
   async createCoupon(data: Omit<CreateCouponData, 'code'>): Promise<Coupon> {
     const code = this.generateCouponCode()
 
+    const insertData: any = {
+      code,
+      discount_type: data.discount_type,
+      class_id: data.class_id || null,
+      created_by: data.created_by,
+      max_uses: data.max_uses || 1,
+      expires_at: data.expires_at || null,
+    }
+
+    if (data.discount_type === 'percentage') {
+      insertData.discount_percentage = data.discount_percentage
+      insertData.discount_amount = null
+    } else {
+      insertData.discount_amount = data.discount_amount
+      insertData.discount_percentage = null
+    }
+
     const { data: coupon, error } = await supabase
       .from('coupons')
-      .insert({
-        code,
-        discount_percentage: data.discount_percentage,
-        class_id: data.class_id || null,
-        created_by: data.created_by
-      })
+      .insert(insertData)
       .select()
       .single()
 
@@ -79,8 +91,17 @@ export class CouponsClientService {
       return { valid: false, error: 'Coupon not found' }
     }
 
-    if (coupon.is_used) {
-      return { valid: false, error: 'Coupon has already been used' }
+    // Check if coupon has reached max uses
+    if (coupon.use_count >= coupon.max_uses) {
+      return { valid: false, error: 'Coupon has reached its maximum number of uses' }
+    }
+
+    // Check if coupon has expired
+    if (coupon.expires_at) {
+      const expiryDate = new Date(coupon.expires_at)
+      if (expiryDate < new Date()) {
+        return { valid: false, error: 'This coupon has expired' }
+      }
     }
 
     // If coupon is class-specific, validate the class ID matches
@@ -92,13 +113,25 @@ export class CouponsClientService {
   }
 
   /**
-   * Mark a coupon as used
+   * Mark a coupon as used (increment use_count)
    */
   async markCouponAsUsed(couponId: string, userId: string): Promise<Coupon> {
+    // First get current coupon to check use_count
+    const { data: current, error: fetchError } = await supabase
+      .from('coupons')
+      .select('use_count, max_uses')
+      .eq('id', couponId)
+      .single()
+
+    if (fetchError) throw fetchError
+
+    const newUseCount = (current.use_count || 0) + 1
+
     const { data, error } = await supabase
       .from('coupons')
       .update({
-        is_used: true,
+        use_count: newUseCount,
+        is_used: newUseCount >= current.max_uses,
         used_by_user_id: userId,
         used_at: new Date().toISOString()
       })

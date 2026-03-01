@@ -5,6 +5,8 @@ import { Clase } from '@/lib/types/clases'
 import { ClassesClient } from '@/components/dashboard/classes-client'
 import { isAdminUser } from '@/lib/supabase/admin'
 
+export const dynamic = 'force-dynamic'
+
 export default async function ClassesPage() {
   const supabase = createClient()
 
@@ -23,15 +25,12 @@ export default async function ClassesPage() {
     redirect('/?error=admin_only')
   }
 
-  // Fetch only today's and future classes from the database
+  // Fetch all classes from the database (upcoming + past for archive)
   const clasesService = new ClasesService()
   let clases: Clase[] = []
 
   try {
-    clases = await clasesService.getUpcomingClases()
-    console.log('=== Upcoming classes fetched from database ===')
-    console.log('Total classes (today and future):', clases.length)
-    console.log('=====================================')
+    clases = await clasesService.getAllClases()
   } catch (error) {
     console.error('Error fetching classes:', error)
     // If table doesn't exist yet, show empty state
