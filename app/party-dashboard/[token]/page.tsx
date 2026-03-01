@@ -45,7 +45,7 @@ export default function PartyDashboardPage() {
     try {
       setLoading(true)
       setError('')
-      const res = await fetch(`/api/party-dashboard?token=${token}`)
+      const res = await fetch(`/api/party-dashboard?token=${token}`, { cache: 'no-store' })
       const data = await res.json()
 
       if (!data.success) {
@@ -107,12 +107,25 @@ export default function PartyDashboardPage() {
         // Email send failure is non-blocking
       }
 
-      // Reset form and refresh
+      // Add the new guest to local state immediately
+      setGuests(prev => [...prev, addData.guest])
+
+      // Reset form
       setChildName('')
       setParentName('')
       setParentEmail('')
       setAddGuestSuccess(`${childName} has been added and an invitation email was sent to ${parentEmail}!`)
-      await fetchDashboardData()
+
+      // Background refresh to sync latest data (e.g. email_sent_at)
+      try {
+        const refreshRes = await fetch(`/api/party-dashboard?token=${token}`, { cache: 'no-store' })
+        const refreshData = await refreshRes.json()
+        if (refreshData.success) {
+          setGuests(refreshData.guests)
+        }
+      } catch {
+        // Non-blocking refresh
+      }
     } catch (err) {
       console.error('Error adding guest:', err)
       setAddGuestError('Failed to add guest. Please try again.')

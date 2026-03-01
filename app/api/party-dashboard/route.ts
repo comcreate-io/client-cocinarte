@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
         status: partyRequest.status,
       },
       guests: guests || [],
+    }, {
+      headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' },
     })
   } catch (error) {
     console.error('Party dashboard error:', error)
