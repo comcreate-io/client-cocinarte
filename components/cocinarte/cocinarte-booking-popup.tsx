@@ -121,6 +121,14 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   // Booking comments state
   const [bookingComments, setBookingComments] = useState('')
 
+  // Guest booking states
+  const [isGuestBooking, setIsGuestBooking] = useState(false)
+  const [guestChildName, setGuestChildName] = useState('')
+  const [guestParentName, setGuestParentName] = useState('')
+  const [guestParentEmail, setGuestParentEmail] = useState('')
+  const [myGuestBookings, setMyGuestBookings] = useState<any[]>([])
+  const [loadingGuestBookings, setLoadingGuestBookings] = useState(false)
+
   // Extra children pricing for Mommy & Me classes
   const EXTRA_CHILD_COST = 70 // Cost per extra child
 
@@ -844,11 +852,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       })
 
       // Build booking data
+      const guestNote = isGuestBooking ? ` Guest booking for ${guestChildName} (parent: ${guestParentName}, ${guestParentEmail}).` : ''
       const bookingData: any = {
         user_id: user.id!,
         class_id: selectedClassData.id,
         student_id: studentInfo.id,
-        child_id: selectedChildId || undefined,
+        child_id: isGuestBooking ? null : (selectedChildId || undefined),
         payment_amount: finalPrice,
         payment_method: isFreeBooking ? 'coupon' : 'stripe',
         payment_status: isFreeBooking ? 'completed' : 'held',
@@ -857,9 +866,10 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
         parent_id: parentWithChildren?.id || undefined,
         booking_comments: bookingComments || undefined,
+        is_guest_booking: isGuestBooking || undefined,
         notes: isFreeBooking
-          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${extraChildrenNote}`
-          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}${extraChildrenNote}`
+          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${extraChildrenNote}${guestNote}`
+          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}${extraChildrenNote}${guestNote}`
       }
 
       // Add extra_children if there are extra children
@@ -916,46 +926,94 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       await clasesService.updateClassEnrollment(selectedClassData.id, enrollmentCount)
       console.log('Class enrollment updated')
       
-      // Send confirmation emails
-      try {
-        // Get selected children names for the email
-        const emailChildrenNames = parentWithChildren && selectedChildIds.length > 0
-          ? parentWithChildren.children
-              .filter(c => selectedChildIds.includes(c.id))
-              .map(c => c.child_full_name)
-          : [studentInfo.child_name]
+      // Send confirmation emails (skip for guest bookings — they get their own emails)
+      if (!isGuestBooking) {
+        try {
+          // Get selected children names for the email
+          const emailChildrenNames = parentWithChildren && selectedChildIds.length > 0
+            ? parentWithChildren.children
+                .filter(c => selectedChildIds.includes(c.id))
+                .map(c => c.child_full_name)
+            : [studentInfo.child_name]
 
-        const emailResponse = await fetch('/api/booking-confirmation', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userEmail: user.email,
-            userName: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
-            studentName: emailChildrenNames.length > 0 ? emailChildrenNames[0] : studentInfo.child_name,
-            classTitle: selectedClassData.title,
-            classDate: selectedClassData.date,
-            classTime: selectedClassData.time,
-            classPrice: finalPrice, // Total price paid (includes extra children cost)
-            basePrice: selectedClassData.price,
-            extraChildren: extraChildren,
-            extraChildrenCost: extraChildren > 0 ? extraChildren * EXTRA_CHILD_COST : 0,
-            selectedChildrenNames: emailChildrenNames,
-            bookingId: newBooking.id || `BK-${Date.now()}`
+          const emailResponse = await fetch('/api/booking-confirmation', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userEmail: user.email,
+              userName: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
+              studentName: emailChildrenNames.length > 0 ? emailChildrenNames[0] : studentInfo.child_name,
+              classTitle: selectedClassData.title,
+              classDate: selectedClassData.date,
+              classTime: selectedClassData.time,
+              classPrice: finalPrice, // Total price paid (includes extra children cost)
+              basePrice: selectedClassData.price,
+              extraChildren: extraChildren,
+              extraChildrenCost: extraChildren > 0 ? extraChildren * EXTRA_CHILD_COST : 0,
+              selectedChildrenNames: emailChildrenNames,
+              bookingId: newBooking.id || `BK-${Date.now()}`
+            })
           })
-        })
 
-        if (!emailResponse.ok) {
-          console.error('Failed to send confirmation emails')
-        } else {
-          console.log('Confirmation emails sent successfully')
+          if (!emailResponse.ok) {
+            console.error('Failed to send confirmation emails')
+          } else {
+            console.log('Confirmation emails sent successfully')
+          }
+        } catch (emailError) {
+          console.error('Error sending confirmation emails:', emailError)
+          // Don't fail the booking if email fails
         }
-      } catch (emailError) {
-        console.error('Error sending confirmation emails:', emailError)
-        // Don't fail the booking if email fails
       }
-      
+
+      // Handle guest booking: create record + send guest emails
+      if (isGuestBooking) {
+        try {
+          console.log('Creating guest booking record...')
+          const guestCreateRes = await fetch('/api/guest-booking/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              booking_id: newBooking.id,
+              purchaser_user_id: user.id,
+              purchaser_name: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
+              purchaser_email: user.email,
+              guest_parent_name: guestParentName,
+              guest_parent_email: guestParentEmail,
+              guest_child_name: guestChildName,
+            }),
+          })
+          const guestCreateData = await guestCreateRes.json()
+
+          if (guestCreateData.success) {
+            console.log('Guest booking created, sending emails...')
+            await fetch('/api/guest-booking/send-emails', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                purchaser_name: studentInfo.parent_name || user.user_metadata?.full_name || 'Parent',
+                purchaser_email: user.email,
+                guest_parent_name: guestParentName,
+                guest_parent_email: guestParentEmail,
+                guest_child_name: guestChildName,
+                class_title: selectedClassData.title,
+                class_date: selectedClassData.date,
+                class_time: selectedClassData.time,
+                class_price: finalPrice,
+                form_token: guestCreateData.form_token,
+                booking_id: newBooking.id,
+              }),
+            })
+            console.log('Guest booking emails sent')
+          }
+        } catch (guestError) {
+          console.error('Error in guest booking flow:', guestError)
+          // Don't fail the booking if guest flow fails
+        }
+      }
+
       // Payment successful, clear pending booking and show confirmation
       console.log('Booking completed successfully, showing confirmation...')
       sessionStorage.removeItem('pendingBooking')
@@ -1567,7 +1625,96 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           </Card>
           )
         })}
+
+        {/* Book for a Guest Child card */}
+        {!isGuestBooking && !isCurrentClassMommyAndMe && (
+          <Card
+            className="transition-all duration-300 border-2 border-dashed border-slate-300 hover:border-[#1E3A8A]/50 hover:shadow-md cursor-pointer bg-slate-50/50"
+            onClick={() => {
+              setIsGuestBooking(true)
+              setSelectedChildId(null)
+              setSelectedChildIds([])
+            }}
+          >
+            <CardContent className="pt-6">
+              <div className="flex flex-col items-center justify-center text-center space-y-2 py-4">
+                <div className="bg-[#1E3A8A]/10 p-3 rounded-full">
+                  <Gift className="h-6 w-6 text-[#1E3A8A]" />
+                </div>
+                <h4 className="text-lg font-bold text-slate-800">Book for a Guest Child</h4>
+                <p className="text-sm text-slate-500">Gift a class to a friend's child</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
+
+      {/* Guest booking mini form */}
+      {isGuestBooking && (
+        <Card className="border-[#1E3A8A]/20 bg-blue-50/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <Gift className="h-5 w-5 text-[#1E3A8A]" />
+                Guest Child Information
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setIsGuestBooking(false)
+                  setGuestChildName('')
+                  setGuestParentName('')
+                  setGuestParentEmail('')
+                }}
+                className="text-slate-500 hover:text-slate-700 text-xs"
+              >
+                <ArrowLeft className="h-3 w-3 mr-1" />
+                Back to my children
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="guest-child-name" className="text-sm font-medium text-slate-700">
+                Guest Child's Name *
+              </Label>
+              <Input
+                id="guest-child-name"
+                value={guestChildName}
+                onChange={(e) => setGuestChildName(e.target.value)}
+                placeholder="Child's name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest-parent-name" className="text-sm font-medium text-slate-700">
+                Guest Parent's Name *
+              </Label>
+              <Input
+                id="guest-parent-name"
+                value={guestParentName}
+                onChange={(e) => setGuestParentName(e.target.value)}
+                placeholder="Parent's full name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guest-parent-email" className="text-sm font-medium text-slate-700">
+                Guest Parent's Email *
+              </Label>
+              <Input
+                id="guest-parent-email"
+                type="email"
+                value={guestParentEmail}
+                onChange={(e) => setGuestParentEmail(e.target.value)}
+                placeholder="parent@email.com"
+              />
+            </div>
+            <p className="text-xs text-slate-500">
+              An enrollment form will be sent to this email after payment. The guest parent will need to complete the child's details and sign consent forms.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Selection Summary for Mommy & Me */}
       {isCurrentClassMommyAndMe && selectedChildIds.length > 0 && (
@@ -1622,12 +1769,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         <Button
           onClick={() => {
             // Set selectedChildId to first child for backward compatibility
-            if (selectedChildIds.length > 0) {
+            if (!isGuestBooking && selectedChildIds.length > 0) {
               setSelectedChildId(selectedChildIds[0])
             }
             setAuthStep('payment')
           }}
-          disabled={!canContinue}
+          disabled={isGuestBooking ? !(guestChildName && guestParentName && guestParentEmail) : !canContinue}
           size="lg"
           className="px-8 bg-cocinarte-red hover:bg-cocinarte-red/90 text-white"
         >
@@ -2025,6 +2172,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       if (parentData && parentData.children) {
         await loadBookingsForChildren(parentData.children)
       }
+
+      // Fetch guest bookings purchased by this user
+      if (user.id) {
+        await loadGuestBookings(user.id)
+      }
     } catch (error) {
       console.error('Error fetching student profile:', error)
     } finally {
@@ -2138,6 +2290,45 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       setChildrenBookings(bookingsMap)
     } catch (error) {
       console.error('Failed to load bookings:', error)
+    }
+  }
+
+  const loadGuestBookings = async (userId: string) => {
+    setLoadingGuestBookings(true)
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+
+      const { data: guestBookings, error } = await supabase
+        .from('guest_bookings')
+        .select(`
+          *,
+          bookings:booking_id (
+            id,
+            booking_status,
+            payment_status,
+            payment_amount,
+            clases:class_id (
+              id,
+              title,
+              date,
+              time,
+              price
+            )
+          )
+        `)
+        .eq('purchaser_user_id', userId)
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('Error loading guest bookings:', error)
+      } else {
+        setMyGuestBookings(guestBookings || [])
+      }
+    } catch (error) {
+      console.error('Failed to load guest bookings:', error)
+    } finally {
+      setLoadingGuestBookings(false)
     }
   }
 
@@ -2373,6 +2564,72 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                   initialBalance={giftCardBalance ?? undefined}
                   onBalanceChange={setGiftCardBalance}
                 />
+              )}
+
+              {/* Guest Bookings Section */}
+              {myGuestBookings.length > 0 && (
+                <>
+                  <div className="border-t border-blue-200 pt-4"></div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-800 flex items-center gap-2 mb-4">
+                      <Gift className="h-5 w-5" />
+                      Guest Bookings ({myGuestBookings.length})
+                    </h3>
+                    <div className="space-y-3">
+                      {myGuestBookings.map((gb: any) => {
+                        const clase = gb.bookings?.clases
+                        const formCompleted = !!gb.form_completed_at
+                        return (
+                          <Card key={gb.id} className="border-purple-200">
+                            <CardContent className="pt-4 pb-4">
+                              <div className="space-y-2">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="font-semibold text-purple-900 text-sm sm:text-base">
+                                      {clase?.title || 'Class'}
+                                    </div>
+                                    <div className="text-xs text-purple-700 mt-1">
+                                      {clase?.date && new Date(clase.date).toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric'
+                                      })}
+                                      {clase?.time && ` • ${clase.time}`}
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1">
+                                    <Badge className="bg-purple-100 text-purple-700 border-0 text-xs">
+                                      Gift
+                                    </Badge>
+                                    {formCompleted ? (
+                                      <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                                        Form Complete
+                                      </Badge>
+                                    ) : (
+                                      <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">
+                                        Form Pending
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg p-2 text-xs space-y-1">
+                                  <div>
+                                    <span className="font-medium text-purple-800">Guest Child: </span>
+                                    <span className="text-purple-700">{gb.guest_child_name}</span>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-purple-800">Guest Parent: </span>
+                                    <span className="text-purple-700">{gb.guest_parent_name} ({gb.guest_parent_email})</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="border-t border-blue-200 pt-4"></div>
@@ -2942,9 +3199,34 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </div>
         <h3 className="text-2xl font-bold text-slate-800 mb-3">Booking Confirmed!</h3>
         <p className="text-slate-600 max-w-md mx-auto">
-          Your cooking class has been successfully booked. You will receive a confirmation email shortly.
+          {isGuestBooking
+            ? 'Your gift booking has been confirmed! The guest parent will receive an enrollment form.'
+            : 'Your cooking class has been successfully booked. You will receive a confirmation email shortly.'}
         </p>
       </div>
+
+      {/* Guest booking info */}
+      {isGuestBooking && (
+        <Alert className="border-purple-200 bg-purple-50">
+          <div className="flex gap-3">
+            <div className="flex-shrink-0">
+              <Gift className="h-5 w-5 text-purple-600" />
+            </div>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-purple-800 mb-1">
+                Guest Enrollment Form Sent
+              </h4>
+              <div className="text-xs text-purple-700 space-y-1">
+                <p>An enrollment form has been sent to <strong>{guestParentEmail}</strong>.</p>
+                <p>
+                  <strong>{guestParentName}</strong> will need to complete {guestChildName}'s information
+                  and sign consent forms before the class.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Alert>
+      )}
 
       {/* Payment Hold Reminder */}
       <Alert className="border-blue-200 bg-blue-50">

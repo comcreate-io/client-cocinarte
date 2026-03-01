@@ -48,6 +48,39 @@ interface EnrolledStudent {
   consent_signed?: boolean
   social_media_consent?: boolean
   liability_consent?: boolean
+  // Guest booking
+  is_guest_booking?: boolean
+  guest_parent_name?: string
+  guest_parent_email?: string
+  guest_form_completed?: boolean
+  // Full guest child data (for detail view)
+  guest_child_data?: {
+    child_full_name?: string
+    child_age?: number
+    child_preferred_name?: string
+    has_cooking_experience?: boolean
+    cooking_experience_details?: string
+    allergies?: string
+    dietary_restrictions?: string
+    medical_conditions?: string
+    emergency_medications?: string
+    additional_notes?: string
+    authorized_pickup_persons?: string
+    custody_restrictions?: string
+    media_permission?: boolean
+    guest_parent_name?: string
+    guest_parent_phone?: string
+    guest_parent_email?: string
+    emergency_contact_name?: string
+    emergency_contact_phone?: string
+    emergency_contact_relationship?: string
+    liability_consent?: boolean
+    social_media_consent?: boolean
+    parent_name_signed?: string
+    child_name_signed?: string
+    signature_url?: string
+    signed_at?: string
+  }
 }
 
 interface ClassStudentsPopupProps {
@@ -103,6 +136,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const [students, setStudents] = useState<EnrolledStudent[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [expandedGuestId, setExpandedGuestId] = useState<string | null>(null)
 
   // Template & email state
   const [templates, setTemplates] = useState<EmailTemplate[]>([])
@@ -163,6 +197,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
           notes,
           booking_comments,
           extra_children,
+          is_guest_booking,
           student_id,
           child_id,
           students (
@@ -180,6 +215,39 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
             dietary_restrictions,
             medical_conditions,
             media_permission
+          ),
+          guest_bookings (
+            guest_parent_name,
+            guest_parent_email,
+            guest_child_name,
+            form_completed_at,
+            guest_children (
+              child_full_name,
+              child_age,
+              child_preferred_name,
+              has_cooking_experience,
+              cooking_experience_details,
+              allergies,
+              dietary_restrictions,
+              medical_conditions,
+              emergency_medications,
+              additional_notes,
+              authorized_pickup_persons,
+              custody_restrictions,
+              media_permission,
+              guest_parent_name,
+              guest_parent_phone,
+              guest_parent_email,
+              emergency_contact_name,
+              emergency_contact_phone,
+              emergency_contact_relationship,
+              liability_consent,
+              social_media_consent,
+              parent_name_signed,
+              child_name_signed,
+              signature_url,
+              signed_at
+            )
           )
         `)
         .eq('class_id', clase.id)
@@ -217,14 +285,20 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
       const enrolledStudents: EnrolledStudent[] = (bookings || []).map((booking: any) => {
         const child = booking.children
         const consent = booking.child_id ? consentMap[booking.child_id] : null
+        const guestBooking = booking.guest_bookings?.[0] || null
+        // guest_children is a single object (many-to-one FK), not an array
+        const guestChild = guestBooking?.guest_children || null
+
+        // Detect guest booking from either the flag or the existence of a guest_bookings record
+        const isGuest = booking.is_guest_booking === true || !!guestBooking
 
         return {
           id: booking.students?.id || booking.student_id,
           booking_id: booking.id,
-          child_name: child?.child_full_name || booking.students?.child_name || 'Unknown',
-          parent_name: booking.students?.parent_name || 'Unknown',
-          email: booking.students?.email || '',
-          phone: booking.students?.phone || '',
+          child_name: guestBooking?.guest_child_name || child?.child_full_name || booking.students?.child_name || 'Unknown',
+          parent_name: guestBooking?.guest_parent_name || booking.students?.parent_name || 'Unknown',
+          email: guestBooking?.guest_parent_email || booking.students?.email || '',
+          phone: guestChild?.guest_parent_phone || booking.students?.phone || '',
           booking_status: booking.booking_status,
           payment_status: booking.payment_status,
           payment_amount: booking.payment_amount,
@@ -232,14 +306,25 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
           notes: booking.notes,
           booking_comments: booking.booking_comments,
           extra_children: booking.extra_children || 0,
-          child_age: child?.child_age ?? undefined,
-          allergies: child?.allergies || undefined,
-          dietary_restrictions: child?.dietary_restrictions || undefined,
-          medical_conditions: child?.medical_conditions || undefined,
-          media_permission: child?.media_permission ?? undefined,
-          consent_signed: !!consent,
-          social_media_consent: consent?.social_media_consent ?? undefined,
-          liability_consent: consent?.liability_consent ?? undefined,
+          child_age: guestChild?.child_age ?? child?.child_age ?? undefined,
+          allergies: guestChild?.allergies || child?.allergies || undefined,
+          dietary_restrictions: guestChild?.dietary_restrictions || child?.dietary_restrictions || undefined,
+          medical_conditions: guestChild?.medical_conditions || child?.medical_conditions || undefined,
+          media_permission: guestChild?.media_permission ?? child?.media_permission ?? undefined,
+          consent_signed: isGuest
+            ? !!guestChild?.liability_consent
+            : !!consent,
+          social_media_consent: isGuest
+            ? guestChild?.social_media_consent ?? undefined
+            : consent?.social_media_consent ?? undefined,
+          liability_consent: isGuest
+            ? guestChild?.liability_consent ?? undefined
+            : consent?.liability_consent ?? undefined,
+          is_guest_booking: isGuest,
+          guest_parent_name: guestBooking?.guest_parent_name,
+          guest_parent_email: guestBooking?.guest_parent_email,
+          guest_form_completed: !!guestBooking?.form_completed_at,
+          guest_child_data: guestChild || undefined,
         }
       })
 
@@ -879,6 +964,16 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                                 +{student.extra_children} extra
                               </Badge>
                             )}
+                            {student.is_guest_booking && (
+                              <Badge className="bg-blue-100 text-blue-700 border-0 text-xs">
+                                Guest
+                              </Badge>
+                            )}
+                            {student.is_guest_booking && !student.guest_form_completed && (
+                              <Badge className="bg-amber-100 text-amber-700 border-0 text-xs">
+                                Form Pending
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge className={`${getPaymentColor(student.payment_status)} border-0 text-xs`}>
@@ -981,6 +1076,124 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                             <div className="bg-amber-50 border border-amber-100 rounded-md px-3 py-2">
                               <p className="text-xs font-medium text-amber-700 mb-0.5">Parent Comment</p>
                               <p className="text-sm text-amber-900">{student.booking_comments}</p>
+                            </div>
+                          )}
+
+                          {/* Guest Details Button & Panel */}
+                          {student.is_guest_booking && student.guest_form_completed && student.guest_child_data && (
+                            <div>
+                              <button
+                                onClick={() => setExpandedGuestId(expandedGuestId === student.booking_id ? null : student.booking_id)}
+                                className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                {expandedGuestId === student.booking_id ? 'Hide Guest Details' : 'View Guest Registration Details'}
+                              </button>
+
+                              {expandedGuestId === student.booking_id && (
+                                <div className="mt-2 border border-blue-200 rounded-lg overflow-hidden">
+                                  {/* Child Info */}
+                                  <div className="bg-blue-50 px-3 py-2">
+                                    <h5 className="text-xs font-semibold text-blue-800 flex items-center gap-1">
+                                      <User className="h-3 w-3" /> Child Information
+                                    </h5>
+                                  </div>
+                                  <div className="px-3 py-2 text-xs space-y-1">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                      {student.guest_child_data.child_full_name && <p><span className="font-medium text-slate-600">Full Name:</span> {student.guest_child_data.child_full_name}</p>}
+                                      {student.guest_child_data.child_age != null && <p><span className="font-medium text-slate-600">Age:</span> {student.guest_child_data.child_age}</p>}
+                                      {student.guest_child_data.child_preferred_name && <p><span className="font-medium text-slate-600">Preferred Name:</span> {student.guest_child_data.child_preferred_name}</p>}
+                                      <p><span className="font-medium text-slate-600">Cooking Experience:</span> {student.guest_child_data.has_cooking_experience ? 'Yes' : 'No'}</p>
+                                    </div>
+                                    {student.guest_child_data.cooking_experience_details && (
+                                      <p><span className="font-medium text-slate-600">Cooking Experience Details:</span> {student.guest_child_data.cooking_experience_details}</p>
+                                    )}
+                                  </div>
+
+                                  {/* Health & Safety */}
+                                  {(student.guest_child_data.allergies || student.guest_child_data.dietary_restrictions || student.guest_child_data.medical_conditions || student.guest_child_data.emergency_medications) && (
+                                    <>
+                                      <div className="bg-red-50 px-3 py-2 border-t border-blue-200">
+                                        <h5 className="text-xs font-semibold text-red-800 flex items-center gap-1">
+                                          <AlertTriangle className="h-3 w-3" /> Health & Safety
+                                        </h5>
+                                      </div>
+                                      <div className="px-3 py-2 text-xs space-y-1">
+                                        {student.guest_child_data.allergies && <p><span className="font-semibold text-red-700">Allergies:</span> {student.guest_child_data.allergies}</p>}
+                                        {student.guest_child_data.dietary_restrictions && <p><span className="font-semibold text-red-700">Dietary Restrictions:</span> {student.guest_child_data.dietary_restrictions}</p>}
+                                        {student.guest_child_data.medical_conditions && <p><span className="font-semibold text-red-700">Medical Conditions:</span> {student.guest_child_data.medical_conditions}</p>}
+                                        {student.guest_child_data.emergency_medications && <p><span className="font-semibold text-red-700">Emergency Medications:</span> {student.guest_child_data.emergency_medications}</p>}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* Parent & Emergency Contact */}
+                                  <div className="bg-green-50 px-3 py-2 border-t border-blue-200">
+                                    <h5 className="text-xs font-semibold text-green-800 flex items-center gap-1">
+                                      <Phone className="h-3 w-3" /> Parent & Emergency Contact
+                                    </h5>
+                                  </div>
+                                  <div className="px-3 py-2 text-xs space-y-1">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                      {student.guest_child_data.guest_parent_name && <p><span className="font-medium text-slate-600">Parent Name:</span> {student.guest_child_data.guest_parent_name}</p>}
+                                      {student.guest_child_data.guest_parent_phone && <p><span className="font-medium text-slate-600">Parent Phone:</span> {student.guest_child_data.guest_parent_phone}</p>}
+                                      {student.guest_child_data.guest_parent_email && <p className="col-span-2"><span className="font-medium text-slate-600">Parent Email:</span> {student.guest_child_data.guest_parent_email}</p>}
+                                    </div>
+                                    {(student.guest_child_data.emergency_contact_name || student.guest_child_data.emergency_contact_phone) && (
+                                      <div className="mt-1 pt-1 border-t border-green-100">
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                          {student.guest_child_data.emergency_contact_name && <p><span className="font-medium text-slate-600">Emergency Contact:</span> {student.guest_child_data.emergency_contact_name}</p>}
+                                          {student.guest_child_data.emergency_contact_phone && <p><span className="font-medium text-slate-600">Emergency Phone:</span> {student.guest_child_data.emergency_contact_phone}</p>}
+                                          {student.guest_child_data.emergency_contact_relationship && <p><span className="font-medium text-slate-600">Relationship:</span> {student.guest_child_data.emergency_contact_relationship}</p>}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {(student.guest_child_data.authorized_pickup_persons || student.guest_child_data.custody_restrictions) && (
+                                      <div className="mt-1 pt-1 border-t border-green-100">
+                                        {student.guest_child_data.authorized_pickup_persons && <p><span className="font-medium text-slate-600">Authorized Pick-up Persons:</span> {student.guest_child_data.authorized_pickup_persons}</p>}
+                                        {student.guest_child_data.custody_restrictions && <p><span className="font-medium text-slate-600">Custody Restrictions:</span> {student.guest_child_data.custody_restrictions}</p>}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Consent & Signature */}
+                                  <div className="bg-purple-50 px-3 py-2 border-t border-blue-200">
+                                    <h5 className="text-xs font-semibold text-purple-800 flex items-center gap-1">
+                                      <FileCheck className="h-3 w-3" /> Consent & Signature
+                                    </h5>
+                                  </div>
+                                  <div className="px-3 py-2 text-xs space-y-1">
+                                    <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                      <p><span className="font-medium text-slate-600">Liability Consent:</span> {student.guest_child_data.liability_consent ? <span className="text-green-700 font-semibold">Signed</span> : <span className="text-red-600">Not signed</span>}</p>
+                                      <p><span className="font-medium text-slate-600">Social Media Consent:</span> {student.guest_child_data.social_media_consent ? <span className="text-green-700 font-semibold">Allowed</span> : <span className="text-slate-500">Not allowed</span>}</p>
+                                      <p><span className="font-medium text-slate-600">Media/Photo Permission:</span> {student.guest_child_data.media_permission ? <span className="text-green-700 font-semibold">Granted</span> : <span className="text-slate-500">Not granted</span>}</p>
+                                    </div>
+                                    <div className="mt-1 pt-1 border-t border-purple-100">
+                                      {student.guest_child_data.parent_name_signed && <p><span className="font-medium text-slate-600">Parent Name Signed:</span> {student.guest_child_data.parent_name_signed}</p>}
+                                      {student.guest_child_data.child_name_signed && <p><span className="font-medium text-slate-600">Child Name Signed:</span> {student.guest_child_data.child_name_signed}</p>}
+                                      {student.guest_child_data.signed_at && <p><span className="font-medium text-slate-600">Signed on:</span> {new Date(student.guest_child_data.signed_at).toLocaleString()}</p>}
+                                    </div>
+                                    {student.guest_child_data.signature_url && (
+                                      <div className="mt-2">
+                                        <p className="font-medium text-slate-600 mb-1">Signature:</p>
+                                        <img src={student.guest_child_data.signature_url} alt="Signature" className="h-16 border border-slate-200 rounded bg-white p-1" />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Additional Notes */}
+                                  {student.guest_child_data.additional_notes && (
+                                    <>
+                                      <div className="bg-slate-50 px-3 py-2 border-t border-blue-200">
+                                        <h5 className="text-xs font-semibold text-slate-700">Additional Notes</h5>
+                                      </div>
+                                      <div className="px-3 py-2 text-xs">
+                                        <p className="text-slate-600">{student.guest_child_data.additional_notes}</p>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
