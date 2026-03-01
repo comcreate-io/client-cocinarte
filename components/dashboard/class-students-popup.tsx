@@ -135,6 +135,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const [editorError, setEditorError] = useState<string | null>(null)
 
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
+  const [cancellingStudentId, setCancellingStudentId] = useState<string | null>(null)
 
   useEffect(() => {
     if (isOpen && clase) {
@@ -539,6 +540,56 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
     }
   }
 
+  const handleCancelStudent = async (student: EnrolledStudent) => {
+    if (!clase) return
+
+    const now = new Date()
+    const classDateTime = new Date(`${clase.date}T${clase.time}`)
+    const hoursUntil = (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+    const isLateCancel = hoursUntil < 48
+
+    let refundEstimate = 0
+    if (hoursUntil >= 48) {
+      refundEstimate = student.payment_amount
+    } else if (clase.late_cancel_refund_type && clase.late_cancel_refund_value != null) {
+      if (clase.late_cancel_refund_type === 'percentage') {
+        refundEstimate = Math.round(student.payment_amount * (clase.late_cancel_refund_value / 100) * 100) / 100
+      } else if (clase.late_cancel_refund_type === 'fixed') {
+        refundEstimate = Math.min(clase.late_cancel_refund_value, student.payment_amount)
+      }
+    }
+
+    let msg = `Cancel booking for ${student.child_name} (Parent: ${student.parent_name})?\n\n`
+    if (!isLateCancel) {
+      msg += `Full refund of $${refundEstimate.toFixed(2)} will be issued.`
+    } else if (refundEstimate > 0) {
+      msg += `Late cancellation — refund of $${refundEstimate.toFixed(2)} will be issued.`
+    } else {
+      msg += `Late cancellation — no refund will be issued.`
+    }
+
+    if (!confirm(msg)) return
+
+    setCancellingStudentId(student.booking_id)
+    try {
+      const response = await fetch('/api/cancel-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: student.booking_id }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Failed to cancel booking')
+
+      // Refresh student list
+      await fetchEnrolledStudents()
+    } catch (error: any) {
+      console.error('Error cancelling student booking:', error)
+      alert(error.message || 'Failed to cancel booking.')
+    } finally {
+      setCancellingStudentId(null)
+    }
+  }
+
   const safeFormatDate = (date: string) => {
     const d = new Date(date)
     return isNaN(d.getTime()) ? 'N/A' : d.toLocaleDateString('en-US', {
@@ -836,6 +887,18 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                             <span className="text-sm font-semibold text-slate-700">
                               ${student.payment_amount.toFixed(2)}
                             </span>
+                            <button
+                              onClick={() => handleCancelStudent(student)}
+                              disabled={cancellingStudentId === student.booking_id}
+                              className="ml-1 p-1 rounded hover:bg-red-100 text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                              title="Cancel this booking"
+                            >
+                              {cancellingStudentId === student.booking_id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4" />
+                              )}
+                            </button>
                           </div>
                         </div>
 

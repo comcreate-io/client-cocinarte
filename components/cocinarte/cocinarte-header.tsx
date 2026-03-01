@@ -4,7 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle, Gift, ChevronDown } from "lucide-react"
+import { Menu, X, Instagram, Facebook, User, LogOut, ChefHat, Mail, Phone, MapPin, Calendar, Shield, ExternalLink, XCircle, Gift, ChevronDown, AlertCircle, CheckCircle, Loader2 } from "lucide-react"
 import { useState, useEffect, Suspense } from "react"
 import CocinarteBookingPopup from "./cocinarte-booking-popup"
 import CocinarteAuthPopup from "./cocinarte-auth-popup"
@@ -47,6 +47,14 @@ function CocinarteHeaderInner() {
   const [bookings, setBookings] = useState<BookingWithDetails[]>([])
   const [loadingBookings, setLoadingBookings] = useState(false)
   const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null)
+  const [cancelDialog, setCancelDialog] = useState<{
+    open: boolean
+    booking: BookingWithDetails | null
+    title: string
+    refundAmount: number
+    isLateCancel: boolean
+  }>({ open: false, booking: null, title: '', refundAmount: 0, isLateCancel: false })
+  const [cancelResultDialog, setCancelResultDialog] = useState<{ open: boolean; message: string; isError: boolean }>({ open: false, message: '', isError: false })
   
   const { user, signOut } = useAuth()
   const searchParams = useSearchParams()
@@ -166,85 +174,76 @@ function CocinarteHeaderInner() {
     }
   }
 
-  const canCancelBooking = (classDate: string, classTime: string): boolean => {
+  const getHoursUntilClass = (classDate: string, classTime: string): number => {
     const now = new Date()
     const classDateTime = new Date(`${classDate}T${classTime}`)
-    const hoursDifference = (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
-    return hoursDifference >= 24
+    return (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
   }
 
-  const handleCancelBooking = async (booking: BookingWithDetails) => {
-    if (!canCancelBooking(booking.class.date, booking.class.time)) {
-      alert('Cannot cancel booking less than 24 hours before the class starts.')
-      return
-    }
+  const canCancelBooking = (classDate: string, classTime: string): boolean => {
+    return getHoursUntilClass(classDate, classTime) > 0
+  }
 
-    if (!confirm(`Are you sure you want to cancel the booking for "${booking.class.title}"? This action cannot be undone.`)) {
-      return
+  const getExpectedRefund = (booking: BookingWithDetails): { amount: number; isLateCancel: boolean } => {
+    const hoursUntil = getHoursUntilClass(booking.class.date, booking.class.time)
+    if (hoursUntil >= 48) {
+      return { amount: booking.payment_amount, isLateCancel: false }
     }
+    const refundType = booking.class.late_cancel_refund_type
+    const refundValue = booking.class.late_cancel_refund_value
+    if (!refundType || refundValue == null) {
+      return { amount: 0, isLateCancel: true }
+    }
+    if (refundType === 'percentage') {
+      return { amount: Math.round(booking.payment_amount * (refundValue / 100) * 100) / 100, isLateCancel: true }
+    }
+    if (refundType === 'fixed') {
+      return { amount: Math.min(refundValue, booking.payment_amount), isLateCancel: true }
+    }
+    return { amount: 0, isLateCancel: true }
+  }
 
+  const handleCancelBooking = (booking: BookingWithDetails) => {
+    const { amount, isLateCancel } = getExpectedRefund(booking)
+    setCancelDialog({
+      open: true,
+      booking,
+      title: booking.class.title,
+      refundAmount: amount,
+      isLateCancel,
+    })
+  }
+
+  const confirmCancelBooking = async () => {
+    const { booking } = cancelDialog
+    if (!booking) return
+
+    setCancelDialog(prev => ({ ...prev, open: false }))
     setCancellingBookingId(booking.id)
 
     try {
-      const bookingsService = new BookingsClientService()
-
-      // Refund gift card balance if any was used
-      if (booking.gift_card_amount_used && booking.gift_card_amount_used > 0 && booking.parent_id) {
-        try {
-          const refundResponse = await fetch('/api/gift-cards/refund', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              parentId: booking.parent_id,
-              amount: booking.gift_card_amount_used,
-              bookingId: booking.id,
-              description: `Refund for cancelled class: ${booking.class.title}`
-            })
-          })
-
-          if (!refundResponse.ok) {
-            console.error('Failed to refund gift card balance')
-          }
-        } catch (refundError) {
-          console.error('Error refunding gift card balance:', refundError)
-        }
-      }
-
-      // Update booking status to cancelled
-      await bookingsService.updateBooking({
-        id: booking.id,
-        booking_status: 'cancelled',
-        payment_status: 'canceled'
-      })
-
-      // Send cancellation emails
-      const response = await fetch('/api/booking-cancellation', {
+      const response = await fetch('/api/cancel-booking', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userEmail: booking.student.email,
-          userName: booking.student.parent_name,
-          studentName: booking.student.child_name,
-          classTitle: booking.class.title,
-          classDate: booking.class.date,
-          classTime: booking.class.time,
-          classPrice: booking.class.price,
-          bookingId: booking.id
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id }),
       })
+
+      const result = await response.json()
 
       if (!response.ok) {
-        console.error('Failed to send cancellation emails')
+        throw new Error(result.error || 'Failed to cancel booking')
       }
 
-      // Refresh bookings list
       await fetchBookings()
-      alert('Booking cancelled successfully. You will receive a confirmation email shortly.')
-    } catch (error) {
+
+      if (result.refundAmount > 0) {
+        setCancelResultDialog({ open: true, message: `Booking cancelled successfully. A refund of $${result.refundAmount.toFixed(2)} will be processed. You will receive a confirmation email shortly.`, isError: false })
+      } else {
+        setCancelResultDialog({ open: true, message: 'Booking cancelled successfully. You will receive a confirmation email shortly.', isError: false })
+      }
+    } catch (error: any) {
       console.error('Error cancelling booking:', error)
-      alert('Failed to cancel booking. Please try again or contact support.')
+      setCancelResultDialog({ open: true, message: error.message || 'Failed to cancel booking. Please try again or contact support.', isError: true })
     } finally {
       setCancellingBookingId(null)
     }
@@ -978,18 +977,14 @@ function CocinarteHeaderInner() {
                                   {booking.booking_status}
                                 </Badge>
                               </div>
-                              {!isCancelled && (
+                              {!isCancelled && canCancel && (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleCancelBooking(booking)}
-                                  disabled={!canCancel || cancellingBookingId === booking.id}
-                                  className={`${
-                                    canCancel
-                                      ? 'text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700'
-                                      : 'opacity-50 cursor-not-allowed'
-                                  }`}
-                                  title={!canCancel ? 'Cannot cancel within 24 hours of class' : 'Cancel booking'}
+                                  disabled={cancellingBookingId === booking.id}
+                                  className="text-red-600 border-red-300 hover:bg-red-50 hover:text-red-700"
+                                  title="Cancel booking"
                                 >
                                   {cancellingBookingId === booking.id ? (
                                     <div className="flex items-center gap-1">
@@ -1077,6 +1072,71 @@ function CocinarteHeaderInner() {
           <GiftCardPurchase onSuccess={() => {
             setTimeout(() => setIsGiftCardOpen(false), 3000)
           }} />
+        </div>
+      </DialogContent>
+    </Dialog>
+    {/* Cancel Booking Confirmation Dialog */}
+    <Dialog open={cancelDialog.open} onOpenChange={(open) => !open && setCancelDialog(prev => ({ ...prev, open: false }))}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-lg text-red-700 flex items-center gap-2">
+            <XCircle className="h-5 w-5" />
+            Cancel Booking
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <p className="text-sm text-gray-700">
+            Are you sure you want to cancel your booking for <strong>{cancelDialog.title}</strong>?
+          </p>
+          <div className={`rounded-lg p-3 text-sm ${
+            !cancelDialog.isLateCancel
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : cancelDialog.refundAmount > 0
+                ? 'bg-yellow-50 border border-yellow-200 text-yellow-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {!cancelDialog.isLateCancel ? (
+              <p>You will receive a <strong>full refund of ${cancelDialog.refundAmount.toFixed(2)}</strong>.</p>
+            ) : cancelDialog.refundAmount > 0 ? (
+              <p>This is a late cancellation (less than 48 hours before class). Per our policy, you will receive a <strong>refund of ${cancelDialog.refundAmount.toFixed(2)}</strong>.</p>
+            ) : (
+              <p>This is a late cancellation (less than 48 hours before class). Per our policy, <strong>no refund</strong> will be issued.</p>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">This action cannot be undone.</p>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={() => setCancelDialog(prev => ({ ...prev, open: false }))}>
+            Keep Booking
+          </Button>
+          <Button
+            size="sm"
+            className="bg-red-600 hover:bg-red-700 text-white"
+            onClick={confirmCancelBooking}
+          >
+            Yes, Cancel Booking
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Cancel Result Dialog */}
+    <Dialog open={cancelResultDialog.open} onOpenChange={(open) => !open && setCancelResultDialog(prev => ({ ...prev, open: false }))}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className={`text-lg flex items-center gap-2 ${cancelResultDialog.isError ? 'text-red-700' : 'text-green-700'}`}>
+            {cancelResultDialog.isError ? (
+              <><AlertCircle className="h-5 w-5" /> Error</>
+            ) : (
+              <><CheckCircle className="h-5 w-5" /> Success</>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-gray-700 py-2">{cancelResultDialog.message}</p>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setCancelResultDialog(prev => ({ ...prev, open: false }))}>
+            OK
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

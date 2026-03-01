@@ -57,7 +57,9 @@ export class BookingsClientService {
           date,
           time,
           price,
-          classDuration
+          classDuration,
+          late_cancel_refund_type,
+          late_cancel_refund_value
         ),
         student:students(
           id,

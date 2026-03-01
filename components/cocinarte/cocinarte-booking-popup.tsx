@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift, Shield, FileCheck } from "lucide-react"
+import { Calendar, Clock, Users, DollarSign, ChefHat, Eye, EyeOff, Mail, Lock, LogIn, UserPlus, ArrowLeft, CreditCard, CheckCircle, User, Ticket, X, LogOut, Baby, AlertCircle, Camera, CalendarDays, Gift, Shield, FileCheck, XCircle, Loader2 } from "lucide-react"
 import { Clase } from "@/lib/types/clases"
 import { ClasesClientService } from "@/lib/supabase/clases-client"
 import { StudentsClientService } from "@/lib/supabase/students-client"
@@ -90,6 +90,16 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   const [isAddingChild, setIsAddingChild] = useState(false)
   const [childFormData, setChildFormData] = useState<Partial<Child>>({})
   const [childrenBookings, setChildrenBookings] = useState<{ [key: string]: any[] }>({})
+  const [cancellingBookingId, setCancellingBookingId] = useState<string | null>(null)
+  const [cancelDialog, setCancelDialog] = useState<{
+    open: boolean
+    booking: any
+    childId: string
+    title: string
+    refundAmount: number
+    isLateCancel: boolean
+  }>({ open: false, booking: null, childId: '', title: '', refundAmount: 0, isLateCancel: false })
+  const [cancelResultDialog, setCancelResultDialog] = useState<{ open: boolean; message: string; isError: boolean }>({ open: false, message: '', isError: false })
 
   // Consent form states for Add Child dialog
   const [showConsentDialog, setShowConsentDialog] = useState(false)
@@ -2022,6 +2032,75 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     }
   }
 
+  const openCancelDialog = (booking: any, childId: string) => {
+    const clase = booking.clases
+    if (!clase) return
+
+    const now = new Date()
+    const classDateTime = new Date(`${clase.date}T${clase.time}`)
+    const hoursUntil = (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
+
+    if (hoursUntil <= 0) {
+      setCancelResultDialog({ open: true, message: 'This class has already started or passed.', isError: true })
+      return
+    }
+
+    const isLateCancel = hoursUntil < 48
+    let refundEstimate = 0
+    const paymentAmount = booking.payment_amount || 0
+    if (hoursUntil >= 48) {
+      refundEstimate = paymentAmount
+    } else if (clase.late_cancel_refund_type && clase.late_cancel_refund_value != null) {
+      if (clase.late_cancel_refund_type === 'percentage') {
+        refundEstimate = Math.round(paymentAmount * (clase.late_cancel_refund_value / 100) * 100) / 100
+      } else if (clase.late_cancel_refund_type === 'fixed') {
+        refundEstimate = Math.min(clase.late_cancel_refund_value, paymentAmount)
+      }
+    }
+
+    setCancelDialog({
+      open: true,
+      booking,
+      childId,
+      title: clase.title,
+      refundAmount: refundEstimate,
+      isLateCancel,
+    })
+  }
+
+  const confirmCancelBooking = async () => {
+    const { booking, childId } = cancelDialog
+    if (!booking) return
+
+    setCancelDialog(prev => ({ ...prev, open: false }))
+    setCancellingBookingId(booking.id)
+
+    try {
+      const response = await fetch('/api/cancel-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Failed to cancel booking')
+
+      if (parentWithChildren?.children) {
+        await loadBookingsForChildren(parentWithChildren.children)
+      }
+
+      if (result.refundAmount > 0) {
+        setCancelResultDialog({ open: true, message: `Booking cancelled. A refund of $${result.refundAmount.toFixed(2)} will be processed.`, isError: false })
+      } else {
+        setCancelResultDialog({ open: true, message: 'Booking cancelled successfully.', isError: false })
+      }
+    } catch (error: any) {
+      console.error('Error cancelling booking:', error)
+      setCancelResultDialog({ open: true, message: error.message || 'Failed to cancel booking. Please try again.', isError: true })
+    } finally {
+      setCancellingBookingId(null)
+    }
+  }
+
   const loadBookingsForChildren = async (children: Child[]) => {
     try {
       const { createClient } = await import('@/lib/supabase/client')
@@ -2039,7 +2118,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               title,
               date,
               time,
-              price
+              price,
+              late_cancel_refund_type,
+              late_cancel_refund_value
             )
           `)
           .eq('child_id', child.id)
@@ -2486,32 +2567,62 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                                   </h5>
                                 </div>
                                 <div className="space-y-2">
-                                  {childrenBookings[child.id].map((booking: any) => (
+                                  {childrenBookings[child.id].map((booking: any) => {
+                                    const classDate = booking.clases?.date
+                                    const classTime = booking.clases?.time
+                                    const isFuture = classDate && classTime && new Date(`${classDate}T${classTime}`).getTime() > Date.now()
+                                    const isCancelled = booking.booking_status === 'cancelled'
+
+                                    return (
                                     <div key={booking.id} className="bg-white border border-orange-100 rounded p-2">
-                                      <div className="font-medium text-sm text-orange-900">
-                                        {booking.clases?.title || 'Class'}
+                                      <div className="flex items-start justify-between gap-2">
+                                        <div className="flex-1">
+                                          <div className="font-medium text-sm text-orange-900">
+                                            {booking.clases?.title || 'Class'}
+                                          </div>
+                                          <div className="text-xs text-orange-700 mt-1">
+                                            {classDate && new Date(classDate).toLocaleDateString('en-US', {
+                                              month: 'short',
+                                              day: 'numeric',
+                                              year: 'numeric'
+                                            })}
+                                            {classTime && ` • ${classTime}`}
+                                          </div>
+                                          <Badge
+                                            variant="outline"
+                                            className={`mt-1 text-xs ${
+                                              booking.booking_status === 'confirmed' ? 'bg-green-50 text-green-800 border-green-200' :
+                                              booking.booking_status === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                                              booking.booking_status === 'cancelled' ? 'bg-red-50 text-red-800 border-red-200' :
+                                              'bg-blue-50 text-blue-800 border-blue-200'
+                                            }`}
+                                          >
+                                            {booking.booking_status || 'booked'}
+                                          </Badge>
+                                        </div>
+                                        {isFuture && !isCancelled && (
+                                          <button
+                                            onClick={() => openCancelDialog(booking, child.id)}
+                                            disabled={cancellingBookingId === booking.id}
+                                            className="mt-0.5 px-2 py-1 rounded text-xs font-medium flex items-center gap-1 hover:bg-red-100 text-red-500 hover:text-red-700 border border-red-200 transition-colors disabled:opacity-50 flex-shrink-0"
+                                          >
+                                            {cancellingBookingId === booking.id ? (
+                                              <>
+                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                Cancelling...
+                                              </>
+                                            ) : (
+                                              <>
+                                                <XCircle className="h-3 w-3" />
+                                                Cancel
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
                                       </div>
-                                      <div className="text-xs text-orange-700 mt-1">
-                                        {booking.clases?.date && new Date(booking.clases.date).toLocaleDateString('en-US', {
-                                          month: 'short',
-                                          day: 'numeric',
-                                          year: 'numeric'
-                                        })}
-                                        {booking.clases?.time && ` • ${booking.clases.time}`}
-                                      </div>
-                                      <Badge
-                                        variant="outline"
-                                        className={`mt-1 text-xs ${
-                                          booking.status === 'confirmed' ? 'bg-green-50 text-green-800 border-green-200' :
-                                          booking.status === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
-                                          booking.status === 'cancelled' ? 'bg-red-50 text-red-800 border-red-200' :
-                                          'bg-blue-50 text-blue-800 border-blue-200'
-                                        }`}
-                                      >
-                                        {booking.status || 'booked'}
-                                      </Badge>
                                     </div>
-                                  ))}
+                                    )
+                                  })}
                                 </div>
                               </div>
                             )}
@@ -3031,6 +3142,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   )
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
         <div className="bg-cocinarte-navy text-white p-6 rounded-t-lg">
@@ -3314,5 +3426,72 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </DialogContent>
       </Dialog>
     </Dialog>
+
+    {/* Cancel Booking Confirmation Dialog */}
+    <Dialog open={cancelDialog.open} onOpenChange={(open) => !open && setCancelDialog(prev => ({ ...prev, open: false }))}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="text-lg text-red-700 flex items-center gap-2">
+            <XCircle className="h-5 w-5" />
+            Cancel Booking
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <p className="text-sm text-gray-700">
+            Are you sure you want to cancel your booking for <strong>{cancelDialog.title}</strong>?
+          </p>
+          <div className={`rounded-lg p-3 text-sm ${
+            !cancelDialog.isLateCancel
+              ? 'bg-green-50 border border-green-200 text-green-800'
+              : cancelDialog.refundAmount > 0
+                ? 'bg-yellow-50 border border-yellow-200 text-yellow-800'
+                : 'bg-red-50 border border-red-200 text-red-800'
+          }`}>
+            {!cancelDialog.isLateCancel ? (
+              <p>You will receive a <strong>full refund of ${cancelDialog.refundAmount.toFixed(2)}</strong>.</p>
+            ) : cancelDialog.refundAmount > 0 ? (
+              <p>This is a late cancellation (less than 48 hours before class). Per our policy, you will receive a <strong>refund of ${cancelDialog.refundAmount.toFixed(2)}</strong>.</p>
+            ) : (
+              <p>This is a late cancellation (less than 48 hours before class). Per our policy, <strong>no refund</strong> will be issued.</p>
+            )}
+          </div>
+          <p className="text-xs text-gray-500">This action cannot be undone.</p>
+        </div>
+        <div className="flex gap-2 justify-end">
+          <Button variant="outline" size="sm" onClick={() => setCancelDialog(prev => ({ ...prev, open: false }))}>
+            Keep Booking
+          </Button>
+          <Button
+            size="sm"
+            className="bg-red-600 hover:bg-red-700 text-white"
+            onClick={confirmCancelBooking}
+          >
+            Yes, Cancel Booking
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Cancel Result Dialog */}
+    <Dialog open={cancelResultDialog.open} onOpenChange={(open) => !open && setCancelResultDialog(prev => ({ ...prev, open: false }))}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className={`text-lg flex items-center gap-2 ${cancelResultDialog.isError ? 'text-red-700' : 'text-green-700'}`}>
+            {cancelResultDialog.isError ? (
+              <><AlertCircle className="h-5 w-5" /> Error</>
+            ) : (
+              <><CheckCircle className="h-5 w-5" /> Success</>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-gray-700 py-2">{cancelResultDialog.message}</p>
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setCancelResultDialog(prev => ({ ...prev, open: false }))}>
+            OK
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

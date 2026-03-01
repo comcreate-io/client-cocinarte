@@ -51,6 +51,8 @@ export interface BookingWithDetails extends Booking {
     price: number;
     classDuration: number;
     class_type?: string;
+    late_cancel_refund_type?: 'percentage' | 'fixed' | null;
+    late_cancel_refund_value?: number | null;
   };
   student: {
     id: string;
