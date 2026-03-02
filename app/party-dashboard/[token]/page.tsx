@@ -45,7 +45,10 @@ export default function PartyDashboardPage() {
     try {
       setLoading(true)
       setError('')
-      const res = await fetch(`/api/party-dashboard?token=${token}`, { cache: 'no-store' })
+      const res = await fetch(`/api/party-dashboard?token=${token}&_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+      })
       const data = await res.json()
 
       if (!data.success) {
@@ -118,7 +121,10 @@ export default function PartyDashboardPage() {
 
       // Background refresh to sync latest data (e.g. email_sent_at)
       try {
-        const refreshRes = await fetch(`/api/party-dashboard?token=${token}`, { cache: 'no-store' })
+        const refreshRes = await fetch(`/api/party-dashboard?token=${token}&_t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: { 'Cache-Control': 'no-cache', 'Pragma': 'no-cache' },
+        })
         const refreshData = await refreshRes.json()
         if (refreshData.success) {
           setGuests(refreshData.guests)
