@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     });
 
     const body = await request.json();
-    const { amount, classTitle, userName, studentName, classId, classDate, classTime, userEmail, extraChildren } = body;
+    const { amount, classTitle, userName, studentName, classId, classDate, classTime, userEmail, extraChildren, totalChildren } = body;
 
-    console.log('Received payment intent request:', { amount, classTitle, classId, hasDate: !!classDate, hasTime: !!classTime, extraChildren: extraChildren || 0 });
+    console.log('Received payment intent request:', { amount, classTitle, classId, hasDate: !!classDate, hasTime: !!classTime, extraChildren: extraChildren || 0, totalChildren: totalChildren || 1 });
 
     // Validate required fields - amount can be 0, so check for null/undefined specifically
     if (amount === null || amount === undefined || !classTitle || !classId) {
@@ -64,11 +64,20 @@ export async function POST(request: NextRequest) {
     const enrolled = classData.enrolled || 0;
     const maxStudents = classData.maxStudents || 0;
 
-    if (enrolled >= maxStudents) {
+    // Check capacity for total children (own + guests)
+    const childrenCount = body.totalChildren || 1;
+    if (enrolled + childrenCount > maxStudents) {
+      const spotsLeft = maxStudents - enrolled;
+      if (spotsLeft <= 0) {
+        return NextResponse.json(
+          { error: 'Sorry, this class is now full. Please choose another class.' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
-        { error: 'Sorry, this class is now full. Please choose another class.' },
+        { error: `Not enough spots available. Only ${spotsLeft} spot${spotsLeft === 1 ? '' : 's'} left in this class.` },
         { status: 400 }
-      );
+        );
     }
 
     // Log the email being used for receipt
@@ -90,6 +99,7 @@ export async function POST(request: NextRequest) {
         classDate: classDate || '',
         classTime: classTime || '',
         extraChildren: String(extraChildren || 0),
+        totalChildren: String(totalChildren || 1),
       },
       // Show only credit/debit card in PaymentElement
       payment_method_types: ['card'],
