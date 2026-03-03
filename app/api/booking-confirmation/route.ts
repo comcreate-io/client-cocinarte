@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
       extraChildren,
       extraChildrenCost,
       selectedChildrenNames,
+      guestChildren,
       bookingId
     } = body;
 
@@ -33,6 +34,8 @@ export async function POST(request: NextRequest) {
     const childrenNamesList: string[] = selectedChildrenNames && selectedChildrenNames.length > 0
       ? selectedChildrenNames
       : [studentName];
+    const guestList: Array<{ childName: string; parentName: string; parentEmail: string }> = guestChildren || [];
+    const hasGuests = guestList.length > 0;
 
     // Create transporter
     const transporter = nodemailer.createTransport({
@@ -82,6 +85,12 @@ export async function POST(request: NextRequest) {
             </ul>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Base Price:</strong> $${basePrice || classPrice}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Extra Children Cost:</strong> +$${extraChildrenCost}</p>
+            ` : ''}
+            ${hasGuests ? `
+            <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Guest Children (${guestList.length}):</strong></p>
+            <ul style="margin: 4px 0 8px 20px; color: #374151; font-size: 14px;">
+              ${guestList.map((g: any) => `<li>${g.childName} (parent: ${g.parentName}, ${g.parentEmail})</li>`).join('')}
+            </ul>
             ` : ''}
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Total Price:</strong> $${classPrice}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Booking ID:</strong> ${bookingId}</p>
@@ -133,6 +142,12 @@ export async function POST(request: NextRequest) {
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Base Price:</strong> $${basePrice || classPrice}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Extra Children (${extraChildren}):</strong> +$${extraChildrenCost}</p>
             ` : ''}
+            ${hasGuests ? `
+            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Guest Children (${guestList.length}):</strong></p>
+            <ul style="margin: 4px 0 8px 20px; color: #374151; font-size: 15px;">
+              ${guestList.map((g: any) => `<li>${g.childName} (parent: ${g.parentName})</li>`).join('')}
+            </ul>
+            ` : ''}
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Total Price:</strong> $${classPrice}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Booking ID:</strong> ${bookingId}</p>
           </div>
@@ -142,6 +157,21 @@ export async function POST(request: NextRequest) {
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #F0614F;">Student Name:</strong> ${studentName}</p>
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #F0614F;">Parent/Guardian:</strong> ${userName}</p>
           </div>
+
+          ${hasGuests ? `
+          <div style="background: #EFF6FF; padding: 22px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3B82F6;">
+            <h3 style="color: #1E40AF; margin: 0 0 15px 0; font-size: 20px;">🎁 Guest Children</h3>
+            <p style="margin: 0 0 10px 0; color: #374151; font-size: 15px;">
+              Enrollment forms have been sent to the guest parents. They will need to complete their child's information and sign consent forms before the class.
+            </p>
+            ${guestList.map((g: any) => `
+            <div style="background: white; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+              <p style="margin: 0; color: #1E40AF; font-weight: bold; font-size: 15px;">${g.childName}</p>
+              <p style="margin: 4px 0 0; color: #6B7280; font-size: 13px;">Parent: ${g.parentName} (${g.parentEmail})</p>
+            </div>
+            `).join('')}
+          </div>
+          ` : ''}
 
           <div style="background: #FCB414; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
             <h4 style="color: white; margin: 0 0 12px 0; font-size: 18px;">📋 Important Reminders</h4>
