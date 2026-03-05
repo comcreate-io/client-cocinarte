@@ -31,7 +31,10 @@
       "Bash(npm run build:*)",
       "Bash(tasklist:*)",
       "Bash(timeout:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

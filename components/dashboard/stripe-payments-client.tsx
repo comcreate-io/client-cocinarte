@@ -53,7 +53,12 @@ export default function StripePaymentsClient() {
         }
       }
 
-      setPayments(allPayments)
+      // Filter to only show succeeded (including refunded) and canceled payments
+      const filteredPayments = allPayments.filter(payment =>
+        payment.status === 'succeeded' || payment.status === 'canceled'
+      )
+
+      setPayments(filteredPayments)
     } catch (error) {
       console.error('Error fetching payments:', error)
       toast({
@@ -522,7 +527,7 @@ export default function StripePaymentsClient() {
           <div>
             <CardTitle>Stripe Payments</CardTitle>
             <CardDescription>
-              All payments from Stripe ({payments.length} total)
+              Completed and canceled payments ({payments.length} total)
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
