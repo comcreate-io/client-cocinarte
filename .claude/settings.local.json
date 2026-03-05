@@ -34,7 +34,11 @@
       "Bash(dir:*)",
       "Bash(lsof:*)",
       "Bash(kill:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(npx supabase:*)",
+      "Bash(node scripts/add-age-range-migration.mjs:*)",
+      "Bash(node scripts/apply-age-range-migration.mjs:*)",
+      "Bash(node scripts/apply-age-range-migration-pg.mjs:*)"
     ],
     "deny": [],
     "ask": []

@@ -903,9 +903,10 @@ export default function CocinarteMonthlyCalendar() {
                   onClick={() => handleClassClick(classItem)}
                   className={`text-xs p-0.5 sm:p-1 rounded font-medium w-full text-left hover:opacity-90 transition-all cursor-pointer ${dayImage ? 'bg-black/50 text-white' : getTypeColor(classItem.type, classItem.price)}`}
                 >
-                  <span className={`truncate ${dayImage ? 'drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]' : ''}`}>
-                    <span className="sm:hidden">{classItem.title}</span>
-                    <span className="hidden sm:inline">{classItem.title}</span>
+                  <span className={`flex items-center gap-1 truncate ${dayImage ? 'drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)]' : ''}`}>
+                    {classItem.requires_parent && <Users className="h-3 w-3 flex-shrink-0" />}
+                    <span className="sm:hidden truncate">{classItem.title}</span>
+                    <span className="hidden sm:inline truncate">{classItem.title}</span>
                   </span>
                 </button>
               ))}
@@ -1042,6 +1043,12 @@ export default function CocinarteMonthlyCalendar() {
                       {classItem.class_type && (
                         <Badge className="bg-cocinarte-navy text-cocinarte-white font-bold text-xs sm:text-sm px-2 py-0.5">
                           {classItem.class_type}
+                        </Badge>
+                      )}
+                      {classItem.requires_parent && (
+                        <Badge className="bg-blue-500 text-white font-bold text-xs sm:text-sm px-2 py-0.5 flex items-center gap-1">
+                          <Users className="h-3 w-3" />
+                          Parent Required
                         </Badge>
                       )}
                     </div>
@@ -1183,6 +1190,17 @@ export default function CocinarteMonthlyCalendar() {
                     <p className="text-sm font-bold text-slate">{selectedClass.maxStudents - selectedClass.enrolled} / {selectedClass.maxStudents}</p>
                   </div>
                 </div>
+                {selectedClass.requires_parent && (
+                  <div className="bg-blue-50 border-2 border-blue-300 p-3 rounded-lg mt-3">
+                    <div className="flex items-start space-x-2">
+                      <Users className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-blue-900">Parent Participation Required</p>
+                        <p className="text-xs text-blue-700 mt-1">A parent/guardian must attend and participate in this class with the child.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Buttons */}

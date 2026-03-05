@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ImageUpload } from '@/components/ui/image-upload'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -56,6 +57,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
         late_cancel_refund_value: editingClass.late_cancel_refund_value ?? null,
         min_age: editingClass.min_age ?? null,
         max_age: editingClass.max_age ?? null,
+        requires_parent: editingClass.requires_parent ?? false,
       }
     }
     return {
@@ -73,6 +75,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
       late_cancel_refund_value: null,
       min_age: null,
       max_age: null,
+      requires_parent: false,
     }
   }
 
@@ -118,7 +121,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
     }
   }
 
-  const handleChange = (field: keyof CreateClaseData, value: string | number) => {
+  const handleChange = (field: keyof CreateClaseData, value: string | number | boolean | null) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -346,6 +349,24 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
                   }}
                   placeholder="Optional"
                 />
+              </div>
+            </div>
+
+            <div className="flex items-start space-x-3 p-4 border rounded-lg bg-blue-50 border-blue-200">
+              <Checkbox
+                id="requires_parent"
+                checked={formData.requires_parent ?? false}
+                onCheckedChange={(checked) =>
+                  handleChange('requires_parent', checked as boolean)
+                }
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label htmlFor="requires_parent" className="cursor-pointer font-medium text-blue-900">
+                  Parent Participation Required
+                </Label>
+                <p className="text-sm text-blue-700">
+                  Check this if a parent/guardian must attend and participate in the class with the child
+                </p>
               </div>
             </div>
 

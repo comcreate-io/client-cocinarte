@@ -14,6 +14,7 @@ export interface Booking {
   parent_id?: string; // Reference to parent for gift card refunds
   extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
   is_guest_booking?: boolean; // Whether this booking is a gift for a guest child
+  accompanying_parent_name?: string; // Name of parent attending for parent-child classes
   notes?: string;
   booking_comments?: string;
   created_at: string;
@@ -34,6 +35,7 @@ export interface CreateBookingData {
   parent_id?: string; // Reference to parent for gift card refunds
   extra_children?: number; // Number of extra children for Mommy & Me classes (0-2, max 3 total)
   is_guest_booking?: boolean; // Whether this booking is a gift for a guest child
+  accompanying_parent_name?: string; // Name of parent attending for parent-child classes
   notes?: string;
   booking_comments?: string;
 }

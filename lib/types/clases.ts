@@ -16,6 +16,7 @@ export interface Clase {
   late_cancel_refund_value?: number | null;
   min_age?: number | null; // Minimum age allowed for this class (in years)
   max_age?: number | null; // Maximum age allowed for this class (in years)
+  requires_parent?: boolean; // Whether parent/guardian must participate with the child
   created_at: string;
   updated_at: string;
 }
@@ -54,6 +55,7 @@ export interface CreateClaseData {
   late_cancel_refund_value?: number | null;
   min_age?: number | null;
   max_age?: number | null;
+  requires_parent?: boolean;
 }
 
 export interface UpdateClaseData extends Partial<CreateClaseData> {

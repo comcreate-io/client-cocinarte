@@ -121,6 +121,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
   // Booking comments state
   const [bookingComments, setBookingComments] = useState('')
 
+  // Accompanying parent name for parent-child classes
+  const [accompanyingParentName, setAccompanyingParentName] = useState('')
+
   // Guest booking states (legacy single-guest)
   const [isGuestBooking, setIsGuestBooking] = useState(false)
   const [guestChildName, setGuestChildName] = useState('')
@@ -907,6 +910,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
         parent_id: parentWithChildren?.id || undefined,
         booking_comments: bookingComments || undefined,
+        accompanying_parent_name: selectedClassData.requires_parent ? accompanyingParentName : undefined,
         is_guest_booking: selectedChildIds.length === 0 && guestList.length > 0 ? true : undefined,
         notes: isFreeBooking
           ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${childrenNote}`
@@ -938,6 +942,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             booking_status: 'confirmed',
             stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
             parent_id: parentWithChildren?.id || undefined,
+            accompanying_parent_name: selectedClassData.requires_parent ? accompanyingParentName : undefined,
             is_guest_booking: true,
             notes: `Guest booking for ${guest.childName} (parent: ${guest.parentName}, ${guest.parentEmail}).`
           }
@@ -1535,7 +1540,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       return { meets: true }
     }
 
-    const canContinue = selectedChildIds.length > 0 || guestList.length > 0
+    const canContinue = (selectedChildIds.length > 0 || guestList.length > 0) &&
+      (!selectedClassData?.requires_parent || accompanyingParentName.trim() !== '')
 
     return (
     <div className="space-y-6">
@@ -1597,6 +1603,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             {(selectedClassData.min_age || selectedClassData.max_age) && (
               <span className="block mt-1 text-sm">
                 <strong>Age Range:</strong> {selectedClassData.min_age || 'Any'} - {selectedClassData.max_age || 'Any'} years
+              </span>
+            )}
+            {selectedClassData.requires_parent && (
+              <span className="block mt-1 text-sm">
+                <strong>⚠️ Parent Participation Required:</strong> A parent/guardian must attend and participate in this class with the child.
               </span>
             )}
           </AlertDescription>
@@ -1906,6 +1917,29 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Accompanying Parent Name - Required for parent-child classes */}
+      {selectedClassData?.requires_parent && (
+        <div className="space-y-2 p-4 bg-blue-50 border-2 border-blue-300 rounded-lg">
+          <div className="flex items-center gap-2 mb-1">
+            <Users className="h-5 w-5 text-blue-600" />
+            <Label htmlFor="accompanying-parent" className="text-sm font-semibold text-blue-900">
+              Accompanying Parent Name *
+            </Label>
+          </div>
+          <p className="text-xs text-blue-700 mb-2">
+            This class requires a parent/guardian to attend and participate with the child.
+          </p>
+          <Input
+            id="accompanying-parent"
+            value={accompanyingParentName}
+            onChange={(e) => setAccompanyingParentName(e.target.value)}
+            placeholder="Enter the name of the parent/guardian attending..."
+            className="bg-white"
+            required
+          />
         </div>
       )}
 

@@ -12,7 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, Clock, DollarSign, User, Mail, Phone, MapPin, ChefHat } from 'lucide-react'
+import { Calendar, Clock, DollarSign, User, Users, Mail, Phone, MapPin, ChefHat } from 'lucide-react'
 import { format } from 'date-fns'
 
 interface BookingDetailsPopupProps {
@@ -135,6 +135,17 @@ export function BookingDetailsPopup({ booking, isOpen, onClose, onEdit }: Bookin
                 <p className="text-sm font-medium">{booking.student?.parent_name}</p>
                 <p className="text-xs text-muted-foreground">Parent/Guardian</p>
               </div>
+
+              {booking.accompanying_parent_name && (
+                <div className="p-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <p className="text-sm font-semibold text-blue-900">Accompanying Parent</p>
+                  </div>
+                  <p className="text-sm font-medium text-blue-800">{booking.accompanying_parent_name}</p>
+                  <p className="text-xs text-blue-600 mt-1">Will attend and participate in the class</p>
+                </div>
+              )}
 
               <div className="flex items-center">
                 <Mail className="h-4 w-4 mr-2 text-muted-foreground" />

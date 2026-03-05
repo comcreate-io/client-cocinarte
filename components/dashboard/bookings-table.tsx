@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Calendar, Clock, DollarSign, User, AlertCircle, CheckCircle, XCircle, Search, Filter, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react'
+import { Calendar, Clock, DollarSign, User, Users, AlertCircle, CheckCircle, XCircle, Search, Filter, MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react'
 import { format } from 'date-fns'
 import {
   DropdownMenu,
@@ -321,6 +321,12 @@ export function BookingsTable({ userId }: BookingsTableProps) {
                         <p className="text-xs text-muted-foreground">
                           Parent: {booking.student?.parent_name}
                         </p>
+                        {booking.accompanying_parent_name && (
+                          <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Attending: {booking.accompanying_parent_name}
+                          </p>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[150px]">
