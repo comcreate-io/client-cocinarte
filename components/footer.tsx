@@ -102,9 +102,17 @@ export default function Footer() {
              <span className="h-1 w-1 bg-amber-400 rounded-full inline-block"></span>
              <span>Hillsboro, OR</span>
            </div>
-          <p className="text-slate-400 text-xs font-questa">
-            © {new Date().getFullYear()} All rights reserved.
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-slate-400 text-xs font-questa">
+              © {new Date().getFullYear()} All rights reserved.
+            </p>
+            <Link
+              href="/dashboard"
+              className="text-slate-500 hover:text-slate-300 transition-colors text-xs font-questa"
+            >
+              Admin
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

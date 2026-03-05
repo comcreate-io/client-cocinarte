@@ -74,7 +74,15 @@ export default function CocinarteFooter() {
         </div>
         
         <div className="border-t border-cocinarte-blue mt-8 pt-8 text-center text-sm text-cocinarte-blue">
-          <p>&copy; 2024 Cocinarte. All rights reserved.</p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <p>&copy; 2024 Cocinarte. All rights reserved.</p>
+            <Link
+              href="/dashboard"
+              className="text-cocinarte-blue/60 hover:text-cocinarte-yellow transition-colors"
+            >
+              Admin
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

@@ -122,6 +122,9 @@ export default function LandingFooter() {
               <Link href="/accessibility" className="hover:text-white transition-colors duration-200">
                 Accessibility
               </Link>
+              <Link href="/dashboard" className="hover:text-white transition-colors duration-200">
+                Admin
+              </Link>
             </div>
           </div>
         </div>

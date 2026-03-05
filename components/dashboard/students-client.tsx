@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState, type JSX } from 'react'
+import { useMemo, useState, useEffect, type JSX } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -55,16 +56,59 @@ interface StudentsClientProps {
 }
 
 export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Element {
+  const searchParams = useSearchParams()
   const [parents, setParents] = useState<Parent[]>(initialParents)
   const [query, setQuery] = useState('')
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null)
   const [isContractOpen, setIsContractOpen] = useState(false)
   const [selectedChild, setSelectedChild] = useState<Child | null>(null)
+  const [highlightedStudentId, setHighlightedStudentId] = useState<string | null>(null)
   const [isEmailComposerOpen, setIsEmailComposerOpen] = useState(false)
   const [emailSubject, setEmailSubject] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [isSendingEmail, setIsSendingEmail] = useState(false)
+
+  // Handle student query parameter to auto-open details
+  useEffect(() => {
+    const studentId = searchParams.get('student')
+    const childName = searchParams.get('childName')
+    const parentEmail = searchParams.get('parentEmail')
+
+    if (parents.length > 0 && (studentId || (childName && parentEmail))) {
+      let parentWithChild = null
+      let matchedChildId = null
+
+      // Try to match by child name and parent email (more reliable)
+      if (childName && parentEmail) {
+        parentWithChild = parents.find(parent =>
+          parent.parent_email.toLowerCase() === parentEmail.toLowerCase() &&
+          parent.children?.some(child => {
+            const match = child.child_full_name.toLowerCase() === childName.toLowerCase()
+            if (match) matchedChildId = child.id
+            return match
+          })
+        )
+      }
+
+      // Fallback: try to match by student ID (in case IDs do match)
+      if (!parentWithChild && studentId) {
+        parentWithChild = parents.find(parent =>
+          parent.children?.some(child => {
+            const match = child.id === studentId
+            if (match) matchedChildId = child.id
+            return match
+          })
+        )
+      }
+
+      if (parentWithChild && matchedChildId) {
+        setHighlightedStudentId(matchedChildId)
+        setSelectedParent(parentWithChild)
+        setIsDetailsOpen(true)
+      }
+    }
+  }, [searchParams, parents])
 
   const filtered = useMemo(() => {
     if (!query) return parents
@@ -435,7 +479,14 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                   </h3>
                   <div className="space-y-3 sm:space-y-4">
                     {selectedParent.children.map((child) => (
-                      <Card key={child.id} className="border-2">
+                      <Card
+                        key={child.id}
+                        className={`border-2 transition-all ${
+                          highlightedStudentId === child.id
+                            ? 'border-blue-500 bg-blue-50/50 shadow-md'
+                            : ''
+                        }`}
+                      >
                         <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6 pb-4 space-y-2 sm:space-y-3">
                           <div>
                             <h4 className="font-semibold text-base sm:text-lg">{child.child_full_name}</h4>
