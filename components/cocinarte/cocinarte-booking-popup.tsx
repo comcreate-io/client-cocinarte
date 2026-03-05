@@ -1517,6 +1517,24 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
     const isChildSelected = (childId: string) => selectedChildIds.includes(childId)
 
+    // Helper to check if child meets age requirements
+    const meetsAgeRequirements = (childAge: number | null | undefined): { meets: boolean; reason?: string } => {
+      if (!childAge) return { meets: true } // If no age provided, allow booking
+      if (!selectedClassData) return { meets: true }
+
+      const minAge = selectedClassData.min_age
+      const maxAge = selectedClassData.max_age
+
+      if (minAge && childAge < minAge) {
+        return { meets: false, reason: `Minimum age: ${minAge} years` }
+      }
+      if (maxAge && childAge > maxAge) {
+        return { meets: false, reason: `Maximum age: ${maxAge} years` }
+      }
+
+      return { meets: true }
+    }
+
     const canContinue = selectedChildIds.length > 0 || guestList.length > 0
 
     return (
@@ -1576,6 +1594,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           <ChefHat className="h-4 w-4 text-cocinarte-orange" />
           <AlertDescription className="text-cocinarte-navy">
             <strong>Booking:</strong> {selectedClassData.title} on {formatDate(selectedClassData.date)} at {formatTime(selectedClassData.time)}
+            {(selectedClassData.min_age || selectedClassData.max_age) && (
+              <span className="block mt-1 text-sm">
+                <strong>Age Range:</strong> {selectedClassData.min_age || 'Any'} - {selectedClassData.max_age || 'Any'} years
+              </span>
+            )}
           </AlertDescription>
         </Alert>
       )}
@@ -1590,6 +1613,9 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               (booking.booking_status === 'confirmed' || booking.booking_status === 'pending' || !booking.booking_status)
             )
             const isAlreadyBooked = !!existingBooking
+            const ageCheck = meetsAgeRequirements(child.child_age)
+            const isAgeRestricted = !ageCheck.meets
+            const cannotSelect = isAlreadyBooked || isAgeRestricted
             const isSelected = isChildSelected(child.id)
             const selectionIndex = selectedChildIds.indexOf(child.id)
 
@@ -1597,13 +1623,13 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
               <Card
                 key={child.id}
                 className={`transition-all duration-300 border-2 ${
-                  isAlreadyBooked
+                  cannotSelect
                     ? 'border-gray-300 bg-gray-50/50 opacity-60 cursor-not-allowed'
                     : isSelected
                       ? 'border-cocinarte-navy shadow-lg bg-cocinarte-navy/5 cursor-pointer'
                       : 'border-slate-200 hover:border-cocinarte-navy/50 hover:shadow-md cursor-pointer'
                 }`}
-                onClick={() => !isAlreadyBooked && handleChildToggle(child.id)}
+                onClick={() => !cannotSelect && handleChildToggle(child.id)}
               >
                 <CardContent className="pt-6">
                   <div className="space-y-3">
@@ -1618,6 +1644,11 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                         <Badge className="bg-orange-500">
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Already Booked
+                        </Badge>
+                      ) : isAgeRestricted ? (
+                        <Badge variant="destructive">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Age Restricted
                         </Badge>
                       ) : isSelected ? (
                         <Badge className="bg-cocinarte-navy">
@@ -1641,7 +1672,17 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                       )}
                     </div>
 
-                    {(child.allergies || child.dietary_restrictions) && (
+                    {isAgeRestricted && ageCheck.reason && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-2 text-xs">
+                        <div className="flex items-center gap-1 text-red-800">
+                          <AlertCircle className="h-3 w-3" />
+                          <span className="font-medium">{ageCheck.reason}</span>
+                        </div>
+                        <p className="text-red-700 mt-1">This child cannot be booked for this class.</p>
+                      </div>
+                    )}
+
+                    {!isAgeRestricted && (child.allergies || child.dietary_restrictions) && (
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs">
                         <div className="flex items-center gap-1 text-yellow-800">
                           <AlertCircle className="h-3 w-3" />

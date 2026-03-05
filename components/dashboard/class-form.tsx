@@ -54,6 +54,8 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
         image_url: editingClass.image_url,
         late_cancel_refund_type: editingClass.late_cancel_refund_type ?? null,
         late_cancel_refund_value: editingClass.late_cancel_refund_value ?? null,
+        min_age: editingClass.min_age ?? null,
+        max_age: editingClass.max_age ?? null,
       }
     }
     return {
@@ -69,6 +71,8 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
       image_url: null,
       late_cancel_refund_type: null,
       late_cancel_refund_value: null,
+      min_age: null,
+      max_age: null,
     }
   }
 
@@ -310,6 +314,39 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
                   />
                 </div>
               )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="min_age">Min Age (years)</Label>
+                <Input
+                  id="min_age"
+                  type="number"
+                  min="1"
+                  max="18"
+                  value={formData.min_age ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? null : parseInt(e.target.value)
+                    handleChange('min_age', value as any)
+                  }}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="max_age">Max Age (years)</Label>
+                <Input
+                  id="max_age"
+                  type="number"
+                  min="1"
+                  max="18"
+                  value={formData.max_age ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value === '' ? null : parseInt(e.target.value)
+                    handleChange('max_age', value as any)
+                  }}
+                  placeholder="Optional"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

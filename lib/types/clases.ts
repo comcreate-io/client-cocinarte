@@ -14,6 +14,8 @@ export interface Clase {
   cancelled_at?: string | null; // ISO timestamp when class was cancelled
   late_cancel_refund_type?: 'percentage' | 'fixed' | null;
   late_cancel_refund_value?: number | null;
+  min_age?: number | null; // Minimum age allowed for this class (in years)
+  max_age?: number | null; // Maximum age allowed for this class (in years)
   created_at: string;
   updated_at: string;
 }
@@ -50,6 +52,8 @@ export interface CreateClaseData {
   image_url?: string | null;
   late_cancel_refund_type?: 'percentage' | 'fixed' | null;
   late_cancel_refund_value?: number | null;
+  min_age?: number | null;
+  max_age?: number | null;
 }
 
 export interface UpdateClaseData extends Partial<CreateClaseData> {
