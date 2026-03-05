@@ -3,11 +3,14 @@
 import { useMemo, useState, type JSX } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Users, Mail, Phone, Search, Baby, AlertCircle, ChefHat, Camera, Shield, FileCheck, XCircle, Download, Eye } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Users, Mail, Phone, Search, Baby, AlertCircle, ChefHat, Camera, Shield, FileCheck, XCircle, Download, Eye, Send } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 import { jsPDF } from 'jspdf'
+import { toast } from 'sonner'
 import {
   SOCIAL_MEDIA_CONSENT_TEXT,
   LIABILITY_CONSENT_TEXT,
@@ -58,6 +61,10 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null)
   const [isContractOpen, setIsContractOpen] = useState(false)
   const [selectedChild, setSelectedChild] = useState<Child | null>(null)
+  const [isEmailComposerOpen, setIsEmailComposerOpen] = useState(false)
+  const [emailSubject, setEmailSubject] = useState('')
+  const [emailMessage, setEmailMessage] = useState('')
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
 
   const filtered = useMemo(() => {
     if (!query) return parents
@@ -86,6 +93,52 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
   const openContractPopup = (child: Child) => {
     setSelectedChild(child)
     setIsContractOpen(true)
+  }
+
+  const openEmailComposer = (parent: Parent) => {
+    setSelectedParent(parent)
+    setEmailSubject('')
+    setEmailMessage('')
+    setIsEmailComposerOpen(true)
+  }
+
+  const sendEmail = async () => {
+    if (!selectedParent || !emailSubject.trim() || !emailMessage.trim()) {
+      toast.error('Please fill in all fields')
+      return
+    }
+
+    setIsSendingEmail(true)
+
+    try {
+      const response = await fetch('/api/send-parent-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: selectedParent.parent_email,
+          subject: emailSubject,
+          message: emailMessage,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send email')
+      }
+
+      toast.success('Email sent successfully!')
+      setIsEmailComposerOpen(false)
+      setEmailSubject('')
+      setEmailMessage('')
+    } catch (error) {
+      console.error('Error sending email:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to send email')
+    } finally {
+      setIsSendingEmail(false)
+    }
   }
 
   const generatePDF = async (child: Child) => {
@@ -360,10 +413,15 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                       </Button>
                     </>
                   )}
-                  <Button asChild size="sm" className={`${selectedParent.parent_phone ? 'col-span-2' : 'col-span-2'} sm:w-auto`}>
-                    <a href={`mailto:${selectedParent.parent_email}`} aria-label="Email">
-                      <Mail className="h-4 w-4 mr-1.5" /> Email
-                    </a>
+                  <Button
+                    size="sm"
+                    className={`${selectedParent.parent_phone ? 'col-span-2' : 'col-span-2'} sm:w-auto`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openEmailComposer(selectedParent)
+                    }}
+                  >
+                    <Mail className="h-4 w-4 mr-1.5" /> Email
                   </Button>
                 </div>
               </div>
@@ -478,6 +536,73 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
           )}
           <DialogFooter className="pt-2 sm:pt-0">
             <Button variant="outline" onClick={() => setIsDetailsOpen(false)} className="w-full sm:w-auto">Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Composer Dialog */}
+      <Dialog open={isEmailComposerOpen} onOpenChange={setIsEmailComposerOpen}>
+        <DialogContent className="w-[95vw] max-w-2xl p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">Send Email</DialogTitle>
+            <DialogDescription>
+              {selectedParent && (
+                <span className="text-sm">
+                  Sending to: <span className="font-medium">{selectedParent.parent_guardian_names}</span> ({selectedParent.parent_email})
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email-subject">Subject</Label>
+              <Input
+                id="email-subject"
+                placeholder="Enter email subject"
+                value={emailSubject}
+                onChange={(e) => setEmailSubject(e.target.value)}
+                disabled={isSendingEmail}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email-message">Message</Label>
+              <Textarea
+                id="email-message"
+                placeholder="Enter your message"
+                value={emailMessage}
+                onChange={(e) => setEmailMessage(e.target.value)}
+                disabled={isSendingEmail}
+                rows={10}
+                className="resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2 sm:pt-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsEmailComposerOpen(false)}
+              disabled={isSendingEmail}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={sendEmail}
+              disabled={isSendingEmail || !emailSubject.trim() || !emailMessage.trim()}
+              className="w-full sm:w-auto"
+            >
+              {isSendingEmail ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Email
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
