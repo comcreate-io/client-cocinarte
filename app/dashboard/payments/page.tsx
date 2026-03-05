@@ -36,16 +36,31 @@ export default async function PaymentsPage() {
   let paymentCount = 0
 
   try {
-    const paymentIntents = await stripe.paymentIntents.list({
-      limit: 100,
-    })
+    // Fetch all payment intents by paginating through Stripe
+    let allPaymentIntents: any[] = []
+    let hasMore = true
+    let startingAfter: string | undefined = undefined
+
+    while (hasMore) {
+      const paymentIntents = await stripe.paymentIntents.list({
+        limit: 100, // Stripe's max per request
+        starting_after: startingAfter,
+      })
+
+      allPaymentIntents = [...allPaymentIntents, ...paymentIntents.data]
+      hasMore = paymentIntents.has_more
+
+      if (hasMore && paymentIntents.data.length > 0) {
+        startingAfter = paymentIntents.data[paymentIntents.data.length - 1].id
+      }
+    }
 
     const now = new Date()
     const currentMonth = now.getMonth()
     const currentYear = now.getFullYear()
 
-    const succeeded = paymentIntents.data.filter(pi => pi.status === 'succeeded')
-    const pending = paymentIntents.data.filter(pi => pi.status === 'processing' || pi.status === 'requires_payment_method')
+    const succeeded = allPaymentIntents.filter(pi => pi.status === 'succeeded')
+    const pending = allPaymentIntents.filter(pi => pi.status === 'processing' || pi.status === 'requires_payment_method')
 
     totalRevenue = succeeded.reduce((sum, pi) => sum + (pi.amount_received / 100), 0)
     pendingAmount = pending.reduce((sum, pi) => sum + (pi.amount / 100), 0)

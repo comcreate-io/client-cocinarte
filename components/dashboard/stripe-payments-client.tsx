@@ -34,10 +34,26 @@ export default function StripePaymentsClient() {
 
   const fetchPayments = async () => {
     try {
-      const response = await fetch('/api/stripe/payments?limit=100')
-      if (!response.ok) throw new Error('Failed to fetch payments')
-      const data = await response.json()
-      setPayments(data.payments || [])
+      let allPayments: StripePaymentDetails[] = []
+      let hasMore = true
+      let startingAfter: string | undefined = undefined
+
+      // Fetch all payments by paginating
+      while (hasMore) {
+        const url = `/api/stripe/payments?limit=100${startingAfter ? `&starting_after=${startingAfter}` : ''}`
+        const response = await fetch(url)
+        if (!response.ok) throw new Error('Failed to fetch payments')
+        const data = await response.json()
+
+        allPayments = [...allPayments, ...(data.payments || [])]
+        hasMore = data.hasMore
+
+        if (hasMore && data.payments && data.payments.length > 0) {
+          startingAfter = data.payments[data.payments.length - 1].id
+        }
+      }
+
+      setPayments(allPayments)
     } catch (error) {
       console.error('Error fetching payments:', error)
       toast({
