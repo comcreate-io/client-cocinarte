@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Users, Mail, Phone, Search, Baby, AlertCircle, ChefHat, Camera, Shield, FileCheck, XCircle, Download, Eye, Send } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Users, Mail, Phone, Search, Baby, AlertCircle, ChefHat, Camera, Shield, FileCheck, XCircle, Download, Eye, Send, Tag } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -68,6 +69,13 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
   const [emailSubject, setEmailSubject] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [isSendingEmail, setIsSendingEmail] = useState(false)
+
+  // Coupon sending state
+  const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false)
+  const [coupons, setCoupons] = useState<any[]>([])
+  const [selectedCouponId, setSelectedCouponId] = useState('')
+  const [isSendingCoupon, setIsSendingCoupon] = useState(false)
+  const [loadingCoupons, setLoadingCoupons] = useState(false)
 
   // Handle student query parameter to auto-open details
   useEffect(() => {
@@ -182,6 +190,83 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
       toast.error(error instanceof Error ? error.message : 'Failed to send email')
     } finally {
       setIsSendingEmail(false)
+    }
+  }
+
+  const fetchCoupons = async () => {
+    setLoadingCoupons(true)
+    try {
+      const response = await fetch('/api/coupons')
+      const data = await response.json()
+      // Filter only available coupons
+      const availableCoupons = data.coupons.filter((c: any) => {
+        const now = new Date()
+        const isNotExpired = !c.expires_at || new Date(c.expires_at) > now
+        const hasUsesLeft = !c.max_uses || c.current_uses < c.max_uses
+        return isNotExpired && hasUsesLeft
+      })
+      setCoupons(availableCoupons)
+    } catch (error) {
+      console.error('Error fetching coupons:', error)
+      toast.error('Failed to load coupons')
+    } finally {
+      setLoadingCoupons(false)
+    }
+  }
+
+  const openCouponDialog = (parent: Parent) => {
+    setSelectedParent(parent)
+    setSelectedCouponId('')
+    setIsCouponDialogOpen(true)
+    fetchCoupons()
+  }
+
+  const sendCoupon = async () => {
+    if (!selectedParent || !selectedCouponId) {
+      toast.error('Please select a coupon')
+      return
+    }
+
+    const selectedCoupon = coupons.find((c) => c.id === selectedCouponId)
+    if (!selectedCoupon) {
+      toast.error('Selected coupon not found')
+      return
+    }
+
+    setIsSendingCoupon(true)
+
+    try {
+      const response = await fetch('/api/send-coupon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          couponCode: selectedCoupon.code,
+          discountType: selectedCoupon.discount_type,
+          discountPercentage: selectedCoupon.discount_percentage,
+          discountAmount: selectedCoupon.discount_amount,
+          recipientEmail: selectedParent.parent_email,
+          recipientName: selectedParent.parent_guardian_names,
+          expiresAt: selectedCoupon.expires_at,
+          maxUses: selectedCoupon.max_uses,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to send coupon')
+      }
+
+      toast.success('Coupon sent successfully!')
+      setIsCouponDialogOpen(false)
+      setSelectedCouponId('')
+    } catch (error) {
+      console.error('Error sending coupon:', error)
+      toast.error(error instanceof Error ? error.message : 'Failed to send coupon')
+    } finally {
+      setIsSendingCoupon(false)
     }
   }
 
@@ -467,6 +552,17 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                   >
                     <Mail className="h-4 w-4 mr-1.5" /> Email
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="col-span-2 sm:w-auto"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      openCouponDialog(selectedParent)
+                    }}
+                  >
+                    <Tag className="h-4 w-4 mr-1.5" /> Send Coupon
+                  </Button>
                 </div>
               </div>
 
@@ -651,6 +747,89 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                 <>
                   <Send className="h-4 w-4 mr-2" />
                   Send Email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Coupon Sending Dialog */}
+      <Dialog open={isCouponDialogOpen} onOpenChange={setIsCouponDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">Send Coupon</DialogTitle>
+            <DialogDescription>
+              {selectedParent && (
+                <span className="text-sm">
+                  Sending to: <span className="font-medium">{selectedParent.parent_guardian_names}</span> ({selectedParent.parent_email})
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="coupon-select">Select Coupon</Label>
+              {loadingCoupons ? (
+                <div className="flex items-center justify-center py-4">
+                  <span className="animate-spin mr-2">⏳</span>
+                  Loading coupons...
+                </div>
+              ) : coupons.length === 0 ? (
+                <div className="text-sm text-muted-foreground py-4 text-center">
+                  No available coupons found
+                </div>
+              ) : (
+                <Select value={selectedCouponId} onValueChange={setSelectedCouponId} disabled={isSendingCoupon}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a coupon" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {coupons.map((coupon) => {
+                      const discountDisplay = coupon.discount_type === 'fixed'
+                        ? `$${coupon.discount_amount} OFF`
+                        : `${coupon.discount_percentage}% OFF`
+                      return (
+                        <SelectItem key={coupon.id} value={coupon.id}>
+                          {coupon.code} - {discountDisplay}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+            {selectedCouponId && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  The coupon will be sent via email with instructions on how to use it.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2 sm:pt-0">
+            <Button
+              variant="outline"
+              onClick={() => setIsCouponDialogOpen(false)}
+              disabled={isSendingCoupon}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={sendCoupon}
+              disabled={isSendingCoupon || !selectedCouponId || coupons.length === 0}
+              className="w-full sm:w-auto"
+            >
+              {isSendingCoupon ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Send Coupon
                 </>
               )}
             </Button>
