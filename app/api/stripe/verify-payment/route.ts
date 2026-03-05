@@ -20,14 +20,14 @@ export async function POST(request: NextRequest) {
     // Retrieve the payment intent from Stripe
     const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
-    // Check if payment is on hold (requires_capture means authorization succeeded)
-    const isHeldSuccessfully = paymentIntent.status === 'requires_capture';
-    
+    // Check if payment succeeded (immediate charge)
+    const isPaymentSuccessful = paymentIntent.status === 'succeeded';
+
     console.log(`Payment Intent ${paymentIntentId} status: ${paymentIntent.status}`);
-    console.log(`Payment hold ${isHeldSuccessfully ? 'SUCCESSFUL' : 'FAILED'}`);
+    console.log(`Payment ${isPaymentSuccessful ? 'SUCCESSFUL' : 'FAILED'}`);
 
     return NextResponse.json({
-      success: isHeldSuccessfully,
+      success: isPaymentSuccessful,
       status: paymentIntent.status,
       amount: paymentIntent.amount / 100, // Convert from cents
       currency: paymentIntent.currency,

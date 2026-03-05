@@ -764,8 +764,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
       // Only verify Stripe payment if there's a charge
       if (!isFreeBooking) {
-        // Verify payment hold was successful with Stripe
-        console.log('Verifying payment hold with Stripe...')
+        // Verify payment was successful with Stripe
+        console.log('Verifying payment with Stripe...')
         const verifyResponse = await fetch('/api/stripe/verify-payment', {
           method: 'POST',
           headers: {
@@ -785,13 +785,13 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
         const verifyData = await verifyResponse.json()
 
-        if (verifyData.status !== 'requires_capture') {
-          setPaymentError(`Payment hold failed. Status: ${verifyData.status}. Please try again.`)
+        if (verifyData.status !== 'succeeded') {
+          setPaymentError(`Payment failed. Status: ${verifyData.status}. Please try again.`)
           setPaymentLoading(false)
           return
         }
 
-        console.log('✅ Payment hold verified successfully')
+        console.log('✅ Payment completed successfully')
       } else {
         console.log('✅ Free booking (100% discount coupon applied)')
       }
@@ -901,8 +901,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         child_id: selectedChildId || undefined,
         payment_amount: finalPrice, // Total amount for the entire transaction
         payment_method: isFreeBooking ? 'coupon' : 'stripe',
-        payment_status: isFreeBooking ? 'completed' : 'held',
-        booking_status: isFreeBooking ? 'confirmed' : 'pending',
+        payment_status: 'completed',
+        booking_status: 'confirmed',
         stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
         gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
         parent_id: parentWithChildren?.id || undefined,
@@ -910,7 +910,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         is_guest_booking: selectedChildIds.length === 0 && guestList.length > 0 ? true : undefined,
         notes: isFreeBooking
           ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${childrenNote}`
-          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment is on HOLD and will be charged 24 hours before class if minimum enrollment is reached.${discountNote}${giftCardNote}${childrenNote}`
+          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment completed.${discountNote}${giftCardNote}${childrenNote}`
       }
 
       // Add extra_children for backward compat
@@ -934,8 +934,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             child_id: null,
             payment_amount: selectedClassData.price,
             payment_method: isFreeBooking ? 'coupon' : 'stripe',
-            payment_status: isFreeBooking ? 'completed' : 'held',
-            booking_status: isFreeBooking ? 'confirmed' : 'pending',
+            payment_status: 'completed',
+            booking_status: 'confirmed',
             stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
             parent_id: parentWithChildren?.id || undefined,
             is_guest_booking: true,
@@ -2215,28 +2215,28 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
                 </div>
               )}
 
-              {/* Payment Hold Notice or Free Booking Notice */}
+              {/* Payment Notice or Free Booking Notice */}
               {calculateFinalPrice() > 0 ? (
-                <Alert className="mb-6 border-blue-200 bg-blue-50">
+                <Alert className="mb-6 border-green-200 bg-green-50">
                   <div className="flex gap-3">
                     <div className="flex-shrink-0">
-                      <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
                     </div>
                     <div className="flex-1">
-                      <h4 className="text-sm font-semibold text-blue-800 mb-1">
-                        Payment Authorization (Not a Charge)
+                      <h4 className="text-sm font-semibold text-green-800 mb-1">
+                        Secure Payment
                       </h4>
-                      <div className="text-sm text-blue-700 space-y-1">
+                      <div className="text-sm text-green-700 space-y-1">
                         <p className="font-medium">
-                          Your card will be <strong>authorized</strong> but <strong>NOT charged</strong> immediately.
+                          Your card will be <strong>charged immediately</strong> to confirm your spot.
                         </p>
                         <ul className="list-disc list-inside space-y-1 mt-2 text-xs">
-                          <li>We'll place a <strong>temporary hold</strong> on your card for ${calculateFinalPrice().toFixed(2)}</li>
-                          <li><strong>You'll only be charged</strong> if the class reaches minimum enrollment 24 hours before start time</li>
-                          <li><strong>If the class doesn't fill up</strong>, the hold will be released and you <strong>won't be charged</strong></li>
-                          <li>The hold may appear as "pending" on your card statement</li>
+                          <li>Total amount: <strong>${calculateFinalPrice().toFixed(2)}</strong></li>
+                          <li>Your booking is confirmed upon successful payment</li>
+                          <li>Cancellations made 48+ hours before class receive a full refund</li>
+                          <li>A confirmation email will be sent to your email address</li>
                         </ul>
                       </div>
                     </div>
@@ -3396,25 +3396,25 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         </Alert>
       )}
 
-      {/* Payment Hold Reminder */}
-      <Alert className="border-blue-200 bg-blue-50">
+      {/* Payment Confirmation */}
+      <Alert className="border-green-200 bg-green-50">
         <div className="flex gap-3">
           <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-semibold text-blue-800 mb-1">
-              Payment Status: Authorized (On Hold)
+            <h4 className="text-sm font-semibold text-green-800 mb-1">
+              Payment Completed
             </h4>
-            <div className="text-xs text-blue-700 space-y-1">
-              <p>Your payment of <strong>${calculateFinalPrice()}</strong> is currently on hold and <strong>NOT yet charged</strong>.</p>
+            <div className="text-xs text-green-700 space-y-1">
+              <p>Your payment of <strong>${calculateFinalPrice()}</strong> has been <strong>successfully processed</strong>.</p>
               <p className="mt-2">
-                <strong>You will only be charged if:</strong> The class reaches minimum enrollment 24 hours before the start time.
+                <strong>Booking Confirmed:</strong> Your spot is now reserved for this class.
               </p>
               <p>
-                <strong>If the class doesn't fill up:</strong> The hold will be released automatically and you won't be charged.
+                <strong>Cancellation Policy:</strong> Full refund available for cancellations made 48+ hours before class starts.
               </p>
             </div>
           </div>

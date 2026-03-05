@@ -8,6 +8,21 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 /**
+ * IMPORTANT: Payment System Update
+ *
+ * This cron job was originally designed to capture held payments 24 hours before class.
+ * The system has been updated to charge payments IMMEDIATELY upon booking.
+ *
+ * This cron job is now DEPRECATED and no longer captures payments.
+ * It can be used for other tasks like:
+ * - Sending reminder emails
+ * - Checking class enrollment
+ * - Admin notifications
+ *
+ * Consider removing or repurposing this endpoint.
+ */
+
+/**
  * Configure Supabase client
  */
 const supabase = createClient(

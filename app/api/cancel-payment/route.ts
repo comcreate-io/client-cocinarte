@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
+/**
+ * DEPRECATED: This endpoint was used to cancel held payment authorizations.
+ *
+ * The payment system has been updated to charge immediately upon booking.
+ * For refunds of completed payments, use /api/stripe/refund instead.
+ *
+ * This endpoint is kept for backward compatibility but should not be used for new bookings.
+ */
+
 export async function POST(request: NextRequest) {
   try {
     // Check for Stripe secret key
@@ -28,23 +37,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Cancel the held payment authorization
-    const paymentIntent = await stripe.paymentIntents.cancel(paymentIntentId);
+    // Try to retrieve the payment intent first
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    // If payment was already captured (succeeded), we need to refund instead of cancel
+    if (paymentIntent.status === 'succeeded') {
+      return NextResponse.json(
+        {
+          error: 'Payment already completed. Use /api/stripe/refund to refund this payment.',
+          shouldUseRefund: true
+        },
+        { status: 400 }
+      );
+    }
+
+    // Cancel the held payment authorization (for old bookings only)
+    const canceledPayment = await stripe.paymentIntents.cancel(paymentIntentId);
 
     return NextResponse.json({
       success: true,
       paymentIntent: {
-        id: paymentIntent.id,
-        status: paymentIntent.status,
-        canceled: paymentIntent.status === 'canceled',
+        id: canceledPayment.id,
+        status: canceledPayment.status,
+        canceled: canceledPayment.status === 'canceled',
       },
     });
   } catch (error: any) {
     console.error('Error canceling payment:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to cancel payment',
-        details: error.message 
+        details: error.message
       },
       { status: 500 }
     );
