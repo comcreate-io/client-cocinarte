@@ -10,6 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -22,7 +32,7 @@ import {
   Calendar, Clock, Users, Mail, Phone, DollarSign, User, Loader2,
   AlertCircle, Send, CheckCircle2, Camera, CameraOff, FileCheck,
   FileX, AlertTriangle, Tag, CreditCard, Ticket, Download, FileSpreadsheet, FileText,
-  Eye, XCircle, Code, Plus, ArrowLeft, Pencil, Save
+  Eye, XCircle, Code, Plus, ArrowLeft, Pencil, Save, Trash2
 } from 'lucide-react'
 
 interface EnrolledStudent {
@@ -175,6 +185,11 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
 
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
   const [cancellingStudentId, setCancellingStudentId] = useState<string | null>(null)
+
+  // Delete template state
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null)
 
   useEffect(() => {
     if (isOpen && clase) {
@@ -711,6 +726,38 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
       setEditorError(error instanceof Error ? error.message : 'Failed to save template')
     } finally {
       setIsSavingTemplate(false)
+    }
+  }
+
+  const confirmDeleteTemplate = (template: EmailTemplate) => {
+    setTemplateToDelete(template)
+    setShowDeleteConfirm(true)
+  }
+
+  const handleDeleteTemplate = async () => {
+    if (!templateToDelete) return
+
+    setDeletingTemplateId(templateToDelete.id)
+
+    try {
+      const response = await fetch(`/api/emails/templates/${templateToDelete.id}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete template')
+      }
+
+      await fetchTemplates()
+      setShowDeleteConfirm(false)
+      setTemplateToDelete(null)
+    } catch (error) {
+      console.error('Error deleting template:', error)
+      alert(error instanceof Error ? error.message : 'Failed to delete template')
+    } finally {
+      setDeletingTemplateId(null)
     }
   }
 
@@ -1768,6 +1815,20 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                               <Mail className="h-3 w-3" />
                               Test
                             </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => confirmDeleteTemplate(template)}
+                              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              disabled={deletingTemplateId === template.id}
+                            >
+                              {deletingTemplateId === template.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3 w-3" />
+                              )}
+                              Delete
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -1859,6 +1920,35 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Template Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Email Template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{templateToDelete?.name}&quot;? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingTemplateId !== null}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTemplate}
+              disabled={deletingTemplateId !== null}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingTemplateId ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   )
 }
