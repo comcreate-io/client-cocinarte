@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
             </div>
 
             <div style="text-align: center;">
-              <a href="https://www.casitaazuleducation.com/cocinarte" class="cta-button">
+              <a href="https://www.cocinartepdx.com/" class="cta-button">
                 Browse Classes Now
               </a>
             </div>
