@@ -242,12 +242,6 @@ export async function POST(request: NextRequest) {
               </ol>
             </div>
 
-            <div style="text-align: center;">
-              <a href="https://www.cocinartepdx.com/" class="cta-button">
-                Browse Classes Now
-              </a>
-            </div>
-
             <div class="note">
               <strong>Important:</strong> ${usageNote} Book your class soon!
             </div>
