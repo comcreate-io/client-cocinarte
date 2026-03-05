@@ -1781,53 +1781,53 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                           <div className="flex flex-wrap gap-2">
                             <Button
                               size="sm"
-                              className="bg-blue-600 hover:bg-blue-700 flex items-center gap-1"
+                              className="bg-blue-600 hover:bg-blue-700 p-2"
                               onClick={() => startCampaign(template)}
                               disabled={isSending}
+                              title="Send to all enrolled students"
                             >
-                              <Send className="h-3 w-3" />
-                              Send
+                              <Send className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => openEditTemplate(template)}
-                              className="flex items-center gap-1"
+                              className="p-2"
+                              title="Edit template"
                             >
-                              <Pencil className="h-3 w-3" />
-                              Edit
+                              <Pencil className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => { setSelectedTemplate(template); setShowPreviewModal(true) }}
-                              className="flex items-center gap-1"
+                              className="p-2"
+                              title="Preview template"
                             >
-                              <Eye className="h-3 w-3" />
-                              Preview
+                              <Eye className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => { setSelectedTemplate(template); setShowTestModal(true) }}
-                              className="flex items-center gap-1"
+                              className="p-2"
+                              title="Send test email"
                             >
-                              <Mail className="h-3 w-3" />
-                              Test
+                              <Mail className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => confirmDeleteTemplate(template)}
-                              className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                               disabled={deletingTemplateId === template.id}
+                              title="Delete template"
                             >
                               {deletingTemplateId === template.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <Loader2 className="h-4 w-4 animate-spin" />
                               ) : (
-                                <Trash2 className="h-3 w-3" />
+                                <Trash2 className="h-4 w-4" />
                               )}
-                              Delete
                             </Button>
                           </div>
                         </div>
