@@ -160,7 +160,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const [testSuccess, setTestSuccess] = useState(false)
 
   // Editor state
-  const [editorMode, setEditorMode] = useState<'list' | 'editor'>('list')
+  const [editorMode, setEditorMode] = useState<'list' | 'editor' | 'quickEmail'>('list')
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
   const [editorName, setEditorName] = useState('')
   const [editorSubject, setEditorSubject] = useState('')
@@ -168,6 +168,10 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const [showEditorPreview, setShowEditorPreview] = useState(false)
   const [isSavingTemplate, setIsSavingTemplate] = useState(false)
   const [editorError, setEditorError] = useState<string | null>(null)
+
+  // Quick Email state
+  const [quickEmailSubject, setQuickEmailSubject] = useState('')
+  const [quickEmailMessage, setQuickEmailMessage] = useState('')
 
   const [showDownloadMenu, setShowDownloadMenu] = useState(false)
   const [cancellingStudentId, setCancellingStudentId] = useState<string | null>(null)
@@ -390,6 +394,8 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
     setShowEditorPreview(false)
     setIsSavingTemplate(false)
     setEditorError(null)
+    setQuickEmailSubject('')
+    setQuickEmailMessage('')
   }
 
   const resetEmailDialog = () => {
@@ -530,6 +536,82 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
     }
   }
 
+  const sendQuickEmail = async () => {
+    if (!clase || !quickEmailSubject.trim() || !quickEmailMessage.trim()) return
+
+    setIsSending(true)
+    setActivityLog([{ time: new Date().toLocaleTimeString(), message: 'Preparing to send email...', type: 'info' }])
+
+    // Initialize campaign progress
+    const recipients = getUniqueRecipients()
+    setCampaignProgress({
+      total: recipients.length,
+      sent: 0,
+      failed: 0,
+      currentBatch: 1,
+      totalBatches: 1,
+      errors: [],
+      status: 'running'
+    })
+
+    try {
+      const response = await fetch('/api/classes/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          classId: clase.id,
+          subject: quickEmailSubject,
+          message: quickEmailMessage,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send emails')
+      }
+
+      setCampaignProgress({
+        total: data.stats.total || recipients.length,
+        sent: data.stats.sent || 0,
+        failed: data.stats.failed || 0,
+        currentBatch: 1,
+        totalBatches: 1,
+        errors: data.details?.filter((d: any) => !d.success).map((d: any) => ({
+          email: d.email || 'unknown',
+          error: d.error || 'Unknown error'
+        })) || [],
+        status: 'completed'
+      })
+
+      setActivityLog(prev => [
+        ...prev,
+        {
+          time: new Date().toLocaleTimeString(),
+          message: `Successfully sent ${data.stats.sent} email(s)!`,
+          type: 'success'
+        }
+      ])
+    } catch (error: any) {
+      setCampaignProgress({
+        total: recipients.length,
+        sent: 0,
+        failed: recipients.length,
+        currentBatch: 1,
+        totalBatches: 1,
+        errors: [{ email: 'all', error: error.message }],
+        status: 'failed'
+      })
+
+      setActivityLog(prev => [
+        ...prev,
+        { time: new Date().toLocaleTimeString(), message: `Error: ${error.message}`, type: 'error' }
+      ])
+    } finally {
+      setIsSending(false)
+    }
+  }
+
   const sendTestEmail = async () => {
     if (!selectedTemplate || !testEmail) return
 
@@ -576,6 +658,12 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
     setShowEditorPreview(false)
     setEditorError(null)
     setEditorMode('editor')
+  }
+
+  const openQuickEmail = () => {
+    setQuickEmailSubject('')
+    setQuickEmailMessage('')
+    setEditorMode('quickEmail')
   }
 
   const handleSaveTemplate = async () => {
@@ -1532,18 +1620,89 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                     </Button>
                   </DialogFooter>
                 </div>
+              ) : editorMode === 'quickEmail' ? (
+                /* Quick Email Mode */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={resetEditorState}
+                      className="flex items-center gap-1"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                    <h3 className="font-medium">Quick Email</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Subject *</label>
+                      <Input
+                        value={quickEmailSubject}
+                        onChange={(e) => setQuickEmailSubject(e.target.value)}
+                        placeholder="Enter email subject..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Message *</label>
+                      <textarea
+                        value={quickEmailMessage}
+                        onChange={(e) => setQuickEmailMessage(e.target.value)}
+                        placeholder="Write your message here..."
+                        rows={10}
+                        className="w-full px-3 py-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Each email will be personalized with the parent's name.
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={resetEditorState}>Cancel</Button>
+                    <Button
+                      onClick={() => sendQuickEmail()}
+                      disabled={!quickEmailSubject.trim() || !quickEmailMessage.trim() || isSending}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isSending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Send to {getUniqueRecipients().length} Parent{getUniqueRecipients().length !== 1 ? 's' : ''}
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </div>
               ) : (
                 /* Template List */
                 <>
-                  <Button
-                    size="sm"
-                    onClick={openNewTemplate}
-                    className="w-full flex items-center justify-center gap-2 border-dashed border-2 bg-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-800"
-                    variant="outline"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Template
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      size="sm"
+                      onClick={openNewTemplate}
+                      className="flex items-center justify-center gap-2 border-dashed border-2 bg-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4" />
+                      New Template
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={openQuickEmail}
+                      className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Send className="h-4 w-4" />
+                      Quick Email
+                    </Button>
+                  </div>
 
                   {loadingTemplates ? (
                     <div className="flex items-center justify-center py-12">
