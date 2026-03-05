@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import {
   Dialog,
   DialogContent,
@@ -956,7 +957,12 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                               {index + 1}
                             </span>
                             <div>
-                              <h4 className="font-semibold text-slate-900">{student.child_name}</h4>
+                              <Link
+                                href={`/dashboard/students?student=${student.id}&childName=${encodeURIComponent(student.child_name)}&parentEmail=${encodeURIComponent(student.email)}`}
+                                className="font-semibold text-blue-600 hover:text-blue-800 hover:underline"
+                              >
+                                {student.child_name}
+                              </Link>
                               <p className="text-xs text-slate-500">Parent: {student.parent_name}</p>
                             </div>
                             {student.extra_children != null && student.extra_children > 0 && (
@@ -1217,7 +1223,12 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                     <div key={student.booking_id} className="border border-slate-200 rounded-lg px-4 py-3 opacity-50">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-slate-700">{student.child_name}</p>
+                          <Link
+                            href={`/dashboard/students?student=${student.id}&childName=${encodeURIComponent(student.child_name)}&parentEmail=${encodeURIComponent(student.email)}`}
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline inline-block"
+                          >
+                            {student.child_name}
+                          </Link>
                           <p className="text-xs text-slate-400">Parent: {student.parent_name} &middot; {student.email}</p>
                         </div>
                         <div className="flex items-center gap-2">
