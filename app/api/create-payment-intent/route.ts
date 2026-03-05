@@ -83,12 +83,11 @@ export async function POST(request: NextRequest) {
     // Log the email being used for receipt
     console.log('Creating payment intent with receipt_email:', userEmail);
 
-    // Create a PaymentIntent with AUTOMATIC CAPTURE (charges immediately)
+    // Create a PaymentIntent with automatic capture (charges immediately)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Stripe expects amount in cents
       currency: 'usd',
       description: `${classTitle}${userName ? ` - ${userName}` : ''}`,
-      // capture_method removed - defaults to 'automatic' which charges immediately
       receipt_email: userEmail || undefined, // Send receipt to customer email (undefined if not provided)
       metadata: {
         className: classTitle,

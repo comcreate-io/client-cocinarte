@@ -46,16 +46,16 @@ export default function StripePaymentForm({
         setErrorMessage(error.message || 'An error occurred during payment')
         setIsLoading(false)
       } else if (paymentIntent) {
-        // Verify payment hold was successful
+        // Verify payment was successful
         console.log('Payment Intent Status:', paymentIntent.status)
-        
-        if (paymentIntent.status === 'requires_capture') {
-          // Payment hold successful!
-          console.log('✅ Payment hold successful - amount authorized')
+
+        if (paymentIntent.status === 'succeeded') {
+          // Payment successful!
+          console.log('✅ Payment successful - amount charged')
           onSuccess()
         } else {
           // Unexpected status
-          setErrorMessage(`Payment authorization failed. Status: ${paymentIntent.status}. Please try again.`)
+          setErrorMessage(`Payment failed. Status: ${paymentIntent.status}. Please try again.`)
           setIsLoading(false)
         }
       } else {
@@ -101,7 +101,7 @@ export default function StripePaymentForm({
               Processing...
             </div>
           ) : (
-            `Authorize $${amount} (Hold)`
+            `Pay $${amount}`
           )}
         </Button>
       </div>
