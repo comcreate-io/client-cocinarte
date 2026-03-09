@@ -38,7 +38,16 @@
       "Bash(npx supabase:*)",
       "Bash(node scripts/add-age-range-migration.mjs:*)",
       "Bash(node scripts/apply-age-range-migration.mjs:*)",
-      "Bash(node scripts/apply-age-range-migration-pg.mjs:*)"
+      "Bash(node scripts/apply-age-range-migration-pg.mjs:*)",
+      "Bash(xargs grep:*)",
+      "Bash(grep:*)",
+      "Bash(npx next:*)",
+      "Bash(node:*)",
+      "WebFetch(domain:www.vercel-status.com)",
+      "Bash(xxd:*)",
+      "Bash(vercel logs:*)",
+      "Bash(vercel ls:*)",
+      "Bash(vercel env:*)"
     ],
     "deny": [],
     "ask": []

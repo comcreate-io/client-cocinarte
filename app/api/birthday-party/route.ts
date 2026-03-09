@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
-import { createClient } from '@supabase/supabase-js'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,10 +35,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save to Supabase
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    const supabase = createServiceRoleClient()
 
     const { error: dbError } = await supabase
       .from('party_requests')
@@ -72,9 +69,12 @@ export async function POST(request: NextRequest) {
 
     // Map package value to display name
     const packageNames: { [key: string]: string } = {
-      'mini-party': 'Mini Fiesta ($350 • 8 kids • 2 hours)',
-      'deluxe-party': 'Deluxe Fiesta ($500 • 12 kids • 2.5 hours)',
-      'premium-party': 'Premium Fiesta ($750 • 16 kids • 3 hours)'
+      'art-slime': 'Art: Slime Making ($450 • Up to 18 kids)',
+      'art-canvas': 'Art: Canvas Painting ($450)',
+      'dance-music': 'Dance & Music Party ($350 • Up to 18 kids)',
+      'mini-fiesta': 'Cooking: Mini Fiesta ($450 • Up to 8 kids • 1.5 hours)',
+      'deluxe-fiesta': 'Cooking: Deluxe Fiesta ($650 • Up to 12 kids • 2 hours)',
+      'premium-fiesta': 'Cooking: Premium Fiesta ($850 • Up to 18 kids • 2.5 hours)'
     }
 
     const packageDisplayName = packageNames[partyPackage] || partyPackage
@@ -321,7 +321,8 @@ Phone: +1 (503) 916-9758
     )
 
   } catch (error) {
-    console.error('Error sending birthday party request email:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Error sending birthday party request:', errorMessage, error)
     return NextResponse.json(
       { error: 'Failed to send birthday party request' },
       { status: 500 }
