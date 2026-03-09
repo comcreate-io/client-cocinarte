@@ -15,7 +15,8 @@ import {
   X,
   Calendar,
   Star,
-  Printer
+  Printer,
+  Baby
 } from "lucide-react"
 import CocinarteBookingPopup from "./cocinarte-booking-popup"
 import Image from "next/image"
@@ -1080,6 +1081,18 @@ export default function CocinarteMonthlyCalendar() {
                     <span className="font-semibold text-slate">{classItem.maxStudents - classItem.enrolled}/{classItem.maxStudents}</span>
                   </div>
                 </div>
+                {(classItem.min_age || classItem.max_age) && (
+                  <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 flex items-center gap-2">
+                    <Baby className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                    <span className="text-amber-700 font-medium">
+                      Ages: {classItem.min_age && classItem.max_age
+                        ? `${classItem.min_age}-${classItem.max_age}`
+                        : classItem.min_age
+                        ? `${classItem.min_age}+`
+                        : `Up to ${classItem.max_age}`}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <span className="text-xl sm:text-2xl font-bold text-amber">${classItem.price}</span>
                   <Button
@@ -1190,6 +1203,23 @@ export default function CocinarteMonthlyCalendar() {
                     <p className="text-sm font-bold text-slate">{selectedClass.maxStudents - selectedClass.enrolled} / {selectedClass.maxStudents}</p>
                   </div>
                 </div>
+                {(selectedClass.min_age || selectedClass.max_age) && (
+                  <div className="bg-amber-50 border-2 border-amber-300 p-3 rounded-lg mt-3">
+                    <div className="flex items-center space-x-2">
+                      <Baby className="h-5 w-5 text-amber-600" />
+                      <div>
+                        <p className="text-sm font-bold text-amber-900">Age Range</p>
+                        <p className="text-xs text-amber-700">
+                          {selectedClass.min_age && selectedClass.max_age
+                            ? `${selectedClass.min_age} - ${selectedClass.max_age} years old`
+                            : selectedClass.min_age
+                            ? `${selectedClass.min_age}+ years old`
+                            : `Up to ${selectedClass.max_age} years old`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {selectedClass.requires_parent && (
                   <div className="bg-blue-50 border-2 border-blue-300 p-3 rounded-lg mt-3">
                     <div className="flex items-start space-x-2">
