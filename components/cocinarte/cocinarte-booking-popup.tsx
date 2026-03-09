@@ -306,17 +306,45 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
           
           // Clear the pending booking
           sessionStorage.removeItem('pendingBooking')
-          
-          // Proceed to payment
-          setAuthStep('payment')
-          setAuthMessage('Account created successfully! Please complete your payment.')
+
+          // Check for children before proceeding
+          try {
+            const parentsService = new ParentsClientService()
+            const parentData = await parentsService.getParentWithChildrenByUserId(user.id)
+
+            if (parentData && parentData.children && parentData.children.length > 0) {
+              setParentWithChildren(parentData)
+
+              // Fetch gift card balance
+              try {
+                const giftCardResponse = await fetch(`/api/gift-cards/balance?parentId=${parentData.id}`)
+                const giftCardData = await giftCardResponse.json()
+                if (giftCardResponse.ok) {
+                  setGiftCardBalance(giftCardData.totalBalance || 0)
+                }
+              } catch (err) {
+                console.error('Error fetching gift card balance:', err)
+                setGiftCardBalance(0)
+              }
+
+              setAuthStep('child-selection')
+              setAuthMessage('Account created successfully! Please select children to book.')
+            } else {
+              setAuthStep('payment')
+              setAuthMessage('Account created successfully! Please complete your payment.')
+            }
+          } catch (err) {
+            console.error('Error fetching children after signup:', err)
+            setAuthStep('payment')
+            setAuthMessage('Account created successfully! Please complete your payment.')
+          }
         } catch (error) {
           console.error('Error restoring booking:', error)
           setAuthError('Unable to restore booking. Please try again.')
         }
       }
     }
-    
+
     handlePostSignup()
   }, [user, isOpen])
 
@@ -623,14 +651,46 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     
     if (error) {
       setAuthError(error.message)
-    } else {
-      setAuthMessage('Successfully signed in!')
-      // After successful login, proceed to payment
-      setTimeout(() => {
-        setAuthStep('payment')
-      }, 1000)
+      setAuthLoading(false)
+      return
     }
-    
+
+    setAuthMessage('Successfully signed in!')
+
+    // After successful login, check for children (same flow as handleBookClass)
+    try {
+      const { data: { user: currentUser } } = await (await import('@/lib/supabase/client')).createClient().auth.getUser()
+      if (currentUser) {
+        const parentsService = new ParentsClientService()
+        const parentData = await parentsService.getParentWithChildrenByUserId(currentUser.id)
+
+        if (parentData && parentData.children && parentData.children.length > 0) {
+          setParentWithChildren(parentData)
+
+          // Fetch gift card balance
+          try {
+            const giftCardResponse = await fetch(`/api/gift-cards/balance?parentId=${parentData.id}`)
+            const giftCardData = await giftCardResponse.json()
+            if (giftCardResponse.ok) {
+              setGiftCardBalance(giftCardData.totalBalance || 0)
+            }
+          } catch (err) {
+            console.error('Error fetching gift card balance:', err)
+            setGiftCardBalance(0)
+          }
+
+          setAuthStep('child-selection')
+        } else {
+          setAuthStep('payment')
+        }
+      } else {
+        setAuthStep('payment')
+      }
+    } catch (err) {
+      console.error('Error fetching children after login:', err)
+      setAuthStep('payment')
+    }
+
     setAuthLoading(false)
   }
 

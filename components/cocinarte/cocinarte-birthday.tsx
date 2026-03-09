@@ -127,7 +127,7 @@ export default function CocinarteBirthday() {
               Cocinarte Party Experiences
             </h2>
             <Image
-              src="/cocinarte/floating_elements/COCINARTE_niño2.svg"
+              src="/cocinarte/floating_elements/COCINARTE_niคo2.svg"
               alt="Child cooking"
               width={80}
               height={80}

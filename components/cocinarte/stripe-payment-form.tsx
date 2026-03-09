@@ -123,14 +123,10 @@ export default function StripePaymentForm({
               <span className="text-sm sm:text-base">Processing...</span>
             </div>
           ) : (
-<<<<<<< HEAD
-            `Pay $${amount}`
-=======
             <span className="flex items-center gap-2">
               <Lock className="w-4 h-4" />
               {submitLabel || defaultSubmitLabel}
             </span>
->>>>>>> bfea6bddc63ce03108b54a260c8c7dfd1e46935d
           )}
         </Button>
       </div>

@@ -11,6 +11,7 @@ ALTER TABLE coupons ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP WITH TIME ZONE
 ALTER TABLE coupons ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT 1 CHECK (max_uses >= 1);
 
 -- Add use count to track how many times coupon has been used
+
 ALTER TABLE coupons ADD COLUMN IF NOT EXISTS use_count INTEGER DEFAULT 0 CHECK (use_count >= 0);
 
 -- Make discount_percentage nullable (not needed for fixed amount coupons)
