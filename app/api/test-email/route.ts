@@ -9,7 +9,10 @@ export async function GET() {
     )
   }
 
-  const to = process.env.CONTACT_EMAIL || 'test@example.com'
+  const to = (process.env.CONTACT_EMAIL || 'test@example.com')
+    .split(',')
+    .map(e => e.trim())
+    .filter(Boolean)
 
   try {
     const result = await sendEmail({
