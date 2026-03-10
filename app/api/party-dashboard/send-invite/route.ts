@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -74,16 +74,6 @@ export async function POST(request: NextRequest) {
       day: 'numeric',
     })
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
-
     const emailHtml = `
       <!DOCTYPE html>
       <html>
@@ -149,8 +139,7 @@ export async function POST(request: NextRequest) {
       </html>
     `
 
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM,
+    await sendEmail({
       to: guest.parent_email,
       subject: `${guest.child_name} is invited to a birthday party at Cocinarte!`,
       html: emailHtml,

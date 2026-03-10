@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,17 +18,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    })
 
     const packageNames: { [key: string]: string } = {
       'art-canvas': 'Art: Canvas Painting',
@@ -260,15 +249,12 @@ Phone: +1 (503) 916-9758
     const emailContent = isApproved ? approvalEmailContent : declineEmailContent
 
     // Send email to customer
-    const mailOptions = {
-      from: process.env.SMTP_FROM,
+    await sendEmail({
       to: partyRequest.email,
       subject: emailContent.subject,
       html: emailContent.html,
       text: emailContent.text
-    }
-
-    await transporter.sendMail(mailOptions)
+    })
     console.log(`Party request ${action} email sent successfully to ${partyRequest.email}`)
 
     return NextResponse.json(

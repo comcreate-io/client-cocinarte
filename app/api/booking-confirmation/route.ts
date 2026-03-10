@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { sendEmail } from '@/lib/resend';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,17 +37,6 @@ export async function POST(request: NextRequest) {
     const guestList: Array<{ childName: string; parentName: string; parentEmail: string }> = guestChildren || [];
     const hasGuests = guestList.length > 0;
 
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
     // Format date and time
     const formattedDate = new Date(classDate).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -69,10 +58,10 @@ export async function POST(request: NextRequest) {
           <h1 style="margin: 0; font-size: 32px; font-weight: bold;">🎉 New Booking Received!</h1>
           <p style="margin: 10px 0 0 0; font-size: 18px;">A new cooking class has been booked</p>
         </div>
-        
+
         <div style="background: white; padding: 30px; border: 2px solid #E5E7EB; border-top: none; border-radius: 0 0 8px 8px;">
           <h2 style="color: #1E3A8A; margin: 0 0 20px 0; font-size: 24px; border-bottom: 2px solid #F0614F; padding-bottom: 10px;">Booking Details</h2>
-          
+
           <div style="background: #F0F9FF; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #1E3A8A;">
             <h3 style="color: #1E3A8A; margin: 0 0 15px 0; font-size: 20px;">🍳 Class Information</h3>
             <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Class:</strong> ${classTitle}</p>
@@ -112,7 +101,6 @@ export async function POST(request: NextRequest) {
     `;
 
     const adminMailOptions = {
-      from: process.env.SMTP_FROM,
       to: 'diego@comcreate.org',
       subject: `New Booking: ${classTitle} - ${formattedDate}`,
       html: adminEmailContent,
@@ -125,10 +113,10 @@ export async function POST(request: NextRequest) {
           <h1 style="margin: 0; font-size: 36px; font-weight: bold;">¡Booking Confirmed!</h1>
           <p style="margin: 12px 0 0 0; font-size: 18px;">Your cooking class reservation is confirmed 🎉</p>
         </div>
-        
+
         <div style="background: white; padding: 30px; border: 2px solid #E5E7EB; border-top: none; border-radius: 0 0 8px 8px;">
           <h2 style="color: #F0614F; margin: 0 0 25px 0; font-size: 26px; border-bottom: 2px solid #FCB414; padding-bottom: 10px;">Your Booking Details</h2>
-          
+
           <div style="background: #F0F9FF; padding: 22px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #1E3A8A;">
             <h3 style="color: #1E3A8A; margin: 0 0 15px 0; font-size: 20px;">🍳 Class Information</h3>
             <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Class:</strong> ${classTitle}</p>
@@ -196,24 +184,23 @@ export async function POST(request: NextRequest) {
     `;
 
     const userMailOptions = {
-      from: process.env.SMTP_FROM,
       to: userEmail,
       subject: `Booking Confirmed - ${classTitle} on ${formattedDate}`,
       html: userEmailContent,
     };
 
     // Send both emails
-    const adminResult = await transporter.sendMail(adminMailOptions);
-    console.log('Admin notification email sent:', adminResult.messageId);
+    await sendEmail(adminMailOptions);
+    console.log('Admin notification email sent');
 
-    const userResult = await transporter.sendMail(userMailOptions);
-    console.log('User confirmation email sent:', userResult.messageId);
+    await sendEmail(userMailOptions);
+    console.log('User confirmation email sent');
 
     return NextResponse.json({
       success: true,
       message: 'Confirmation emails sent successfully',
-      adminEmailSent: !!adminResult.messageId,
-      userEmailSent: !!userResult.messageId
+      adminEmailSent: true,
+      userEmailSent: true
     });
 
   } catch (error) {

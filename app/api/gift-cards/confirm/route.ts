@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 import { GiftCardsClientService } from '@/lib/supabase/gift-cards-client'
 import { sendAdminNotification } from '@/lib/email'
 
@@ -89,16 +89,6 @@ export async function POST(request: NextRequest) {
 }
 
 async function sendGiftCardEmail(giftCard: any, metadata: any, purchasedAmount: number, bonus: number) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
-  })
-
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cocinartepdx.com'
 
   const emailHtml = `
@@ -232,8 +222,7 @@ Email: info@cocinartepdx.com
 Phone: +1 (503) 916-9758
   `
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+  await sendEmail({
     to: metadata.recipient_email,
     subject: `${metadata.purchaser_name} sent you a $${giftCard.initial_balance} Cocinarte Gift Card!`,
     html: emailHtml,
@@ -301,8 +290,7 @@ Phone: +1 (503) 916-9758
     </html>
   `
 
-  await transporter.sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
+  await sendEmail({
     to: metadata.purchaser_email,
     subject: `Your Cocinarte Gift Card has been sent to ${metadata.recipient_name}!`,
     html: purchaserEmailHtml,

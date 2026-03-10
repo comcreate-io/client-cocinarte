@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isAdminUser } from '@/lib/supabase/admin'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 
 // Cocinarte color palette
 const COLORS = {
@@ -11,16 +11,6 @@ const COLORS = {
   yellow: '#FCB414',
   lightBlue: '#CDECF9'
 }
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
 
 function generateEmailHtml(classTitle: string, classDate: string, classTime: string, subject: string, message: string, childName: string): string {
   // Format the message with line breaks
@@ -211,8 +201,7 @@ export async function POST(request: NextRequest) {
           student.child_name || 'Student'
         )
 
-        await transporter.sendMail({
-          from: `"Cocinarte PDX" <${process.env.SMTP_FROM || 'info@cocinartepdx.com'}>`,
+        await sendEmail({
           to: student.email,
           subject: `[Cocinarte] ${subject}`,
           html: html,

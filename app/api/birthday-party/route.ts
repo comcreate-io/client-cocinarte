@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 export async function POST(request: NextRequest) {
@@ -56,17 +56,6 @@ export async function POST(request: NextRequest) {
       // Continue with email even if database fails
     }
 
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    })
-
     // Map package value to display name
     const packageNames: { [key: string]: string } = {
       'art-slime': 'Art: Slime Making ($450 • Up to 18 kids)',
@@ -102,7 +91,6 @@ export async function POST(request: NextRequest) {
     }
     
     const mailOptions = {
-      from: process.env.SMTP_FROM,
       to: adminEmails,
       replyTo: email,
       subject: `🎉 New Birthday Party Request - ${formattedDate}`,
@@ -211,12 +199,11 @@ This request was submitted from the Birthday Party section on your website.
     }
 
     // Send email to admin
-    await transporter.sendMail(mailOptions)
+    await sendEmail(mailOptions)
     console.log('Birthday party request email sent successfully')
 
     // Send confirmation email to customer
     const customerMailOptions = {
-      from: process.env.SMTP_FROM,
       to: email,
       subject: '🎉 We Received Your Birthday Party Request!',
       html: `
@@ -312,7 +299,7 @@ Phone: +1 (503) 916-9758
       `
     }
 
-    await transporter.sendMail(customerMailOptions)
+    await sendEmail(customerMailOptions)
     console.log('Customer confirmation email sent successfully')
 
     return NextResponse.json(

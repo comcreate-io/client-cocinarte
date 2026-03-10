@@ -1,17 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 import { isAdminUser } from '@/lib/supabase/admin'
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
 
 export async function POST(request: Request) {
   try {
@@ -49,10 +39,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const from = process.env.SMTP_FROM || process.env.SMTP_USER
-
     const mailOptions = {
-      from: `"Cocinarte PDX" <${from}>`,
       to,
       subject,
       html: `
@@ -83,7 +70,7 @@ export async function POST(request: Request) {
       text: message,
     }
 
-    await transporter.sendMail(mailOptions)
+    await sendEmail(mailOptions)
 
     console.log(`[Parent Email] Sent to: ${to}`)
 

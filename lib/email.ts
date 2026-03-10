@@ -1,14 +1,4 @@
-import nodemailer from "nodemailer";
-
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || "587"),
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+import { sendEmail } from './resend'
 
 // ============ INTERFACES ============
 
@@ -55,7 +45,9 @@ export const CAMPAIGN_CONFIG = {
 
 export async function verifyEmailConnection(): Promise<boolean> {
   try {
-    await transporter.verify();
+    if (!process.env.RESEND_API_KEY) {
+      return false;
+    }
     return true;
   } catch {
     return false;
@@ -70,16 +62,11 @@ interface SendTestEmailOptions {
 }
 
 export async function sendTestEmail({ to, subject, html }: SendTestEmailOptions) {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-
-  const mailOptions = {
-    from: `"Cocinarte PDX" <${from}>`,
+  return sendEmail({
     to,
     subject: `[TEST] ${subject}`,
     html,
-  };
-
-  return transporter.sendMail(mailOptions);
+  });
 }
 
 // Personalize email content with recipient data and optional class context
@@ -139,8 +126,6 @@ export async function sendAdminNotification(
   type: AdminNotificationType,
   data: AdminNotificationData
 ): Promise<{ success: boolean; error?: string }> {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-
   const typeLabels: Record<AdminNotificationType, string> = {
     signup: "🎉 New User Signup",
     login: "🔐 User Login",
@@ -195,15 +180,12 @@ export async function sendAdminNotification(
     </html>
   `;
 
-  const mailOptions = {
-    from: `"Cocinarte Notifications" <${from}>`,
-    to: ADMIN_NOTIFICATION_EMAIL,
-    subject,
-    html,
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await sendEmail({
+      to: ADMIN_NOTIFICATION_EMAIL,
+      subject,
+      html,
+    });
     console.log(`[Admin Notification] Sent: ${type}`);
     return { success: true };
   } catch (error) {
@@ -222,21 +204,16 @@ export async function sendCampaignEmail({
   html,
   classContext,
 }: CampaignEmailOptions): Promise<{ success: boolean; error?: string }> {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-
   // Personalize subject and content
   const personalizedSubject = personalizeEmailContent(subject, recipient, classContext);
   const personalizedHtml = personalizeEmailContent(html, recipient, classContext);
 
-  const mailOptions = {
-    from: `"Cocinarte PDX" <${from}>`,
-    to: recipient.email,
-    subject: personalizedSubject,
-    html: personalizedHtml,
-  };
-
   try {
-    await transporter.sendMail(mailOptions);
+    await sendEmail({
+      to: recipient.email,
+      subject: personalizedSubject,
+      html: personalizedHtml,
+    });
     return { success: true };
   } catch (error) {
     return {

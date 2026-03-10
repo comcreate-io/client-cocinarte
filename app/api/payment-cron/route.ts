@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
-import nodemailer from 'nodemailer';
+import { sendEmail } from '@/lib/resend';
 
 // Force dynamic rendering for cron job
 export const dynamic = 'force-dynamic';
@@ -35,19 +35,6 @@ const supabase = createClient(
  */
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: '2025-09-30.clover',
-});
-
-/**
- * Configure email transporter
- */
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    }
 });
 
 /**
@@ -238,7 +225,6 @@ async function sendClassConfirmationEmail(student: any, clase: any) {
     });
     
     const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: email,
         subject: `✅ Class Confirmed: ${clase.title} - Tomorrow!`,
         html: `
@@ -264,7 +250,7 @@ async function sendClassConfirmationEmail(student: any, clase: any) {
     };
 
     try {
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`  ✅ Confirmation sent to ${email}`);
         return true;
     } catch (error: any) {
@@ -292,7 +278,6 @@ async function sendPaymentFailureEmail(student: any, clase: any) {
     });
     
     const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: email,
         subject: `⚠️ Payment Issue: ${clase.title}`,
         html: `
@@ -336,7 +321,7 @@ async function sendPaymentFailureEmail(student: any, clase: any) {
     };
 
     try {
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`  ✅ Payment failure notification sent to ${email}`);
         return true;
     } catch (error: any) {
@@ -364,7 +349,6 @@ async function sendClassCancellationEmail(student: any, clase: any) {
     });
 
     const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: email,
         subject: `❌ Class Cancelled: ${clase.title}`,
         html: `
@@ -394,7 +378,7 @@ async function sendClassCancellationEmail(student: any, clase: any) {
     };
 
     try {
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`  ✅ Cancellation sent to ${email}`);
         return true;
     } catch (error: any) {
@@ -415,7 +399,6 @@ async function sendAdminNotificationEmail(clase: any, enrolled: number, minStude
     });
 
     const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER,
         to: adminEmail,
         subject: `⚠️ Action Required: Class Below Minimum - ${clase.title}`,
         html: `
@@ -460,7 +443,7 @@ async function sendAdminNotificationEmail(clase: any, enrolled: number, minStude
     };
 
     try {
-        await transporter.sendMail(mailOptions);
+        await sendEmail(mailOptions);
         console.log(`  ✅ Admin notification sent to ${adminEmail}`);
         return true;
     } catch (error: any) {

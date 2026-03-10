@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { sendEmail } from '@/lib/resend';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,17 +24,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
 
     // Format date and time
     const formattedDate = new Date(classDate).toLocaleDateString('en-US', {
@@ -93,7 +82,6 @@ export async function POST(request: NextRequest) {
     `;
 
     const adminMailOptions = {
-      from: process.env.SMTP_FROM,
       to: 'diego@comcreate.org',
       subject: `Booking Cancelled: ${classTitle} - ${formattedDate}`,
       html: adminEmailContent,
@@ -160,24 +148,23 @@ export async function POST(request: NextRequest) {
     `;
 
     const userMailOptions = {
-      from: process.env.SMTP_FROM,
       to: userEmail,
       subject: `Booking Cancelled - ${classTitle} on ${formattedDate}`,
       html: userEmailContent,
     };
 
     // Send both emails
-    const adminResult = await transporter.sendMail(adminMailOptions);
-    console.log('Admin cancellation notification email sent:', adminResult.messageId);
+    await sendEmail(adminMailOptions);
+    console.log('Admin cancellation notification email sent');
 
-    const userResult = await transporter.sendMail(userMailOptions);
-    console.log('User cancellation confirmation email sent:', userResult.messageId);
+    await sendEmail(userMailOptions);
+    console.log('User cancellation confirmation email sent');
 
     return NextResponse.json({
       success: true,
       message: 'Cancellation emails sent successfully',
-      adminEmailSent: !!adminResult.messageId,
-      userEmailSent: !!userResult.messageId
+      adminEmailSent: true,
+      userEmailSent: true
     });
 
   } catch (error) {
