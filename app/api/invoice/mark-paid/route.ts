@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import nodemailer from 'nodemailer'
-
-// Create nodemailer transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
+import { sendEmail } from '@/lib/resend'
 
 export async function POST(request: NextRequest) {
   try {
@@ -63,8 +52,7 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      await transporter.sendMail({
-        from: `"Cocinarte" <${process.env.SMTP_FROM}>`,
+      await sendEmail({
         to: invoice.recipient_email,
         subject: `Payment Confirmation - Invoice ${invoice.invoice_number}`,
         html: `

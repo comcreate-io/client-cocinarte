@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { uploadToCloudinary } from '@/lib/cloudinary'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 
 export const dynamic = 'force-dynamic'
 
@@ -162,16 +162,6 @@ export async function POST(request: NextRequest) {
         : 'TBD'
 
       const childName = form_data.child_full_name
-
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true',
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      })
 
       // Health summary
       const healthItems: string[] = []
@@ -338,8 +328,7 @@ export async function POST(request: NextRequest) {
       `
 
       const emailPromises = [
-        transporter.sendMail({
-          from: process.env.SMTP_FROM,
+        sendEmail({
           to: partyGuest.parent_email,
           subject: `Enrollment Complete - ${childName} is ready for the party!`,
           html: guestParentEmailHtml,
@@ -348,8 +337,7 @@ export async function POST(request: NextRequest) {
 
       if (partyRequest?.email) {
         emailPromises.push(
-          transporter.sendMail({
-            from: process.env.SMTP_FROM,
+          sendEmail({
             to: partyRequest.email,
             subject: `Guest Enrollment Complete - ${childName} is ready for the party!`,
             html: hostEmailHtml,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,16 +26,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
 
     const formattedDate = new Date(class_date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -189,21 +179,18 @@ export async function POST(request: NextRequest) {
 
     // Send all three emails
     const emailPromises = [
-      transporter.sendMail({
-        from: process.env.SMTP_FROM,
+      sendEmail({
         to: purchaser_email,
         subject: `🎁 Gift Booking Confirmed - ${class_title}`,
         html: purchaserEmailContent,
       }),
-      transporter.sendMail({
-        from: process.env.SMTP_FROM,
+      sendEmail({
         to: guest_parent_email,
         subject: `🎉 A Cooking Class Gift for ${guest_child_name} - Complete Enrollment`,
         html: guestParentEmailContent,
       }),
-      transporter.sendMail({
-        from: process.env.SMTP_FROM,
-        to: process.env.ADMIN_EMAIL || process.env.SMTP_USER,
+      sendEmail({
+        to: process.env.ADMIN_EMAIL || process.env.CONTACT_EMAIL || 'info@cocinartepdx.com',
         subject: `🎁 New Guest Booking - ${class_title} (${guest_child_name})`,
         html: adminEmailContent,
       }),

@@ -402,8 +402,50 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             guestsCount,
             totalChildren,
             finalAmount,
-            isMommyAndMe: isCurrentClassMommyAndMe
+            isMommyAndMe: isCurrentClassMommyAndMe,
+            appliedCoupon,
+            useGiftCard,
+            giftCardAmountToUse
           })
+
+          // Validation: Check for potential issues
+          if (!selectedClassData.price || selectedClassData.price === 0) {
+            console.error('⚠️ Class price is 0 or undefined!', {
+              classId: selectedClassData.id,
+              title: selectedClassData.title,
+              price: selectedClassData.price
+            })
+            throw new Error('This class has no price set. Please contact support or try another class.')
+          }
+
+          if (totalChildren === 0 && !appliedCoupon) {
+            console.error('⚠️ No children selected for booking!', {
+              selectedChildIds,
+              guestList
+            })
+            throw new Error('Please select at least one child or add a guest to continue.')
+          }
+
+          // Only allow $0 payment if it's due to 100% coupon or gift card covering everything
+          const priceBeforeDiscounts = isCurrentClassMommyAndMe
+            ? (ownChildrenCount > 0 ? selectedClassData.price + Math.max(0, ownChildrenCount - 1) * EXTRA_CHILD_COST : 0) + guestsCount * selectedClassData.price
+            : totalChildren * selectedClassData.price
+
+          if (finalAmount === 0 && priceBeforeDiscounts > 0) {
+            console.log('✅ Free booking due to discount:', {
+              priceBeforeDiscounts,
+              finalAmount,
+              appliedCoupon,
+              giftCardAmountToUse
+            })
+          } else if (finalAmount === 0 && priceBeforeDiscounts === 0 && totalChildren > 0) {
+            console.error('⚠️ Calculated price is $0 but children are selected!', {
+              basePrice: selectedClassData.price,
+              totalChildren,
+              priceBeforeDiscounts
+            })
+            throw new Error('Unable to calculate price. The class price may not be set correctly.')
+          }
 
           const requestBody = {
             amount: finalAmount,
@@ -600,8 +642,29 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
 
   // Calculate final price with coupon discount, gift card
   const calculateFinalPrice = () => {
+    const ownCost = getOwnChildrenCost()
+    const guestsCost = getGuestsCost()
     let price = getTotalBeforeDiscounts()
+
+    // Debug logging to identify when price is 0
+    if (price === 0) {
+      console.warn('⚠️ calculateFinalPrice: Base price is $0', {
+        selectedClassData: selectedClassData ? {
+          id: selectedClassData.id,
+          title: selectedClassData.title,
+          price: selectedClassData.price
+        } : null,
+        selectedChildIds,
+        guestList: guestList.map(g => g.childName),
+        ownCost,
+        guestsCost,
+        isCurrentClassMommyAndMe
+      })
+    }
+
     if (price === 0 && !selectedClassData) return 0
+
+    const priceBeforeDiscounts = price
 
     // Apply coupon discount first
     if (appliedCoupon) {
@@ -616,6 +679,15 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
     // Then apply gift card if enabled
     if (useGiftCard && giftCardAmountToUse > 0) {
       price = Math.max(0, price - giftCardAmountToUse)
+    }
+
+    // Log when final price becomes 0 after discounts
+    if (price === 0 && priceBeforeDiscounts > 0) {
+      console.log('✅ Final price is $0 due to discounts:', {
+        priceBeforeDiscounts,
+        appliedCoupon,
+        giftCardAmountToUse
+      })
     }
 
     return price

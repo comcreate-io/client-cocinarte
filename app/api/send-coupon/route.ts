@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
+import { sendEmail } from '@/lib/resend';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,17 +37,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
 
     const greeting = recipientName ? `Hi ${recipientName}` : 'Hello';
 
@@ -259,8 +248,7 @@ export async function POST(request: NextRequest) {
     `;
 
     // Send email to customer
-    await transporter.sendMail({
-      from: `"Cocinarte" <${process.env.SMTP_USER}>`,
+    await sendEmail({
       to: recipientEmail,
       subject: `Your ${discountDisplay} Discount Coupon for Cocinarte - ${couponCode}`,
       html: customerHtml,

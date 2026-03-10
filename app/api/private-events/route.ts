@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import nodemailer from 'nodemailer'
+import { sendEmail } from '@/lib/resend'
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,17 +52,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create transporter
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    })
-
     // Format the date for better readability
     const formattedDate = new Date(preferredDate).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -86,7 +75,6 @@ export async function POST(request: NextRequest) {
     }
     
     const mailOptions = {
-      from: process.env.SMTP_FROM,
       to: adminEmails,
       replyTo: email,
       subject: `🎊 New Private Event Request - ${eventType}`,
@@ -216,12 +204,11 @@ This request was submitted from the Private Classes section on your website.
     }
 
     // Send email to admin
-    await transporter.sendMail(mailOptions)
+    await sendEmail(mailOptions)
     console.log('Private event request email sent successfully')
 
     // Send confirmation email to customer
     const customerMailOptions = {
-      from: process.env.SMTP_FROM,
       to: email,
       subject: '🎊 We Received Your Private Class Request!',
       html: `
@@ -343,7 +330,7 @@ Phone: +1 (503) 916-9758
       `
     }
 
-    await transporter.sendMail(customerMailOptions)
+    await sendEmail(customerMailOptions)
     console.log('Customer confirmation email sent successfully')
 
     return NextResponse.json(
