@@ -1028,36 +1028,44 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
         finalPrice
       })
 
-      // Build primary booking data (for own children)
-      const bookingData: any = {
-        user_id: user.id!,
-        class_id: selectedClassData.id,
-        student_id: studentInfo.id,
-        child_id: selectedChildId || undefined,
-        payment_amount: finalPrice, // Total amount for the entire transaction
-        payment_method: isFreeBooking ? 'coupon' : 'stripe',
-        payment_status: 'completed',
-        booking_status: 'confirmed',
-        stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
-        gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
-        parent_id: parentWithChildren?.id || undefined,
-        booking_comments: bookingComments || undefined,
-        accompanying_parent_name: selectedClassData.requires_parent ? accompanyingParentName : undefined,
-        is_guest_booking: selectedChildIds.length === 0 && guestList.length > 0 ? true : undefined,
-        notes: isFreeBooking
-          ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${childrenNote}`
-          : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment completed.${discountNote}${giftCardNote}${childrenNote}`
-      }
+      // Only create primary booking if the user selected their own children
+      // (skip for guest-only purchases to avoid duplicate entries)
+      const isGuestOnlyPurchase = selectedChildIds.length === 0 && guestList.length > 0
+      let primaryBookingId: string | null = null
 
-      // Add extra_children for backward compat
-      if (isCurrentClassMommyAndMe && extraChildren > 0) {
-        bookingData.extra_children = extraChildren
-      } else if (!isCurrentClassMommyAndMe && selectedChildIds.length > 1) {
-        bookingData.extra_children = selectedChildIds.length - 1
-      }
+      if (!isGuestOnlyPurchase) {
+        const bookingData: any = {
+          user_id: user.id!,
+          class_id: selectedClassData.id,
+          student_id: studentInfo.id,
+          child_id: selectedChildId || undefined,
+          payment_amount: guestList.length > 0 ? getOwnChildrenCost() : finalPrice,
+          payment_method: isFreeBooking ? 'coupon' : 'stripe',
+          payment_status: 'completed',
+          booking_status: 'confirmed',
+          stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
+          gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
+          parent_id: parentWithChildren?.id || undefined,
+          booking_comments: bookingComments || undefined,
+          accompanying_parent_name: selectedClassData.requires_parent ? accompanyingParentName : undefined,
+          notes: isFreeBooking
+            ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${childrenNote}`
+            : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment completed.${discountNote}${giftCardNote}${childrenNote}`
+        }
 
-      const newBooking = await bookingsService.createBooking(bookingData)
-      console.log('Primary booking created:', newBooking.id)
+        // Add extra_children for backward compat
+        if (isCurrentClassMommyAndMe && extraChildren > 0) {
+          bookingData.extra_children = extraChildren
+        } else if (!isCurrentClassMommyAndMe && selectedChildIds.length > 1) {
+          bookingData.extra_children = selectedChildIds.length - 1
+        }
+
+        const newBooking = await bookingsService.createBooking(bookingData)
+        primaryBookingId = newBooking.id
+        console.log('Primary booking created:', newBooking.id)
+      } else {
+        console.log('Guest-only purchase, skipping primary booking creation')
+      }
 
       // Create guest booking records for each guest in the guestList
       for (const guest of guestList) {
@@ -1147,7 +1155,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             body: JSON.stringify({
               parentId: parentWithChildren.id,
               amount: giftCardAmountToUse,
-              bookingId: newBooking.id,
+              bookingId: primaryBookingId,
               description: `Payment for ${selectedClassData.title} on ${formatDate(selectedClassData.date)}`
             })
           })
@@ -1193,7 +1201,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             extraChildrenCost: isCurrentClassMommyAndMe && extraChildren > 0 ? extraChildren * EXTRA_CHILD_COST : 0,
             selectedChildrenNames: emailChildrenNames,
             guestChildren: guestList.map(g => ({ childName: g.childName, parentName: g.parentName, parentEmail: g.parentEmail })),
-            bookingId: newBooking.id || `BK-${Date.now()}`
+            bookingId: primaryBookingId || `BK-${Date.now()}`
           })
         })
 
