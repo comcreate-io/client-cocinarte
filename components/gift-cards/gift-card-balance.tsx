@@ -86,9 +86,38 @@ export default function GiftCardBalance({ parentId, initialBalance, onBalanceCha
         throw new Error(data.error || 'Failed to redeem gift card')
       }
 
+      // Update local state immediately with redeemed card data
+      const redeemedCard: GiftCardData = {
+        id: data.giftCard.id,
+        code: data.giftCard.code,
+        initial_balance: data.giftCard.initial_balance,
+        current_balance: data.giftCard.current_balance,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        purchaser_name: '',
+      }
+
+      setGiftCards(prev => {
+        const exists = prev.some(gc => gc.id === redeemedCard.id)
+        return exists ? prev : [redeemedCard, ...prev]
+      })
+      setTotalBalance(prev => prev + data.giftCard.current_balance)
+      onBalanceChange?.(totalBalance + data.giftCard.current_balance)
+
       setRedeemSuccess(`Gift card added! Balance: $${data.giftCard.current_balance.toFixed(2)}`)
       setRedeemCode('')
-      await loadGiftCards()
+
+      // Also refresh from server in background (without setting loading state)
+      fetch(`/api/gift-cards/balance?parentId=${parentId}`)
+        .then(res => res.json())
+        .then(balanceData => {
+          if (balanceData.giftCards) {
+            setGiftCards(balanceData.giftCards)
+            setTotalBalance(balanceData.totalBalance)
+            onBalanceChange?.(balanceData.totalBalance)
+          }
+        })
+        .catch(() => {}) // Silent background refresh
 
       setTimeout(() => {
         setIsDialogOpen(false)
