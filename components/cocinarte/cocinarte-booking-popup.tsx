@@ -1078,8 +1078,8 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             booking_comments: i === 0 ? (bookingComments || undefined) : undefined,
             accompanying_parent_name: selectedClassData.requires_parent ? accompanyingParentName : undefined,
             notes: isFreeBooking
-              ? `Free booking for ${childFullName} - ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${i === 0 ? discountNote + giftCardNote + childrenNote : ''}`
-              : `Booking for ${childFullName} - ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment completed.${i === 0 ? discountNote + giftCardNote + childrenNote : ''}`
+              ? `Free booking for ${childFullName} - ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${i === 0 ? childrenNote : ''}`
+              : `Booking for ${childFullName} - ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment completed.${discountNote}${giftCardNote}${i === 0 ? childrenNote : ''}`
           }
 
           const newBooking = await bookingsService.createBooking(bookingData)
