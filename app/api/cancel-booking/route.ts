@@ -103,59 +103,93 @@ export async function POST(request: NextRequest) {
     const hoursUntil = (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
     const isLateCancel = hoursUntil < 48
 
-    // Calculate refund amounts
-    const stripePaymentAmount = booking.payment_amount - (booking.gift_card_amount_used || 0)
-    const totalRefundRatio = booking.payment_amount > 0
-      ? calculateRefund(booking.payment_amount, hoursUntil, clase.late_cancel_refund_type, clase.late_cancel_refund_value) / booking.payment_amount
+    // Determine ACTUAL amounts paid (excluding coupon discounts)
+    // Use Stripe payment intent as source of truth for the real charge
+    const giftCardUsed = booking.gift_card_amount_used || 0
+    let actualStripeCharge = 0
+
+    if (booking.stripe_payment_intent_id) {
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id)
+        // amount_received is in cents — convert to dollars
+        actualStripeCharge = (paymentIntent.amount_received || 0) / 100
+      } catch (err: any) {
+        console.error('Error retrieving payment intent:', err.message)
+        // Fallback: estimate from payment_amount minus gift card
+        actualStripeCharge = Math.max(0, booking.payment_amount - giftCardUsed)
+      }
+    }
+
+    // For bookings with multiple children sharing the same payment intent,
+    // calculate this booking's proportional share of the Stripe charge
+    let thisBookingStripeShare = actualStripeCharge
+    if (booking.stripe_payment_intent_id) {
+      const { data: siblingBookings } = await supabase
+        .from('bookings')
+        .select('id, payment_amount')
+        .eq('stripe_payment_intent_id', booking.stripe_payment_intent_id)
+        .neq('booking_status', 'cancelled')
+
+      if (siblingBookings && siblingBookings.length > 1) {
+        const totalPaymentAmount = siblingBookings.reduce((sum: number, b: any) => sum + b.payment_amount, 0)
+        thisBookingStripeShare = totalPaymentAmount > 0
+          ? (booking.payment_amount / totalPaymentAmount) * actualStripeCharge
+          : actualStripeCharge / siblingBookings.length
+      }
+    }
+
+    // The actual refundable amount is only what was really paid (Stripe + gift card)
+    // Coupon discounts are NOT refundable
+    const actualPaid = Math.round((thisBookingStripeShare + giftCardUsed) * 100) / 100
+
+    // Apply refund policy based on timing
+    const refundRatio = actualPaid > 0
+      ? calculateRefund(actualPaid, hoursUntil, clase.late_cancel_refund_type, clase.late_cancel_refund_value) / actualPaid
       : (hoursUntil >= 48 ? 1 : 0)
 
-    const stripeRefundAmount = Math.round(stripePaymentAmount * totalRefundRatio * 100) / 100
-    const giftCardRefundAmount = Math.round((booking.gift_card_amount_used || 0) * totalRefundRatio * 100) / 100
+    const stripeRefundAmount = Math.round(thisBookingStripeShare * refundRatio * 100) / 100
+    const giftCardRefundAmount = Math.round(giftCardUsed * refundRatio * 100) / 100
     const totalRefundAmount = Math.round((stripeRefundAmount + giftCardRefundAmount) * 100) / 100
 
-    // 1. Process Stripe refund
+    console.log(`[Cancel Booking] payment_amount: $${booking.payment_amount}, actualStripeCharge: $${actualStripeCharge}, thisBookingStripeShare: $${thisBookingStripeShare}, giftCardUsed: $${giftCardUsed}, refundRatio: ${refundRatio}, stripeRefund: $${stripeRefundAmount}, giftCardRefund: $${giftCardRefundAmount}`)
+
+    // 1. Process Stripe refund (only refund actual money charged, never coupon amounts)
     if (stripeRefundAmount > 0 && booking.stripe_payment_intent_id) {
       try {
-        // Check payment intent status
         const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id)
 
         if (paymentIntent.status === 'requires_capture') {
           // Payment is held (not captured) — cancel the authorization
-          if (stripeRefundAmount >= stripePaymentAmount) {
-            // Full cancel
+          if (stripeRefundAmount >= thisBookingStripeShare) {
             await stripe.paymentIntents.cancel(booking.stripe_payment_intent_id)
           } else {
-            // Partial: capture only the non-refunded portion
-            const captureAmount = Math.round((stripePaymentAmount - stripeRefundAmount) * 100)
+            const captureAmount = Math.round((thisBookingStripeShare - stripeRefundAmount) * 100)
             await stripe.paymentIntents.capture(booking.stripe_payment_intent_id, {
               amount_to_capture: captureAmount,
             })
           }
         } else if (paymentIntent.status === 'succeeded') {
-          // Payment was captured — issue a refund
           const refundAmountCents = Math.round(stripeRefundAmount * 100)
+          const amountReceived = paymentIntent.amount_received || 0
           if (refundAmountCents > 0) {
-            if (refundAmountCents >= (paymentIntent.amount_received || 0)) {
-              // Full refund
+            // Never refund more than what Stripe actually received
+            const safeRefundCents = Math.min(refundAmountCents, amountReceived)
+            if (safeRefundCents >= amountReceived) {
               await stripe.refunds.create({
                 payment_intent: booking.stripe_payment_intent_id,
               })
-            } else {
-              // Partial refund
+            } else if (safeRefundCents > 0) {
               await stripe.refunds.create({
                 payment_intent: booking.stripe_payment_intent_id,
-                amount: refundAmountCents,
+                amount: safeRefundCents,
               })
             }
           }
         }
-        // If status is 'canceled' already, nothing to do
       } catch (stripeError: any) {
         console.error('Stripe refund error:', stripeError.message)
-        // Continue with cancellation even if Stripe fails — log the error
       }
     } else if (booking.stripe_payment_intent_id && stripeRefundAmount === 0) {
-      // No refund, but if payment is held, capture it fully
       try {
         const paymentIntent = await stripe.paymentIntents.retrieve(booking.stripe_payment_intent_id)
         if (paymentIntent.status === 'requires_capture') {
@@ -166,7 +200,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Refund gift card balance proportionally
+    // 2. Refund gift card balance (gift card money goes back to gift card, not Stripe)
     if (giftCardRefundAmount > 0 && booking.parent_id) {
       try {
         const { data: giftCards } = await supabase
@@ -199,14 +233,19 @@ export async function POST(request: NextRequest) {
 
     // 3. Update booking status
     const paymentStatus = totalRefundAmount > 0 ? 'refunded' : 'canceled'
+    const refundBreakdown = []
+    if (stripeRefundAmount > 0) refundBreakdown.push(`$${stripeRefundAmount.toFixed(2)} to card`)
+    if (giftCardRefundAmount > 0) refundBreakdown.push(`$${giftCardRefundAmount.toFixed(2)} to gift card`)
+    const refundDetails = refundBreakdown.length > 0 ? refundBreakdown.join(', ') : 'no refund'
+
     await supabase
       .from('bookings')
       .update({
         booking_status: 'cancelled',
         payment_status: paymentStatus,
         notes: isLateCancel
-          ? `Late cancellation — refund: $${totalRefundAmount.toFixed(2)}`
-          : `Cancelled 48+ hours before — full refund: $${totalRefundAmount.toFixed(2)}`,
+          ? `Late cancellation — ${refundDetails}`
+          : `Cancelled 48+ hours before — ${refundDetails}`,
       })
       .eq('id', bookingId)
 
