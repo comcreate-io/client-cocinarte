@@ -29,11 +29,35 @@ import type { EmailTemplate } from '@/lib/supabase'
 import { formatDate } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Calendar, Clock, Users, Mail, Phone, DollarSign, User, Loader2,
   AlertCircle, Send, CheckCircle2, Camera, CameraOff, FileCheck,
   FileX, AlertTriangle, Tag, CreditCard, Ticket, Download, FileSpreadsheet, FileText,
   Eye, XCircle, Code, Plus, ArrowLeft, Pencil, Save, Trash2
 } from 'lucide-react'
+
+interface Child {
+  id: string
+  child_full_name: string
+  child_age: number
+  child_preferred_name?: string
+  allergies?: string
+  dietary_restrictions?: string
+  medical_conditions?: string
+  media_permission?: boolean
+  parent: {
+    id: string
+    parent_guardian_names: string
+    parent_email: string
+    parent_phone: string
+  }
+}
 
 interface EnrolledStudent {
   id: string
@@ -190,6 +214,16 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null)
+
+  // Add child state
+  const [showAddChildDialog, setShowAddChildDialog] = useState(false)
+  const [allChildren, setAllChildren] = useState<Child[]>([])
+  const [selectedChildId, setSelectedChildId] = useState<string>('')
+  const [loadingChildren, setLoadingChildren] = useState(false)
+  const [addingChild, setAddingChild] = useState(false)
+  const [addChildError, setAddChildError] = useState<string | null>(null)
+  const [addChildSuccess, setAddChildSuccess] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     if (isOpen && clase) {
@@ -355,6 +389,80 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchAllChildren = async () => {
+    setLoadingChildren(true)
+    setAddChildError(null)
+    try {
+      const response = await fetch('/api/children')
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch children')
+      }
+
+      setAllChildren(data.children || [])
+    } catch (err) {
+      console.error('Error fetching children:', err)
+      setAddChildError(err instanceof Error ? err.message : 'Failed to load children')
+    } finally {
+      setLoadingChildren(false)
+    }
+  }
+
+  const handleAddChildToClass = async () => {
+    if (!selectedChildId || !clase) return
+
+    setAddingChild(true)
+    setAddChildError(null)
+    setAddChildSuccess(false)
+
+    try {
+      const response = await fetch('/api/admin/add-child-to-class', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          childId: selectedChildId,
+          classId: clase.id,
+          paymentAmount: clase.price,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add child to class')
+      }
+
+      setAddChildSuccess(true)
+      setSelectedChildId('')
+
+      // Refresh the enrolled students list
+      await fetchEnrolledStudents()
+
+      // Close the dialog after a short delay
+      setTimeout(() => {
+        setShowAddChildDialog(false)
+        setAddChildSuccess(false)
+      }, 2000)
+    } catch (err) {
+      console.error('Error adding child to class:', err)
+      setAddChildError(err instanceof Error ? err.message : 'Failed to add child to class')
+    } finally {
+      setAddingChild(false)
+    }
+  }
+
+  const handleOpenAddChildDialog = () => {
+    setShowAddChildDialog(true)
+    setSelectedChildId('')
+    setAddChildError(null)
+    setAddChildSuccess(false)
+    setSearchTerm('')
+    fetchAllChildren()
   }
 
   const fetchTemplates = async () => {
@@ -1384,6 +1492,14 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
         {/* Footer */}
         <div className="flex-shrink-0 border-t px-4 py-2 sm:px-6 sm:py-3 flex justify-between items-center bg-slate-50/50">
           <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={handleOpenAddChildDialog}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Child</span>
+            </Button>
             {confirmedStudents.length > 0 && (
               <>
                 <Button
@@ -1949,6 +2065,150 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Child Dialog */}
+      <Dialog open={showAddChildDialog} onOpenChange={setShowAddChildDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Add Child to Class
+            </DialogTitle>
+            <DialogDescription>
+              Select a child to manually add to this class
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {loadingChildren ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                <span className="ml-3 text-slate-500">Loading children...</span>
+              </div>
+            ) : (
+              <>
+                {/* Search Input */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Search Children</label>
+                  <Input
+                    type="text"
+                    placeholder="Search by child or parent name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+
+                {/* Child Select */}
+                <div>
+                  <label className="block text-sm font-medium mb-2">Select Child</label>
+                  <Select value={selectedChildId} onValueChange={setSelectedChildId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choose a child..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allChildren
+                        .filter((child) => {
+                          if (!searchTerm) return true
+                          const search = searchTerm.toLowerCase()
+                          return (
+                            child.child_full_name.toLowerCase().includes(search) ||
+                            child.parent.parent_guardian_names.toLowerCase().includes(search) ||
+                            child.parent.parent_email.toLowerCase().includes(search)
+                          )
+                        })
+                        .map((child) => (
+                          <SelectItem key={child.id} value={child.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {child.child_full_name} (Age {child.child_age})
+                              </span>
+                              <span className="text-xs text-slate-500">
+                                Parent: {child.parent.parent_guardian_names}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Selected Child Details */}
+                {selectedChildId && (
+                  <div className="bg-slate-50 rounded-lg p-3 text-sm">
+                    {(() => {
+                      const selected = allChildren.find((c) => c.id === selectedChildId)
+                      if (!selected) return null
+                      return (
+                        <div className="space-y-1">
+                          <p className="font-semibold">{selected.child_full_name}</p>
+                          <p className="text-slate-600">Age: {selected.child_age}</p>
+                          <p className="text-slate-600">
+                            Parent: {selected.parent.parent_guardian_names}
+                          </p>
+                          <p className="text-slate-600">Email: {selected.parent.parent_email}</p>
+                          <p className="text-slate-600">Phone: {selected.parent.parent_phone}</p>
+                          {selected.allergies && (
+                            <p className="text-red-600 font-medium mt-2">
+                              Allergies: {selected.allergies}
+                            </p>
+                          )}
+                          {selected.dietary_restrictions && (
+                            <p className="text-red-600">
+                              Dietary: {selected.dietary_restrictions}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
+
+                {addChildError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                    <AlertCircle className="h-4 w-4" />
+                    <p className="text-sm">{addChildError}</p>
+                  </div>
+                )}
+
+                {addChildSuccess && (
+                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <p className="text-sm">Child added to class successfully!</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAddChildDialog(false)}
+              disabled={addingChild}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddChildToClass}
+              disabled={!selectedChildId || addingChild || loadingChildren}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {addingChild ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add to Class
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   )
 }
