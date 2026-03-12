@@ -1,7 +1,22 @@
 import { NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/resend'
+import { createClient } from '@/lib/supabase/server'
+import { isAdminUser } from '@/lib/supabase/admin'
 
 export async function GET() {
+  // Require admin authentication to prevent unwanted test emails
+  const supabase = createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const isAdmin = await isAdminUser(supabase, user.email)
+  if (!isAdmin) {
+    return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
+  }
+
   if (!process.env.RESEND_API_KEY) {
     return NextResponse.json(
       { error: 'RESEND_API_KEY is not configured' },
