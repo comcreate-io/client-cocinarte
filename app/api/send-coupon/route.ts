@@ -248,21 +248,25 @@ export async function POST(request: NextRequest) {
     `;
 
     // Send email to customer
-    await sendEmail({
+    const result = await sendEmail({
       to: recipientEmail,
       subject: `Your ${discountDisplay} Discount Coupon for Cocinarte - ${couponCode}`,
       html: customerHtml,
     });
 
+    console.log(`[Coupon Email] Sent to: ${recipientEmail}, Resend ID: ${result?.id || 'unknown'}`);
+
     return NextResponse.json({
       success: true,
-      message: 'Coupon email sent successfully'
+      message: 'Coupon email sent successfully',
+      emailId: result?.id,
     });
 
   } catch (error) {
     console.error('Error sending coupon email:', error);
+    const message = error instanceof Error ? error.message : 'Failed to send coupon email';
     return NextResponse.json(
-      { error: 'Failed to send coupon email' },
+      { error: message },
       { status: 500 }
     );
   }

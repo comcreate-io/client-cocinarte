@@ -161,7 +161,8 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
       })
 
       if (!response.ok) {
-        throw new Error('Failed to send email')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to send email')
       }
 
       // Mark coupon as sent
