@@ -1034,40 +1034,70 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       let primaryBookingId: string | null = null
 
       if (!isGuestOnlyPurchase) {
-        const bookingData: any = {
-          user_id: user.id!,
-          class_id: selectedClassData.id,
-          student_id: studentInfo.id,
-          child_id: selectedChildId || undefined,
-          payment_amount: guestList.length > 0 ? getOwnChildrenCost() : finalPrice,
-          payment_method: isFreeBooking ? 'coupon' : 'stripe',
-          payment_status: 'completed',
-          booking_status: 'confirmed',
-          stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
-          gift_card_amount_used: useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
-          parent_id: parentWithChildren?.id || undefined,
-          booking_comments: bookingComments || undefined,
-          accompanying_parent_name: selectedClassData.requires_parent ? accompanyingParentName : undefined,
-          notes: isFreeBooking
-            ? `Free booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${discountNote}${giftCardNote}${childrenNote}`
-            : `Booking for ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment completed.${discountNote}${giftCardNote}${childrenNote}`
-        }
+        // Calculate discounted own-children cost for accurate payment_amount
+        const totalBeforeDiscount = getTotalBeforeDiscounts()
+        const ownCostBeforeDiscount = getOwnChildrenCost()
+        const ownCostAfterDiscount = totalBeforeDiscount > 0
+          ? (ownCostBeforeDiscount / totalBeforeDiscount) * finalPrice
+          : 0
 
-        // Add extra_children for backward compat
-        if (isCurrentClassMommyAndMe && extraChildren > 0) {
-          bookingData.extra_children = extraChildren
-        } else if (!isCurrentClassMommyAndMe && selectedChildIds.length > 1) {
-          bookingData.extra_children = selectedChildIds.length - 1
-        }
+        // Create individual booking for each selected child
+        for (let i = 0; i < selectedChildIds.length; i++) {
+          const childId = selectedChildIds[i]
+          const childData = parentWithChildren?.children.find((c: Child) => c.id === childId)
+          const childFullName = childData?.child_full_name || 'Child'
 
-        const newBooking = await bookingsService.createBooking(bookingData)
-        primaryBookingId = newBooking.id
-        console.log('Primary booking created:', newBooking.id)
+          // Calculate per-child payment amount
+          let perChildPayment: number
+          if (selectedChildIds.length === 1) {
+            // Single child: gets the full discounted own cost (or finalPrice if no guests)
+            perChildPayment = guestList.length > 0 ? ownCostAfterDiscount : finalPrice
+          } else if (isCurrentClassMommyAndMe) {
+            // Mommy & Me: proportional share based on base vs extra pricing
+            const perChildBeforeDiscount = i === 0 ? selectedClassData.price : EXTRA_CHILD_COST
+            perChildPayment = ownCostBeforeDiscount > 0
+              ? (perChildBeforeDiscount / ownCostBeforeDiscount) * ownCostAfterDiscount
+              : 0
+          } else {
+            // Regular class: split evenly among own children
+            perChildPayment = ownCostAfterDiscount / selectedChildIds.length
+          }
+
+          const bookingData: any = {
+            user_id: user.id!,
+            class_id: selectedClassData.id,
+            student_id: studentInfo.id,
+            child_id: childId,
+            payment_amount: Math.round(perChildPayment * 100) / 100,
+            payment_method: isFreeBooking ? 'coupon' : 'stripe',
+            payment_status: 'completed',
+            booking_status: 'confirmed',
+            stripe_payment_intent_id: isFreeBooking ? null : paymentIntentId,
+            gift_card_amount_used: i === 0 && useGiftCard && giftCardAmountToUse > 0 ? giftCardAmountToUse : undefined,
+            parent_id: parentWithChildren?.id || undefined,
+            booking_comments: i === 0 ? (bookingComments || undefined) : undefined,
+            accompanying_parent_name: selectedClassData.requires_parent ? accompanyingParentName : undefined,
+            notes: isFreeBooking
+              ? `Free booking for ${childFullName} - ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}.${i === 0 ? discountNote + giftCardNote + childrenNote : ''}`
+              : `Booking for ${childFullName} - ${selectedClassData.title} on ${formatDate(selectedClassData.date)} at ${formatTime(selectedClassData.time)}. Payment completed.${i === 0 ? discountNote + giftCardNote + childrenNote : ''}`
+          }
+
+          const newBooking = await bookingsService.createBooking(bookingData)
+          if (i === 0) primaryBookingId = newBooking.id
+          console.log(`Booking created for ${childFullName}: ${newBooking.id}`)
+        }
       } else {
         console.log('Guest-only purchase, skipping primary booking creation')
       }
 
       // Create guest booking records for each guest in the guestList
+      // Calculate discounted guest cost
+      const totalBeforeDiscountForGuests = getTotalBeforeDiscounts()
+      const guestCostBeforeDiscount = getGuestsCost()
+      const perGuestAfterDiscount = totalBeforeDiscountForGuests > 0 && guestList.length > 0
+        ? ((guestCostBeforeDiscount / totalBeforeDiscountForGuests) * finalPrice) / guestList.length
+        : selectedClassData.price
+
       for (const guest of guestList) {
         try {
           console.log(`Creating guest booking for ${guest.childName}...`)
@@ -1076,7 +1106,7 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
             class_id: selectedClassData.id,
             student_id: studentInfo.id,
             child_id: null,
-            payment_amount: selectedClassData.price,
+            payment_amount: Math.round(perGuestAfterDiscount * 100) / 100,
             payment_method: isFreeBooking ? 'coupon' : 'stripe',
             payment_status: 'completed',
             booking_status: 'confirmed',
