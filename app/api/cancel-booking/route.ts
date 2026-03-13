@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
         gift_card_amount_used,
         parent_id,
         booking_status,
+        booking_comments,
         students:student_id (
           id,
           parent_name,
@@ -95,6 +96,61 @@ export async function POST(request: NextRequest) {
 
     if (!clase) {
       return NextResponse.json({ error: 'Class data not found' }, { status: 404 })
+    }
+
+    // Check if this was an admin enrollment — no refund allowed
+    const isAdminEnrollment = booking.booking_comments?.startsWith('[Admin enrollment by')
+
+    if (isAdminEnrollment) {
+      // Cancel booking without any refund
+      await supabase
+        .from('bookings')
+        .update({
+          booking_status: 'cancelled',
+          payment_status: 'canceled',
+          notes: 'Admin enrollment — no refund',
+        })
+        .eq('id', bookingId)
+
+      if (clase.enrolled > 0) {
+        await supabase
+          .from('clases')
+          .update({ enrolled: clase.enrolled - 1 })
+          .eq('id', clase.id)
+      }
+
+      // Send cancellation email (with $0 refund)
+      if (student?.email) {
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/booking-cancellation`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userEmail: student.email,
+              userName: student.parent_name,
+              studentName: student.child_name,
+              classTitle: clase.title,
+              classDate: clase.date,
+              classTime: clase.time,
+              classPrice: booking.payment_amount,
+              bookingId: booking.id,
+              refundAmount: 0,
+              isLateCancel: false,
+            }),
+          })
+        } catch (emailError) {
+          console.error('Error sending cancellation email:', emailError)
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        refundAmount: 0,
+        stripeRefundAmount: 0,
+        giftCardRefundAmount: 0,
+        isLateCancel: false,
+        isAdminEnrollment: true,
+      })
     }
 
     // Calculate hours until class
