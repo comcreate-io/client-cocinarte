@@ -40,6 +40,7 @@ export async function updateSession(request: NextRequest) {
   const publicRoutes = [
     '/',
     '/about',
+    '/blog',
     '/admissions',
     '/calendar',
     '/camp-alegria',
@@ -57,6 +58,7 @@ export async function updateSession(request: NextRequest) {
   ]
 
   const isPublicRoute = publicRoutes.includes(request.nextUrl.pathname) ||
+    request.nextUrl.pathname.startsWith('/blog') ||
     request.nextUrl.pathname.startsWith('/auth') ||
     request.nextUrl.pathname.startsWith('/api') ||
     request.nextUrl.pathname.startsWith('/landing') ||

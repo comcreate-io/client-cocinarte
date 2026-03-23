@@ -469,6 +469,12 @@ function CocinarteHeaderInner() {
                     <Gift className="h-4 w-4" />
                     Gift Cards
                   </button>
+                  <Link
+                    href="/blog"
+                    className="block px-4 py-3 text-sm font-semibold text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black transition-all duration-200"
+                  >
+                    Blog
+                  </Link>
                 </div>
               )}
             </div>
@@ -564,6 +570,13 @@ function CocinarteHeaderInner() {
               onClick={() => setIsMenuOpen(false)}
             >
               Private Events
+            </Link>
+            <Link
+              href="/blog"
+              className="flex items-center px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Blog
             </Link>
             {/* Camps Section */}
             <div className="px-3 py-2">

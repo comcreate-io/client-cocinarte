@@ -65,6 +65,7 @@ export default function Footer() {
                <Link href="/calendar" className="underline hover:text-slate-light transition-colors text-sm">Calendar</Link>
                <Link href="/programs" className="underline hover:text-slate-light transition-colors text-sm">Programs</Link>
                <Link href="/about" className="underline hover:text-slate-light transition-colors text-sm">About</Link>
+               <Link href="/blog" className="underline hover:text-slate-light transition-colors text-sm">Blog</Link>
                <Link href="/contact" className="underline hover:text-slate-light transition-colors text-sm">Contact</Link>
                <Link href="/terms" className="underline hover:text-slate-light transition-colors text-sm">Terms & Conditions</Link>
              </div>
