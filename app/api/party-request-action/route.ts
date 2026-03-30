@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
               <div style="text-align: center; margin-top: 30px; padding: 20px; background: #F0F9FF; border-radius: 8px; border: 1px solid #BFDBFE;">
                 <p style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">Questions? We're here to help!</p>
                 <p style="color: #374151; margin: 0; font-size: 15px;">
-                  📧 <a href="mailto:info@cocinartepdx.com" style="color: #F0614F; text-decoration: none; font-weight: bold;">info@cocinartepdx.com</a>
+                  📧 <a href="mailto:cocinarte@casitaazulpdx.org" style="color: #F0614F; text-decoration: none; font-weight: bold;">cocinarte@casitaazulpdx.org</a>
                   <br>
                   📞 <a href="tel:+15039169758" style="color: #F0614F; text-decoration: none; font-weight: bold;">+1 (503) 916-9758</a>
                 </p>
@@ -151,7 +151,7 @@ We can't wait to help make this birthday celebration extra special for your chil
 👨‍🍳 The Cocinarte Team 👨‍🍳
 
 Questions?
-Email: info@cocinartepdx.com
+Email: cocinarte@casitaazulpdx.org
 Phone: +1 (503) 916-9758
       `
     }
@@ -201,7 +201,7 @@ Phone: +1 (503) 916-9758
                   We'd love to help celebrate your child's special day! Please reach out to us to discuss alternative dates or party options that might work better.
                 </p>
                 <div style="text-align: center;">
-                  <a href="mailto:info@cocinartepdx.com" style="background: #F0614F; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: bold; display: inline-block;">
+                  <a href="mailto:cocinarte@casitaazulpdx.org" style="background: #F0614F; color: white; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: bold; display: inline-block;">
                     Contact Us
                   </a>
                 </div>
@@ -211,7 +211,7 @@ Phone: +1 (503) 916-9758
               <div style="text-align: center; margin-top: 30px; padding: 20px; background: #F0F9FF; border-radius: 8px; border: 1px solid #BFDBFE;">
                 <p style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 15px; font-weight: bold;">Questions? We're here to help!</p>
                 <p style="color: #374151; margin: 0; font-size: 14px;">
-                  📧 <a href="mailto:info@cocinartepdx.com" style="color: #F0614F; text-decoration: none; font-weight: bold;">info@cocinartepdx.com</a>
+                  📧 <a href="mailto:cocinarte@casitaazulpdx.org" style="color: #F0614F; text-decoration: none; font-weight: bold;">cocinarte@casitaazulpdx.org</a>
                   <br>
                   📞 <a href="tel:+15039169758" style="color: #F0614F; text-decoration: none; font-weight: bold;">+1 (503) 916-9758</a>
                 </p>
@@ -241,7 +241,7 @@ We'd love to help celebrate your child's special day! Please reach out to us to 
 The Cocinarte Team
 
 Questions?
-Email: info@cocinartepdx.com
+Email: cocinarte@casitaazulpdx.org
 Phone: +1 (503) 916-9758
       `
     }

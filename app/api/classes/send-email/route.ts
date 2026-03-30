@@ -84,8 +84,8 @@ function generateEmailHtml(classTitle: string, classDate: string, classTime: str
                     Questions? Reply to this email or contact us at
                   </p>
                   <p style="margin: 0;">
-                    <a href="mailto:info@cocinartepdx.com" style="color: ${COLORS.navy}; text-decoration: none; font-weight: 600;">
-                      info@cocinartepdx.com
+                    <a href="mailto:cocinarte@casitaazulpdx.org" style="color: ${COLORS.navy}; text-decoration: none; font-weight: 600;">
+                      cocinarte@casitaazulpdx.org
                     </a>
                   </p>
                   <p style="color: #999; font-size: 12px; margin: 20px 0 0 0;">

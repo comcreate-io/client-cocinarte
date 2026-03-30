@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
             <div style="text-align: center; margin-top: 30px; padding: 20px; color: #6b7280; font-size: 14px; background-color: transparent;">
               <p style="margin: 0 0 10px 0; font-weight: 600; font-size: 18px; color: #000638;">Cocinarte</p>
               <p style="margin: 5px 0; color: #6b7280;">
-                Questions? Contact us at <a href="mailto:info@cocinartepdx.com" style="color: #00ADEE; text-decoration: underline;">info@cocinartepdx.com</a>
+                Questions? Contact us at <a href="mailto:cocinarte@casitaazulpdx.org" style="color: #00ADEE; text-decoration: underline;">cocinarte@casitaazulpdx.org</a>
               </p>
               <p style="margin: 5px 0 0 0; color: #6b7280;">
                 Phone: <a href="tel:5039169758" style="color: #00ADEE; text-decoration: none;">(503) 916-9758</a>

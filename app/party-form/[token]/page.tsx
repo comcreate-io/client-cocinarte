@@ -311,7 +311,7 @@ export default function PartyFormPage() {
                 </div>
               )}
               <p className="text-sm text-slate-500 mt-6">
-                If you have any questions, contact us at info@cocinartepdx.com
+                If you have any questions, contact us at cocinarte@casitaazulpdx.org
               </p>
             </CardContent>
           </Card>

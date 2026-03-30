@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
             </p>
 
             <p style="color: #6B7280; font-size: 13px; text-align: center; margin-top: 30px;">
-              If you have any questions, please contact us at info@cocinarte.com
+              If you have any questions, please contact us at cocinarte@casitaazulpdx.org
             </p>
           </div>
         </div>
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
             </div>
 
             <p style="color: #6B7280; font-size: 13px; text-align: center; margin-top: 30px;">
-              If you have any questions, please contact us at info@cocinarte.com
+              If you have any questions, please contact us at cocinarte@casitaazulpdx.org
             </p>
           </div>
         </div>

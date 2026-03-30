@@ -60,7 +60,7 @@ export async function POST(request: Request) {
             <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;">
             <div style="text-align: center; color: #999; font-size: 12px;">
               <p style="margin: 0;">Cocinarte PDX - Cooking Classes for Kids</p>
-              <p style="margin: 5px 0;">📧 info@cocinartepdx.com | 📞 (503) 555-0123</p>
+              <p style="margin: 5px 0;">📧 cocinarte@casitaazulpdx.org | 📞 (503) 555-0123</p>
               <p style="margin: 5px 0;">Portland, Oregon</p>
             </div>
           </div>

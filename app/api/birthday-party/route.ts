@@ -262,7 +262,7 @@ This request was submitted from the Birthday Party section on your website.
             
             <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; text-align: center;">
               <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
-                Questions? Email us at <a href="mailto:info@cocinartepdx.com" style="color: #f97316; text-decoration: none;">info@cocinartepdx.com</a>
+                Questions? Email us at <a href="mailto:cocinarte@casitaazulpdx.org" style="color: #f97316; text-decoration: none;">cocinarte@casitaazulpdx.org</a>
               </p>
               <p style="color: #6b7280; font-size: 14px; margin: 5px 0;">
                 Or call us at <a href="tel:+15039169758" style="color: #f97316; text-decoration: none;">+1 (503) 916-9758</a>
@@ -294,7 +294,7 @@ Looking forward to celebrating with you!
 🎉 The Cocinarte Team 🎉
 
 Questions? 
-Email: info@cocinartepdx.com
+Email: cocinarte@casitaazulpdx.org
 Phone: +1 (503) 916-9758
       `
     }

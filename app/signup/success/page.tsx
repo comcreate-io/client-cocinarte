@@ -89,7 +89,7 @@ export default function SignupSuccessPage() {
           <p className="text-gray-600 text-sm">
             Questions?{' '}
             <a
-              href="mailto:info@cocinarte.com"
+              href="mailto:cocinarte@casitaazulpdx.org"
               className="text-cocinarte-orange hover:text-cocinarte-red transition-colors"
             >
               Contact us

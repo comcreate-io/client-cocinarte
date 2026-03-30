@@ -52,7 +52,7 @@ export default function CocinarteContact() {
             </CardHeader>
             <CardContent className="text-center">
               <CardDescription className="text-slate-medium text-base sm:text-lg">
-                <p className="font-semibold text-slate">info@cocinartepdx.com</p>
+                <p className="font-semibold text-slate">cocinarte@casitaazulpdx.org</p>
               </CardDescription>
             </CardContent>
           </Card>

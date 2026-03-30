@@ -309,7 +309,7 @@ async function sendPaymentFailureEmail(student: any, clase: any) {
                     <div style="background: #dcfce7; padding: 15px; margin: 15px 0; border-left: 4px solid #16a34a;">
                         <h3 style="margin-top: 0; color: #166534;">📞 Action Required</h3>
                         <p style="color: #166534; margin: 10px 0;">Please contact us immediately to update your payment method and secure ${childName}'s spot:</p>
-                        <p style="color: #166534; margin: 10px 0;"><strong>Email:</strong> info@cocinartepdx.com</p>
+                        <p style="color: #166534; margin: 10px 0;"><strong>Email:</strong> cocinarte@casitaazulpdx.org</p>
                         <p style="color: #166534; margin: 10px 0;"><strong>Phone:</strong> Contact information</p>
                     </div>
 
@@ -391,7 +391,7 @@ async function sendClassCancellationEmail(student: any, clase: any) {
  * Send admin notification email when class is below minimum enrollment
  */
 async function sendAdminNotificationEmail(clase: any, enrolled: number, minStudents: number) {
-    const adminEmail = 'info@cocinartepdx.com';
+    const adminEmail = 'cocinarte@casitaazulpdx.org';
 
     const classDate = new Date(clase.date).toLocaleDateString('en-US', {
         timeZone: 'America/Los_Angeles',

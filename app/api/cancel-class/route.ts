@@ -61,7 +61,7 @@ async function sendClassCancellationEmail(student: any, clase: any) {
           <p>Browse other available classes at: <a href="https://cocinartepdx.com">cocinartepdx.com</a></p>
           <p style="margin-top: 20px;">Best regards,<br/>The Cocinarte Team</p>
           <p style="color: #666; font-size: 12px;">
-            Questions? Contact us at info@cocinartepdx.com or +1 (503) 916-9758
+            Questions? Contact us at cocinarte@casitaazulpdx.org or +1 (503) 916-9758
           </p>
         </div>
       </div>

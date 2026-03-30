@@ -55,6 +55,7 @@ export class ClasesService {
       .from('clases')
       .select('*')
       .gte('date', today)
+      .is('cancelled_at', null)
       .order('date', { ascending: true })
       .order('time', { ascending: true });
 

@@ -182,7 +182,7 @@ async function sendGiftCardEmail(giftCard: any, metadata: any, purchasedAmount: 
             Cocinarte Cooking School
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0 0 5px 0;">
-            info@cocinartepdx.com
+            cocinarte@casitaazulpdx.org
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0;">
             +1 (503) 916-9758
@@ -218,7 +218,7 @@ This gift card is valid for 1 year from the date of purchase.
 
 ---
 Cocinarte Cooking School
-Email: info@cocinartepdx.com
+Email: cocinarte@casitaazulpdx.org
 Phone: +1 (503) 916-9758
   `
 
@@ -282,7 +282,7 @@ Phone: +1 (503) 916-9758
             Cocinarte Cooking School
           </p>
           <p style="color: #FEFEFE; opacity: 0.9; font-size: 14px; margin: 0;">
-            info@cocinartepdx.com | +1 (503) 916-9758
+            cocinarte@casitaazulpdx.org | +1 (503) 916-9758
           </p>
         </div>
       </div>
@@ -294,7 +294,7 @@ Phone: +1 (503) 916-9758
     to: metadata.purchaser_email,
     subject: `Your Cocinarte Gift Card has been sent to ${metadata.recipient_name}!`,
     html: purchaserEmailHtml,
-    text: `Gift Card Sent Successfully!\n\nYour $${giftCard.initial_balance} gift card has been sent to ${metadata.recipient_name} (${metadata.recipient_email}).\n\nCode: ${giftCard.code}\n\nThank you for sharing the joy of cooking!\n\n---\nCocinarte Cooking School\nEmail: info@cocinartepdx.com\nPhone: +1 (503) 916-9758`
+    text: `Gift Card Sent Successfully!\n\nYour $${giftCard.initial_balance} gift card has been sent to ${metadata.recipient_name} (${metadata.recipient_email}).\n\nCode: ${giftCard.code}\n\nThank you for sharing the joy of cooking!\n\n---\nCocinarte Cooking School\nEmail: cocinarte@casitaazulpdx.org\nPhone: +1 (503) 916-9758`
   })
 
   console.log(`Gift card email sent to ${metadata.recipient_email}`)

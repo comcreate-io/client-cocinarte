@@ -42,7 +42,7 @@ export default function CocinarteFooter() {
               </p>
               <p className="flex items-center">
                 <Mail className="w-4 h-4 mr-2" />
-                info@cocinartepdx.com
+                cocinarte@casitaazulpdx.org
               </p>
               <p className="flex items-center">
                 <MapPin className="w-4 h-4 mr-2" />
@@ -65,7 +65,7 @@ export default function CocinarteFooter() {
                 <Link href="https://twitter.com/cocinarte" target="_blank" rel="noopener noreferrer" className="w-8 h-8 bg-cocinarte-yellow rounded-full flex items-center justify-center hover:bg-cocinarte-orange transition-colors cursor-pointer">
                   <Twitter className="w-4 h-4 text-cocinarte-black" />
                 </Link>
-                <Link href="mailto:info@cocinartepdx.com" className="w-8 h-8 bg-cocinarte-yellow rounded-full flex items-center justify-center hover:bg-cocinarte-orange transition-colors cursor-pointer">
+                <Link href="mailto:cocinarte@casitaazulpdx.org" className="w-8 h-8 bg-cocinarte-yellow rounded-full flex items-center justify-center hover:bg-cocinarte-orange transition-colors cursor-pointer">
                   <Mail className="w-4 h-4 text-cocinarte-black" />
                 </Link>
               </div>

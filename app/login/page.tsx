@@ -151,8 +151,8 @@ export default function LoginPage() {
         <div className="text-center mt-6">
           <p className="text-cocinarte-white/80 text-sm">
             Need help? Contact us at{' '}
-            <a href="mailto:info@cocinarte.com" className="text-cocinarte-white hover:text-cocinarte-yellow transition-colors duration-200">
-              info@cocinarte.com
+            <a href="mailto:cocinarte@casitaazulpdx.org" className="text-cocinarte-white hover:text-cocinarte-yellow transition-colors duration-200">
+              cocinarte@casitaazulpdx.org
             </a>
           </p>
         </div>

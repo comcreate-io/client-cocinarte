@@ -52,7 +52,7 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-2 text-slate-200 text-sm">
                 <Mail className="h-4 w-4" />
-                info@cocinartepdx.com
+                cocinarte@casitaazulpdx.org
               </div>
               <div className="flex items-center gap-2 text-slate-200 text-sm">
                 <Clock className="h-4 w-4" />

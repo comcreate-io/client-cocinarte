@@ -238,10 +238,10 @@ export default function ContactPage() {
                         <h3 className="font-ivry font-semibold text-slate mb-1 text-sm md:text-base">Email</h3>
                         <p className="text-slate-medium font-questa text-sm md:text-base break-all">
                           <a
-                            href="mailto:info@cocinartepdx.com"
+                            href="mailto:cocinarte@casitaazulpdx.org"
                             className="hover:text-amber transition-colors"
                           >
-                            info@cocinartepdx.com
+                            cocinarte@casitaazulpdx.org
                           </a>
                         </p>
                       </div>

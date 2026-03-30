@@ -11,7 +11,6 @@ import CocinarteFAQ from "@/components/cocinarte/cocinarte-faq"
 import CocinarteContact from "@/components/cocinarte/cocinarte-contact"
 import CocinarteSocialFeed from "@/components/cocinarte/cocinarte-social-feed"
 import CocinarteCTA from "@/components/cocinarte/cocinarte-cta"
-import CampPromotionPopup from "@/components/cocinarte/camp-promotion-popup"
 import Image from "next/image"
 
 export default function HomePage() {
@@ -102,7 +101,6 @@ export default function HomePage() {
         <CocinarteContact />
         <CocinarteCTA />
         <CocinarteFooter />
-        <CampPromotionPopup />
       </div>
   )
 }

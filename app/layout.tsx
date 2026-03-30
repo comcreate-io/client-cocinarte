@@ -211,7 +211,7 @@ export default function RootLayout({
                 "addressCountry": "US"
               },
               "telephone": "+1-503-916-9758",
-              "email": "info@cocinarte.com",
+              "email": "cocinarte@casitaazulpdx.org",
               "areaServed": {
                 "@type": "City",
                 "name": "Hillsboro"
