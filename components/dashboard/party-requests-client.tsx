@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   CheckCircle, XCircle, Eye, Calendar, Users, Mail, Phone, Copy, Loader2,
-  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download, Pencil
+  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download, Pencil, Plus
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -125,6 +125,91 @@ export function PartyRequestsClient() {
   const [isEditing, setIsEditing] = useState(false)
   const [editFormData, setEditFormData] = useState<EditFormData | null>(null)
   const [saving, setSaving] = useState(false)
+
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [createLoading, setCreateLoading] = useState(false)
+  const [createFormData, setCreateFormData] = useState({
+    package: '',
+    preferred_date: '',
+    number_of_children: 1,
+    child_name_age: '',
+    parent_name: '',
+    email: '',
+    phone: '',
+    special_requests: '',
+    admin_notes: '',
+  })
+
+  const resetCreateForm = () => {
+    setCreateFormData({
+      package: '',
+      preferred_date: '',
+      number_of_children: 1,
+      child_name_age: '',
+      parent_name: '',
+      email: '',
+      phone: '',
+      special_requests: '',
+      admin_notes: '',
+    })
+  }
+
+  const handleCreateParty = async () => {
+    if (!createFormData.preferred_date || !createFormData.package || !createFormData.parent_name || !createFormData.email || !createFormData.phone) {
+      setError('Please fill in all required fields (date, package, parent name, email, phone)')
+      return
+    }
+
+    setCreateLoading(true)
+    setError('')
+
+    try {
+      // Insert directly as approved
+      const { data: inserted, error: dbError } = await supabase
+        .from('party_requests')
+        .insert({
+          preferred_date: createFormData.preferred_date,
+          number_of_children: createFormData.number_of_children,
+          package: createFormData.package,
+          parent_name: createFormData.parent_name,
+          phone: createFormData.phone,
+          email: createFormData.email,
+          child_name_age: createFormData.child_name_age || null,
+          special_requests: createFormData.special_requests || null,
+          admin_notes: createFormData.admin_notes || null,
+          status: 'approved',
+        })
+        .select()
+        .single()
+
+      if (dbError) throw dbError
+
+      // Send approval email with dashboard link
+      const emailRes = await fetch('/api/party-request-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId: inserted.id,
+          action: 'approve',
+          request: inserted,
+          adminNotes: createFormData.admin_notes,
+        }),
+      })
+
+      if (!emailRes.ok) {
+        console.error('Failed to send approval email, but party was created')
+      }
+
+      await fetchRequests()
+      setIsCreateDialogOpen(false)
+      resetCreateForm()
+      setSuccessMessage('Party created successfully and approval email sent!')
+    } catch (err: any) {
+      setError(err.message || 'Failed to create party')
+    } finally {
+      setCreateLoading(false)
+    }
+  }
 
   const supabase = createClient()
 
@@ -493,6 +578,10 @@ export function PartyRequestsClient() {
             {filteredRequests.length} request{filteredRequests.length !== 1 ? 's' : ''}
           </div>
         </div>
+        <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Plus className="h-4 w-4 mr-1" />
+          Create Party
+        </Button>
       </div>
 
       {/* Messages */}
@@ -1151,6 +1240,157 @@ export function PartyRequestsClient() {
                 Close
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Party Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+        setIsCreateDialogOpen(open)
+        if (!open) resetCreateForm()
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Create Party</DialogTitle>
+            <DialogDescription>
+              Create a new party for a client. The party will be created as approved and the client will receive an email with their dashboard link.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="create-package">Package *</Label>
+                <Select
+                  value={createFormData.package}
+                  onValueChange={(value) => setCreateFormData({ ...createFormData, package: value })}
+                >
+                  <SelectTrigger id="create-package">
+                    <SelectValue placeholder="Select a package" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="art-canvas">Art: Canvas Painting</SelectItem>
+                    <SelectItem value="diy-party">DIY Party</SelectItem>
+                    <SelectItem value="mini-fiesta">Mini Fiesta</SelectItem>
+                    <SelectItem value="deluxe-fiesta">Deluxe Fiesta</SelectItem>
+                    <SelectItem value="premium-fiesta">Premium Fiesta</SelectItem>
+                    <SelectItem value="vip-package">VIP Package</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="create-date">Preferred Date *</Label>
+                <Input
+                  id="create-date"
+                  type="date"
+                  value={createFormData.preferred_date}
+                  onChange={(e) => setCreateFormData({ ...createFormData, preferred_date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="create-children">Number of Children</Label>
+                <Input
+                  id="create-children"
+                  type="number"
+                  min={1}
+                  value={createFormData.number_of_children}
+                  onChange={(e) => setCreateFormData({ ...createFormData, number_of_children: parseInt(e.target.value) || 1 })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="create-birthday-child">Birthday Child</Label>
+                <Input
+                  id="create-birthday-child"
+                  type="text"
+                  value={createFormData.child_name_age}
+                  onChange={(e) => setCreateFormData({ ...createFormData, child_name_age: e.target.value })}
+                  placeholder="e.g. Emma, age 7"
+                />
+              </div>
+            </div>
+
+            <div className="border-t pt-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Contact Information
+              </h3>
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-parent">Parent/Guardian Name *</Label>
+                  <Input
+                    id="create-parent"
+                    type="text"
+                    value={createFormData.parent_name}
+                    onChange={(e) => setCreateFormData({ ...createFormData, parent_name: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="create-email">Email *</Label>
+                    <Input
+                      id="create-email"
+                      type="email"
+                      value={createFormData.email}
+                      onChange={(e) => setCreateFormData({ ...createFormData, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="create-phone">Phone *</Label>
+                    <Input
+                      id="create-phone"
+                      type="text"
+                      value={createFormData.phone}
+                      onChange={(e) => setCreateFormData({ ...createFormData, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t pt-4 space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="create-special">Special Requests</Label>
+                <Textarea
+                  id="create-special"
+                  value={createFormData.special_requests}
+                  onChange={(e) => setCreateFormData({ ...createFormData, special_requests: e.target.value })}
+                  placeholder="Any special requests or dietary restrictions..."
+                  rows={3}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="create-admin-notes">Admin Notes</Label>
+                <Textarea
+                  id="create-admin-notes"
+                  value={createFormData.admin_notes}
+                  onChange={(e) => setCreateFormData({ ...createFormData, admin_notes: e.target.value })}
+                  placeholder="Internal admin notes..."
+                  rows={3}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} disabled={createLoading}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateParty} disabled={createLoading}>
+              {createLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create & Send Email
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
