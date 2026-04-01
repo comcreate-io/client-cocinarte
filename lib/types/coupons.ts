@@ -18,6 +18,7 @@ export interface Coupon {
   expires_at?: string | null;
   max_uses: number;
   use_count: number;
+  note?: string | null;
 }
 
 export interface CreateCouponData {
@@ -29,6 +30,7 @@ export interface CreateCouponData {
   created_by?: string;
   expires_at?: string | null;
   max_uses?: number;
+  note?: string | null;
 }
 
 export interface UpdateCouponData extends Partial<CreateCouponData> {

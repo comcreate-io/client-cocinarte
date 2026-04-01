@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Plus, Mail, Trash2, Copy, CheckCircle2, Percent, BookOpen, DollarSign, Calendar, Hash } from 'lucide-react'
+import { Plus, Mail, Trash2, Copy, CheckCircle2, Percent, BookOpen, DollarSign, Calendar, Hash, StickyNote } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -64,6 +64,8 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
   const [selectedClassId, setSelectedClassId] = useState<string>('universal')
   const [expiresAt, setExpiresAt] = useState<string>('')
   const [maxUses, setMaxUses] = useState<number>(1)
+  const [note, setNote] = useState<string>('')
+  const [customCode, setCustomCode] = useState<string>('')
 
   // Send email form state
   const [recipientEmail, setRecipientEmail] = useState('')
@@ -102,6 +104,8 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
         created_by: userEmail,
         expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
         max_uses: maxUses,
+        note: note.trim() || null,
+        custom_code: customCode.trim() || undefined,
       })
 
       setCoupons([newCoupon, ...coupons])
@@ -112,6 +116,8 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
       setSelectedClassId('universal')
       setExpiresAt('')
       setMaxUses(1)
+      setNote('')
+      setCustomCode('')
       setSuccessMessage(`Coupon ${newCoupon.code} created successfully!`)
     } catch (err: any) {
       setError(err.message || 'Failed to create coupon')
@@ -258,6 +264,7 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
               <TableHead>Uses</TableHead>
               <TableHead>Expires</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Note</TableHead>
               <TableHead>Sent To</TableHead>
               <TableHead>Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -266,7 +273,7 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
           <TableBody>
             {coupons.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
+                <TableCell colSpan={10} className="text-center text-muted-foreground">
                   No coupons created yet. Create your first coupon!
                 </TableCell>
               </TableRow>
@@ -345,6 +352,16 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
                          'Available'}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate" title={coupon.note || ''}>
+                      {coupon.note ? (
+                        <div className="flex items-center gap-1">
+                          <StickyNote className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{coupon.note}</span>
+                        </div>
+                      ) : (
+                        <span>—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {coupon.recipient_email ? (
                         <div className="text-sm">
@@ -391,136 +408,161 @@ export function CouponsClient({ initialCoupons, userEmail, availableClasses }: C
 
       {/* Create Coupon Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Create New Coupon</DialogTitle>
             <DialogDescription>
-              Generate a new discount coupon with a random 6-character code
+              Create a new discount coupon with a custom or randomly generated code
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="class-select">Valid for Class (Optional)</Label>
-              <Select value={selectedClassId} onValueChange={setSelectedClassId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All classes (universal coupon)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="universal">All classes (universal coupon)</SelectItem>
-                  {availableClasses.map((cls) => (
-                    <SelectItem key={cls.id} value={cls.id}>
+          <div className="space-y-4 py-4 overflow-y-auto pr-1">
+            {/* Custom Code & Class - side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="custom-code">Coupon Code (Optional)</Label>
+                <Input
+                  id="custom-code"
+                  placeholder="e.g. REVIEW10"
+                  value={customCode}
+                  onChange={(e) => setCustomCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                  maxLength={20}
+                  className="font-mono uppercase"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank to auto-generate
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="class-select">Valid for Class (Optional)</Label>
+                <Select value={selectedClassId} onValueChange={setSelectedClassId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All classes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="universal">All classes</SelectItem>
+                    {availableClasses.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        <div className="flex items-center gap-2">
+                          <BookOpen className="h-3 w-3" />
+                          <span>{cls.title}</span>
+                          <span className="text-xs text-muted-foreground">
+                            ({new Date(cls.date).toLocaleDateString()})
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Leave blank for all classes
+                </p>
+              </div>
+            </div>
+
+            {/* Discount Type & Value - side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Discount Type</Label>
+                <Select value={discountType} onValueChange={(val) => setDiscountType(val as DiscountType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="percentage">
                       <div className="flex items-center gap-2">
-                        <BookOpen className="h-3 w-3" />
-                        <span>{cls.title}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({new Date(cls.date).toLocaleDateString()})
-                        </span>
+                        <Percent className="h-3 w-3" />
+                        <span>Percentage (%)</span>
                       </div>
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Leave blank to create a universal coupon valid for all classes
-              </p>
+                    <SelectItem value="fixed">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-3 w-3" />
+                        <span>Fixed Amount ($)</span>
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {discountType === 'percentage' ? (
+                <div className="space-y-2">
+                  <Label htmlFor="discount">Discount Value</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="discount"
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={discountPercentage}
+                      onChange={(e) => setDiscountPercentage(parseInt(e.target.value) || 0)}
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="discount-amount">Discount Value</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">$</span>
+                    <Input
+                      id="discount-amount"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={discountAmount}
+                      onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Discount Type */}
-            <div className="space-y-2">
-              <Label>Discount Type</Label>
-              <Select value={discountType} onValueChange={(val) => setDiscountType(val as DiscountType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="percentage">
-                    <div className="flex items-center gap-2">
-                      <Percent className="h-3 w-3" />
-                      <span>Percentage (%)</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="fixed">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-3 w-3" />
-                      <span>Fixed Amount ($)</span>
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Discount Value */}
-            {discountType === 'percentage' ? (
+            {/* Expiration & Max Uses - side by side */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="discount">Discount Percentage</Label>
+                <Label htmlFor="expires-at">Expiration Date (Optional)</Label>
+                <Input
+                  id="expires-at"
+                  type="date"
+                  value={expiresAt}
+                  onChange={(e) => setExpiresAt(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Leave blank for no expiry
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="max-uses">Maximum Uses</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    id="discount"
+                    id="max-uses"
                     type="number"
                     min="1"
-                    max="100"
-                    value={discountPercentage}
-                    onChange={(e) => setDiscountPercentage(parseInt(e.target.value) || 0)}
-                    className="w-24"
+                    value={maxUses}
+                    onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
                   />
-                  <span className="text-sm text-muted-foreground">%</span>
+                  <span className="text-sm text-muted-foreground">times</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Enter a discount percentage between 1% and 100%
+                  1 = single-use
                 </p>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <Label htmlFor="discount-amount">Discount Amount</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">$</span>
-                  <Input
-                    id="discount-amount"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={discountAmount}
-                    onChange={(e) => setDiscountAmount(parseFloat(e.target.value) || 0)}
-                    className="w-32"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Enter a fixed dollar amount to discount
-                </p>
-              </div>
-            )}
-
-            {/* Expiration Date */}
-            <div className="space-y-2">
-              <Label htmlFor="expires-at">Expiration Date (Optional)</Label>
-              <Input
-                id="expires-at"
-                type="date"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave blank for a coupon that never expires
-              </p>
             </div>
 
-            {/* Max Uses */}
+            {/* Admin Note - full width */}
             <div className="space-y-2">
-              <Label htmlFor="max-uses">Maximum Uses</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  id="max-uses"
-                  type="number"
-                  min="1"
-                  value={maxUses}
-                  onChange={(e) => setMaxUses(parseInt(e.target.value) || 1)}
-                  className="w-24"
-                />
-                <span className="text-sm text-muted-foreground">times</span>
-              </div>
+              <Label htmlFor="note">Admin Note (Optional)</Label>
+              <Input
+                id="note"
+                placeholder="e.g. Post dumpling class coupon code"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
               <p className="text-xs text-muted-foreground">
-                How many times this coupon can be redeemed (1 = single-use)
+                Internal note to track why this coupon was created
               </p>
             </div>
           </div>

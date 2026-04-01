@@ -17,8 +17,8 @@ export class CouponsClientService {
   /**
    * Create a new coupon with a random code
    */
-  async createCoupon(data: Omit<CreateCouponData, 'code'>): Promise<Coupon> {
-    const code = this.generateCouponCode()
+  async createCoupon(data: Omit<CreateCouponData, 'code'> & { custom_code?: string }): Promise<Coupon> {
+    const code = data.custom_code?.trim().toUpperCase() || this.generateCouponCode()
 
     const insertData: any = {
       code,
@@ -27,6 +27,7 @@ export class CouponsClientService {
       created_by: data.created_by,
       max_uses: data.max_uses || 1,
       expires_at: data.expires_at || null,
+      note: data.note || null,
     }
 
     if (data.discount_type === 'percentage') {
