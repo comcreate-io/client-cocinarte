@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   CheckCircle, XCircle, Eye, Calendar, Users, Mail, Phone, Copy, Loader2,
-  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download, Pencil, Plus
+  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download, Pencil, Plus, Ban
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import {
@@ -46,7 +46,7 @@ interface PartyRequest {
   email: string
   child_name_age: string | null
   special_requests: string | null
-  status: 'pending' | 'approved' | 'declined'
+  status: 'pending' | 'approved' | 'declined' | 'withdrawn'
   admin_notes: string | null
   dashboard_token: string
   created_at: string
@@ -125,6 +125,9 @@ export function PartyRequestsClient() {
   const [isEditing, setIsEditing] = useState(false)
   const [editFormData, setEditFormData] = useState<EditFormData | null>(null)
   const [saving, setSaving] = useState(false)
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
+  const [withdrawNotes, setWithdrawNotes] = useState('')
+  const [withdrawLoading, setWithdrawLoading] = useState(false)
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
@@ -387,7 +390,7 @@ export function PartyRequestsClient() {
     if (!selectedRequest) return
     setEditFormData({
       package: selectedRequest.package,
-      preferred_date: selectedRequest.preferred_date,
+      preferred_date: selectedRequest.preferred_date ? new Date(selectedRequest.preferred_date).toISOString().split('T')[0] : '',
       number_of_children: selectedRequest.number_of_children,
       child_name_age: selectedRequest.child_name_age || '',
       parent_name: selectedRequest.parent_name,
@@ -506,6 +509,42 @@ export function PartyRequestsClient() {
     }
   }
 
+  const handleOpenWithdrawDialog = (request: PartyRequest) => {
+    setSelectedRequest(request)
+    setWithdrawNotes(request.admin_notes || '')
+    setIsWithdrawDialogOpen(true)
+  }
+
+  const handleWithdrawParty = async () => {
+    if (!selectedRequest) return
+
+    setWithdrawLoading(true)
+    setError('')
+    setSuccessMessage('')
+
+    try {
+      const { error: dbError } = await supabase
+        .from('party_requests')
+        .update({
+          status: 'withdrawn',
+          admin_notes: withdrawNotes || null,
+        })
+        .eq('id', selectedRequest.id)
+
+      if (dbError) throw dbError
+
+      await fetchRequests()
+      setIsWithdrawDialogOpen(false)
+      setSelectedRequest(null)
+      setWithdrawNotes('')
+      setSuccessMessage('Party request marked as withdrawn by client.')
+    } catch (err: any) {
+      setError(err.message || 'Failed to withdraw request')
+    } finally {
+      setWithdrawLoading(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -514,6 +553,8 @@ export function PartyRequestsClient() {
         return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">Approved</Badge>
       case 'declined':
         return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Declined</Badge>
+      case 'withdrawn':
+        return <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-300">Withdrawn by Client</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -526,6 +567,7 @@ export function PartyRequestsClient() {
       'mini-fiesta': 'Mini Fiesta',
       'deluxe-fiesta': 'Deluxe Fiesta',
       'premium-fiesta': 'Premium Fiesta',
+      'dance-music': 'Dance & Music Party',
       'vip-package': 'VIP Package'
     }
     return packageNames[pkg] || pkg
@@ -572,6 +614,7 @@ export function PartyRequestsClient() {
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="declined">Declined</SelectItem>
+              <SelectItem value="withdrawn">Withdrawn</SelectItem>
             </SelectContent>
           </Select>
           <div className="text-sm text-muted-foreground">
@@ -646,23 +689,34 @@ export function PartyRequestsClient() {
                         View
                       </Button>
                       {request.status === 'approved' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleCopyDashboardLink(request)}
-                        >
-                          {copiedDashboardLink === request.id ? (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="h-4 w-4 mr-1" />
-                              Dashboard
-                            </>
-                          )}
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCopyDashboardLink(request)}
+                          >
+                            {copiedDashboardLink === request.id ? (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-1 text-green-600" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-4 w-4 mr-1" />
+                                Dashboard
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-orange-600 hover:text-orange-700"
+                            onClick={() => handleOpenWithdrawDialog(request)}
+                          >
+                            <Ban className="h-4 w-4 mr-1" />
+                            Withdraw
+                          </Button>
+                        </>
                       )}
                       {request.status === 'pending' && (
                         <>
@@ -1064,6 +1118,7 @@ export function PartyRequestsClient() {
                       <SelectItem value="mini-fiesta">Mini Fiesta</SelectItem>
                       <SelectItem value="deluxe-fiesta">Deluxe Fiesta</SelectItem>
                       <SelectItem value="premium-fiesta">Premium Fiesta</SelectItem>
+                      <SelectItem value="dance-music">Dance & Music Party</SelectItem>
                       <SelectItem value="diy-party">DIY Party</SelectItem>
                       <SelectItem value="vip-package">VIP Package</SelectItem>
                     </SelectContent>
@@ -1236,9 +1291,26 @@ export function PartyRequestsClient() {
                 </Button>
               </div>
             ) : (
-              <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
-                Close
-              </Button>
+              <div className="flex gap-2 w-full justify-between">
+                <div>
+                  {selectedRequest?.status === 'approved' && (
+                    <Button
+                      variant="outline"
+                      className="text-orange-600 hover:text-orange-700"
+                      onClick={() => {
+                        setIsDetailsDialogOpen(false)
+                        handleOpenWithdrawDialog(selectedRequest)
+                      }}
+                    >
+                      <Ban className="h-4 w-4 mr-1" />
+                      Withdraw
+                    </Button>
+                  )}
+                </div>
+                <Button variant="outline" onClick={() => setIsDetailsDialogOpen(false)}>
+                  Close
+                </Button>
+              </div>
             )}
           </DialogFooter>
         </DialogContent>
@@ -1436,6 +1508,47 @@ export function PartyRequestsClient() {
               className={actionType === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}
             >
               {actionLoading ? 'Processing...' : actionType === 'approve' ? 'Approve & Send Email' : 'Decline & Send Email'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Withdraw Dialog */}
+      <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Withdraw Party Request</DialogTitle>
+            <DialogDescription>
+              {selectedRequest && `Mark the request from ${selectedRequest.parent_name} as withdrawn by client. No email will be sent.`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Reason / Notes (optional)
+              </label>
+              <Textarea
+                value={withdrawNotes}
+                onChange={(e) => setWithdrawNotes(e.target.value)}
+                placeholder="e.g. Client did not follow through with booking, no payment received..."
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsWithdrawDialogOpen(false)}
+              disabled={withdrawLoading}
+            >
+              Go Back
+            </Button>
+            <Button
+              onClick={handleWithdrawParty}
+              disabled={withdrawLoading}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {withdrawLoading ? 'Processing...' : 'Mark as Withdrawn'}
             </Button>
           </DialogFooter>
         </DialogContent>

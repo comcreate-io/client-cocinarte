@@ -22,7 +22,7 @@ export interface PartyRequestWithToken {
   email: string
   child_name_age: string | null
   special_requests: string | null
-  status: 'pending' | 'approved' | 'declined'
+  status: 'pending' | 'approved' | 'declined' | 'withdrawn'
   dashboard_token: string
   created_at: string
   updated_at: string

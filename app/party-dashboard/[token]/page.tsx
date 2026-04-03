@@ -189,6 +189,7 @@ export default function PartyDashboardPage() {
       'mini-fiesta': 'Mini Fiesta',
       'deluxe-fiesta': 'Deluxe Fiesta',
       'premium-fiesta': 'Premium Fiesta',
+      'dance-music': 'Dance & Music Party',
       'vip-package': 'VIP Package',
     }
     return packageNames[pkg] || pkg
