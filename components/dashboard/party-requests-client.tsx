@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -25,9 +25,12 @@ import {
 } from '@/components/ui/dialog'
 import {
   CheckCircle, XCircle, Eye, Calendar, Users, Mail, Phone, Copy, Loader2,
-  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download, Pencil, Plus, Ban
+  ChevronDown, ChevronUp, Camera, CameraOff, AlertTriangle, Baby, Shield, User, Download, Pencil, Plus, Ban,
+  Send, ArrowLeft, Code, Save, Trash2, AlertCircle, CheckCircle2
 } from 'lucide-react'
+import { Progress } from '@/components/ui/progress'
 import { createClient } from '@/lib/supabase/client'
+import type { EmailTemplate } from '@/lib/supabase'
 import {
   Select,
   SelectContent,
@@ -102,6 +105,49 @@ interface EditFormData {
   admin_notes: string
 }
 
+interface CampaignProgress {
+  total: number
+  sent: number
+  failed: number
+  currentBatch: number
+  totalBatches: number
+  errors: Array<{ email: string; error: string }>
+  status: 'running' | 'completed' | 'failed'
+}
+
+function getDefaultPartyTemplate() {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Template</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+    <tr>
+      <td style="padding: 40px 30px;">
+        <h1 style="margin: 0 0 20px; color: #F0614F; font-size: 24px;">Hello {{first_name}}!</h1>
+        <p style="margin: 0 0 20px; color: #666666; font-size: 16px; line-height: 1.5;">
+          Thank you for joining us at the birthday party! Here is your email content.
+        </p>
+        <a href="#" style="display: inline-block; padding: 12px 24px; background-color: #F0614F; color: #ffffff; text-decoration: none; border-radius: 4px; font-size: 16px;">
+          Call to Action
+        </a>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 30px; background-color: #f8f8f8; text-align: center;">
+        <p style="margin: 0; color: #999999; font-size: 12px;">
+          &copy; ${new Date().getFullYear()} Cocinarte PDX. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`
+}
+
 export function PartyRequestsClient() {
   const [requests, setRequests] = useState<PartyRequest[]>([])
   const [filteredRequests, setFilteredRequests] = useState<PartyRequest[]>([])
@@ -128,6 +174,34 @@ export function PartyRequestsClient() {
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false)
   const [withdrawNotes, setWithdrawNotes] = useState('')
   const [withdrawLoading, setWithdrawLoading] = useState(false)
+
+  // Email state
+  const [showEmailDialog, setShowEmailDialog] = useState(false)
+  const [emailPartyRequest, setEmailPartyRequest] = useState<PartyRequest | null>(null)
+  const [templates, setTemplates] = useState<EmailTemplate[]>([])
+  const [loadingTemplates, setLoadingTemplates] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate | null>(null)
+  const [showPreviewModal, setShowPreviewModal] = useState(false)
+  const [showTestModal, setShowTestModal] = useState(false)
+  const [campaignProgress, setCampaignProgress] = useState<CampaignProgress | null>(null)
+  const [isSending, setIsSending] = useState(false)
+  const [activityLog, setActivityLog] = useState<Array<{ time: string; message: string; type: 'info' | 'success' | 'error' }>>([])
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const [testEmail, setTestEmail] = useState('')
+  const [isSendingTest, setIsSendingTest] = useState(false)
+  const [testError, setTestError] = useState<string | null>(null)
+  const [testSuccess, setTestSuccess] = useState(false)
+  const [editorMode, setEditorMode] = useState<'list' | 'editor' | 'quickEmail'>('list')
+  const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null)
+  const [editorName, setEditorName] = useState('')
+  const [editorSubject, setEditorSubject] = useState('')
+  const [editorHtml, setEditorHtml] = useState('')
+  const [showEditorPreview, setShowEditorPreview] = useState(false)
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false)
+  const [editorError, setEditorError] = useState<string | null>(null)
+  const [quickEmailSubject, setQuickEmailSubject] = useState('')
+  const [quickEmailMessage, setQuickEmailMessage] = useState('')
+  const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
@@ -545,6 +619,347 @@ export function PartyRequestsClient() {
     }
   }
 
+  // Email helper functions
+  const getUniquePartyRecipients = () => {
+    const seen = new Set<string>()
+    const recipients: Array<{ email: string; first_name: string; last_name: string }> = []
+    for (const g of selectedGuests) {
+      const email = g.parent_email?.toLowerCase().trim()
+      if (email && !seen.has(email)) {
+        seen.add(email)
+        const parts = g.parent_name.split(' ')
+        recipients.push({
+          email: g.parent_email,
+          first_name: parts[0] || '',
+          last_name: parts.slice(1).join(' ') || '',
+        })
+      }
+    }
+    return recipients
+  }
+
+  const buildPartyContext = () => {
+    if (!emailPartyRequest) return undefined
+    const dateObj = new Date(emailPartyRequest.preferred_date)
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+    return {
+      class_name: `${emailPartyRequest.child_name_age || 'Birthday'} Party`,
+      class_date: formattedDate,
+      class_time: '',
+      class_description: getPackageDisplayName(emailPartyRequest.package),
+      class_type: 'Birthday Party',
+      class_price: '',
+    }
+  }
+
+  const fetchTemplates = async () => {
+    setLoadingTemplates(true)
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('email_templates')
+        .select('*')
+        .order('updated_at', { ascending: false })
+      if (fetchError) {
+        console.error('Error fetching templates:', fetchError)
+        return
+      }
+      setTemplates(data || [])
+    } catch (err) {
+      console.error('Error fetching templates:', err)
+    } finally {
+      setLoadingTemplates(false)
+    }
+  }
+
+  const handleOpenEmailDialog = (request: PartyRequest) => {
+    setEmailPartyRequest(request)
+    setShowEmailDialog(true)
+    fetchTemplates()
+  }
+
+  const resetCampaignState = () => {
+    setCampaignProgress(null)
+    setIsSending(false)
+    setActivityLog([])
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      abortControllerRef.current = null
+    }
+  }
+
+  const resetTestState = () => {
+    setTestEmail('')
+    setTestError(null)
+    setTestSuccess(false)
+    setIsSendingTest(false)
+  }
+
+  const resetEditorState = () => {
+    setEditorMode('list')
+    setEditingTemplate(null)
+    setEditorName('')
+    setEditorSubject('')
+    setEditorHtml('')
+    setShowEditorPreview(false)
+    setIsSavingTemplate(false)
+    setEditorError(null)
+    setQuickEmailSubject('')
+    setQuickEmailMessage('')
+  }
+
+  const resetEmailDialog = () => {
+    setShowEmailDialog(false)
+    setSelectedTemplate(null)
+    setEmailPartyRequest(null)
+    resetCampaignState()
+    resetEditorState()
+  }
+
+  const startCampaign = async (template: EmailTemplate) => {
+    setSelectedTemplate(template)
+    setIsSending(true)
+    setActivityLog([{ time: new Date().toLocaleTimeString(), message: 'Starting campaign...', type: 'info' }])
+
+    const recipients = getUniquePartyRecipients()
+    abortControllerRef.current = new AbortController()
+
+    try {
+      const response = await fetch('/api/campaigns/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templateId: template.id,
+          recipients,
+          classContext: buildPartyContext(),
+        }),
+        signal: abortControllerRef.current.signal,
+      })
+
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+
+      if (!reader) throw new Error('Failed to start campaign')
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const text = decoder.decode(value)
+        const lines = text.split('\n\n')
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data: CampaignProgress = JSON.parse(line.slice(6))
+              setCampaignProgress(data)
+
+              if (data.status === 'running') {
+                setActivityLog(prev => [...prev, {
+                  time: new Date().toLocaleTimeString(),
+                  message: `Processing batch ${data.currentBatch}/${data.totalBatches} (${data.sent + data.failed}/${data.total})`,
+                  type: 'info'
+                }])
+              } else if (data.status === 'completed') {
+                setActivityLog(prev => [...prev, {
+                  time: new Date().toLocaleTimeString(),
+                  message: `Campaign completed! ${data.sent} sent, ${data.failed} failed`,
+                  type: data.failed > 0 ? 'error' : 'success'
+                }])
+              } else if (data.status === 'failed') {
+                setActivityLog(prev => [...prev, {
+                  time: new Date().toLocaleTimeString(),
+                  message: `Campaign failed: ${data.errors[0]?.error || 'Unknown error'}`,
+                  type: 'error'
+                }])
+              }
+            } catch {
+              // Ignore parse errors
+            }
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name !== 'AbortError') {
+        setActivityLog(prev => [...prev, { time: new Date().toLocaleTimeString(), message: `Error: ${error.message}`, type: 'error' }])
+      }
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const sendQuickEmail = async () => {
+    if (!emailPartyRequest || !quickEmailSubject.trim() || !quickEmailMessage.trim()) return
+
+    setIsSending(true)
+    setActivityLog([{ time: new Date().toLocaleTimeString(), message: 'Preparing to send email...', type: 'info' }])
+
+    const recipients = getUniquePartyRecipients()
+    setCampaignProgress({
+      total: recipients.length,
+      sent: 0,
+      failed: 0,
+      currentBatch: 1,
+      totalBatches: 1,
+      errors: [],
+      status: 'running'
+    })
+
+    try {
+      const response = await fetch('/api/parties/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partyRequestId: emailPartyRequest.id,
+          subject: quickEmailSubject,
+          message: quickEmailMessage,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) throw new Error(data.error || 'Failed to send emails')
+
+      setCampaignProgress({
+        total: data.stats.total || recipients.length,
+        sent: data.stats.sent || 0,
+        failed: data.stats.failed || 0,
+        currentBatch: 1,
+        totalBatches: 1,
+        errors: data.details?.filter((d: any) => !d.success).map((d: any) => ({
+          email: d.email || 'unknown',
+          error: d.error || 'Unknown error'
+        })) || [],
+        status: 'completed'
+      })
+
+      setActivityLog(prev => [...prev, {
+        time: new Date().toLocaleTimeString(),
+        message: `Successfully sent ${data.stats.sent} email(s)!`,
+        type: 'success'
+      }])
+    } catch (error: any) {
+      setCampaignProgress({
+        total: recipients.length,
+        sent: 0,
+        failed: recipients.length,
+        currentBatch: 1,
+        totalBatches: 1,
+        errors: [{ email: 'all', error: error.message }],
+        status: 'failed'
+      })
+
+      setActivityLog(prev => [...prev, { time: new Date().toLocaleTimeString(), message: `Error: ${error.message}`, type: 'error' }])
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const sendTestEmail = async () => {
+    if (!selectedTemplate || !testEmail) return
+
+    setIsSendingTest(true)
+    setTestError(null)
+    setTestSuccess(false)
+
+    try {
+      const response = await fetch(`/api/emails/templates/${selectedTemplate.id}/send-test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, classContext: buildPartyContext() }),
+      })
+
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Failed to send test email')
+      setTestSuccess(true)
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : 'Failed to send test email')
+    } finally {
+      setIsSendingTest(false)
+    }
+  }
+
+  const openNewTemplate = () => {
+    setEditingTemplate(null)
+    setEditorName('')
+    setEditorSubject('')
+    setEditorHtml(getDefaultPartyTemplate())
+    setShowEditorPreview(false)
+    setEditorError(null)
+    setEditorMode('editor')
+  }
+
+  const openEditTemplate = (template: EmailTemplate) => {
+    setEditingTemplate(template)
+    setEditorName(template.name)
+    setEditorSubject(template.subject)
+    setEditorHtml(template.html_content)
+    setShowEditorPreview(false)
+    setEditorError(null)
+    setEditorMode('editor')
+  }
+
+  const openQuickEmail = () => {
+    setQuickEmailSubject('')
+    setQuickEmailMessage('')
+    setEditorMode('quickEmail')
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!editorName.trim()) { setEditorError('Template name is required'); return }
+    if (!editorSubject.trim()) { setEditorError('Subject line is required'); return }
+    if (!editorHtml.trim()) { setEditorError('HTML content is required'); return }
+
+    setIsSavingTemplate(true)
+    setEditorError(null)
+
+    try {
+      const url = editingTemplate
+        ? `/api/emails/templates/${editingTemplate.id}`
+        : '/api/emails/templates'
+      const method = editingTemplate ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editorName,
+          subject: editorSubject,
+          html_content: editorHtml,
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save template')
+      }
+
+      await fetchTemplates()
+      resetEditorState()
+    } catch (err) {
+      setEditorError(err instanceof Error ? err.message : 'Failed to save template')
+    } finally {
+      setIsSavingTemplate(false)
+    }
+  }
+
+  const confirmDeleteTemplate = async (template: EmailTemplate) => {
+    setDeletingTemplateId(template.id)
+    try {
+      const response = await fetch(`/api/emails/templates/${template.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Failed to delete template')
+      await fetchTemplates()
+    } catch (err) {
+      console.error('Error deleting template:', err)
+    } finally {
+      setDeletingTemplateId(null)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -867,14 +1282,24 @@ export function PartyRequestsClient() {
                     </h3>
                     <div className="flex items-center gap-2">
                       {selectedGuests.length > 0 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleDownloadGuestList}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Download List
-                        </Button>
+                        <>
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700"
+                            onClick={() => handleOpenEmailDialog(selectedRequest)}
+                          >
+                            <Mail className="h-3 w-3 mr-1" />
+                            Email All
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleDownloadGuestList}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Download List
+                          </Button>
+                        </>
                       )}
                       <Button
                         variant="outline"
@@ -1549,6 +1974,380 @@ export function PartyRequestsClient() {
               className="bg-orange-600 hover:bg-orange-700"
             >
               {withdrawLoading ? 'Processing...' : 'Mark as Withdrawn'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email All Guests Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={(open) => { if (!open) resetEmailDialog(); setShowEmailDialog(open) }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email All Party Guests
+            </DialogTitle>
+            <DialogDescription>
+              {campaignProgress
+                ? `Sending emails to party guests`
+                : emailPartyRequest
+                ? `Send to ${getUniquePartyRecipients().length} guest parent${getUniquePartyRecipients().length !== 1 ? 's' : ''} (${selectedGuests.length} guest${selectedGuests.length !== 1 ? 's' : ''}) for ${emailPartyRequest.child_name_age || 'Birthday'}'s party`
+                : ''
+              }
+            </DialogDescription>
+          </DialogHeader>
+
+          {campaignProgress ? (
+            <div className="space-y-4">
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progress</span>
+                  <span>{campaignProgress.sent + campaignProgress.failed} / {campaignProgress.total}</span>
+                </div>
+                <Progress
+                  value={campaignProgress.total > 0 ? ((campaignProgress.sent + campaignProgress.failed) / campaignProgress.total) * 100 : 0}
+                />
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center p-3 bg-slate-100 rounded-lg">
+                  <p className="text-2xl font-bold text-green-600">{campaignProgress.sent}</p>
+                  <p className="text-xs text-slate-500">Sent</p>
+                </div>
+                <div className="text-center p-3 bg-slate-100 rounded-lg">
+                  <p className="text-2xl font-bold text-red-600">{campaignProgress.failed}</p>
+                  <p className="text-xs text-slate-500">Failed</p>
+                </div>
+                <div className="text-center p-3 bg-slate-100 rounded-lg">
+                  <p className="text-2xl font-bold">{campaignProgress.currentBatch}/{campaignProgress.totalBatches}</p>
+                  <p className="text-xs text-slate-500">Batches</p>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div className={`flex items-center gap-2 p-3 rounded-lg ${
+                campaignProgress.status === 'completed' ? 'bg-green-50 text-green-700' :
+                campaignProgress.status === 'failed' ? 'bg-red-50 text-red-700' :
+                'bg-blue-50 text-blue-700'
+              }`}>
+                {campaignProgress.status === 'completed' ? (
+                  <CheckCircle2 className="h-5 w-5" />
+                ) : campaignProgress.status === 'failed' ? (
+                  <XCircle className="h-5 w-5" />
+                ) : (
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                )}
+                <span className="font-medium capitalize">{campaignProgress.status}</span>
+              </div>
+
+              {/* Activity Log */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Activity Log</p>
+                <div className="border rounded-lg max-h-40 overflow-y-auto">
+                  {activityLog.map((log, i) => (
+                    <div key={i} className={`px-3 py-2 text-sm border-b last:border-b-0 flex items-start gap-2 ${
+                      log.type === 'error' ? 'bg-red-50' :
+                      log.type === 'success' ? 'bg-green-50' : ''
+                    }`}>
+                      <span className="text-slate-400 text-xs whitespace-nowrap">{log.time}</span>
+                      <span>{log.message}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Errors */}
+              {campaignProgress.errors.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-red-600">Errors ({campaignProgress.errors.length})</p>
+                  <div className="border border-red-200 rounded-lg max-h-32 overflow-y-auto">
+                    {campaignProgress.errors.map((error, i) => (
+                      <div key={i} className="px-3 py-2 text-sm border-b last:border-b-0 bg-red-50">
+                        <span className="font-medium">{error.email}:</span> {error.error}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter>
+                {campaignProgress.status === 'completed' || campaignProgress.status === 'failed' ? (
+                  <Button onClick={resetEmailDialog}>Close</Button>
+                ) : (
+                  <Button variant="outline" disabled>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Sending...
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {editorMode === 'editor' ? (
+                /* Inline Template Editor */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={resetEditorState} className="flex items-center gap-1">
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                    <h3 className="font-medium">
+                      {editingTemplate ? 'Edit Template' : 'New Template'}
+                    </h3>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Template Name</label>
+                      <Input value={editorName} onChange={(e) => setEditorName(e.target.value)} placeholder="e.g., Recipe Follow-Up" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Subject Line</label>
+                      <Input value={editorSubject} onChange={(e) => setEditorSubject(e.target.value)} placeholder="e.g., Recipes from the Party!" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">HTML Content</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowEditorPreview(false)}
+                          className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors ${!showEditorPreview ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-secondary'}`}
+                        >
+                          <Code className="h-4 w-4" />
+                          Code
+                        </button>
+                        <button
+                          onClick={() => setShowEditorPreview(true)}
+                          className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors ${showEditorPreview ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-secondary'}`}
+                        >
+                          <Eye className="h-4 w-4" />
+                          Preview
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-xs text-muted-foreground">
+                      Available variables: {'{{first_name}}'}, {'{{last_name}}'}, {'{{email}}'}, {'{{full_name}}'}, {'{{class_name}}'}, {'{{class_date}}'}, {'{{class_description}}'}
+                    </div>
+
+                    {showEditorPreview ? (
+                      <div className="border rounded-lg p-4 min-h-[300px] bg-white overflow-auto">
+                        <div dangerouslySetInnerHTML={{ __html: editorHtml }} />
+                      </div>
+                    ) : (
+                      <textarea
+                        value={editorHtml}
+                        onChange={(e) => setEditorHtml(e.target.value)}
+                        className="w-full h-[300px] p-4 font-mono text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+                        placeholder="Enter your HTML email template..."
+                      />
+                    )}
+                  </div>
+
+                  {editorError && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                      <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      <p className="text-sm">{editorError}</p>
+                    </div>
+                  )}
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={resetEditorState}>Cancel</Button>
+                    <Button onClick={handleSaveTemplate} disabled={isSavingTemplate} className="bg-blue-600 hover:bg-blue-700">
+                      {isSavingTemplate ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+                      ) : (
+                        <><Save className="h-4 w-4 mr-2" />{editingTemplate ? 'Update Template' : 'Save Template'}</>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              ) : editorMode === 'quickEmail' ? (
+                /* Quick Email Mode */
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" onClick={resetEditorState} className="flex items-center gap-1">
+                      <ArrowLeft className="h-4 w-4" />
+                      Back
+                    </Button>
+                    <h3 className="font-medium">Quick Email</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Subject *</label>
+                      <Input value={quickEmailSubject} onChange={(e) => setQuickEmailSubject(e.target.value)} placeholder="Enter email subject..." />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Message *</label>
+                      <textarea
+                        value={quickEmailMessage}
+                        onChange={(e) => setQuickEmailMessage(e.target.value)}
+                        placeholder="Write your message here..."
+                        rows={10}
+                        className="w-full px-3 py-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Each email will be personalized with the guest child's name and party details using Cocinarte branding.
+                      </p>
+                    </div>
+                  </div>
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={resetEditorState}>Cancel</Button>
+                    <Button
+                      onClick={() => sendQuickEmail()}
+                      disabled={!quickEmailSubject.trim() || !quickEmailMessage.trim() || isSending}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      {isSending ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                      ) : (
+                        <><Send className="h-4 w-4 mr-2" />Send to {getUniquePartyRecipients().length} Parent{getUniquePartyRecipients().length !== 1 ? 's' : ''}</>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              ) : (
+                /* Template List */
+                <>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      size="sm"
+                      onClick={openNewTemplate}
+                      className="flex items-center justify-center gap-2 border-dashed border-2 bg-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-800"
+                      variant="outline"
+                    >
+                      <Plus className="h-4 w-4" />
+                      New Template
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={openQuickEmail}
+                      className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Send className="h-4 w-4" />
+                      Quick Email
+                    </Button>
+                  </div>
+
+                  {loadingTemplates ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                      <span className="ml-3 text-slate-500">Loading templates...</span>
+                    </div>
+                  ) : templates.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <Mail className="h-10 w-10 mx-auto mb-3" />
+                      <p className="font-medium">No email templates yet</p>
+                      <p className="text-sm mt-1">Click &quot;New Template&quot; above to create one.</p>
+                    </div>
+                  ) : (
+                    <div className="grid gap-3">
+                      {templates.map((template) => (
+                        <div key={template.id} className="border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium truncate">{template.name}</h3>
+                            <p className="text-sm text-slate-500 truncate">Subject: {template.subject}</p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 p-2" onClick={() => startCampaign(template)} disabled={isSending} title="Send to all guests">
+                              <Send className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openEditTemplate(template)} className="p-2" title="Edit template">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => { setSelectedTemplate(template); setShowPreviewModal(true) }} className="p-2" title="Preview template">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => { setSelectedTemplate(template); setShowTestModal(true) }} className="p-2" title="Send test email">
+                              <Mail className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => confirmDeleteTemplate(template)}
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                              disabled={deletingTemplateId === template.id}
+                              title="Delete template"
+                            >
+                              {deletingTemplateId === template.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <DialogFooter>
+                    <Button variant="outline" onClick={resetEmailDialog}>Close</Button>
+                  </DialogFooter>
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Preview: {selectedTemplate?.name}</DialogTitle>
+            <DialogDescription>Subject: {selectedTemplate?.subject}</DialogDescription>
+          </DialogHeader>
+          <div className="border rounded-lg p-4 bg-white min-h-[400px] overflow-auto">
+            <div dangerouslySetInnerHTML={{ __html: selectedTemplate?.html_content || '' }} />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowPreviewModal(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Test Email Modal */}
+      <Dialog open={showTestModal} onOpenChange={(open) => { if (!open) resetTestState(); setShowTestModal(open) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Send Test Email</DialogTitle>
+            <DialogDescription>Send a test email to preview &quot;{selectedTemplate?.name}&quot;</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Email Address</label>
+              <input
+                type="email"
+                value={testEmail}
+                onChange={(e) => setTestEmail(e.target.value)}
+                placeholder="test@example.com"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {testError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm">{testError}</p>
+              </div>
+            )}
+            {testSuccess && (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-600">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm">Test email sent successfully!</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { resetTestState(); setShowTestModal(false) }}>Cancel</Button>
+            <Button onClick={sendTestEmail} disabled={!testEmail || isSendingTest} className="bg-blue-600 hover:bg-blue-700">
+              {isSendingTest ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+              ) : (
+                <><Send className="h-4 w-4 mr-2" />Send Test</>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
