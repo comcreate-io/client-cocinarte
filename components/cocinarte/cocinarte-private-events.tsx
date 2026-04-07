@@ -234,7 +234,7 @@ export default function CocinartePrivateEvents() {
               </div>
               <div className="hidden sm:block h-16 w-px bg-cocinarte-blue/30"></div>
               <div className="text-center">
-                <p className="text-3xl font-bold text-white">Up to 12</p>
+                <p className="text-3xl font-bold text-white">Up to 5</p>
                 <p className="text-sm text-cocinarte-blue mt-1">People (including parents)</p>
               </div>
             </div>
@@ -243,7 +243,7 @@ export default function CocinartePrivateEvents() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-8">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <Users className="w-8 h-8 text-cocinarte-yellow mx-auto mb-2" />
-                <p className="text-sm font-medium">Up to 12 Guests</p>
+                <p className="text-sm font-medium">Up to 5 Guests</p>
                 <p className="text-xs text-cocinarte-blue">Adults & Kids</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
@@ -317,7 +317,7 @@ export default function CocinartePrivateEvents() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h5 className="font-bold text-blue-800 mb-2">👥 Group Size</h5>
-                <p className="text-sm text-blue-700">Package includes up to <strong>12 people total</strong> (children and accompanying adults). Additional guests may be possible for an extra fee - please inquire.</p>
+                <p className="text-sm text-blue-700">Package includes up to <strong>5 people total</strong> (children and accompanying adults). Additional guests may be possible for an extra fee - please inquire.</p>
               </div>
 
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -385,17 +385,17 @@ export default function CocinartePrivateEvents() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Number of Guests * <span className="font-normal text-slate-500">(max 12)</span></label>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Number of Guests * <span className="font-normal text-slate-500">(max 5)</span></label>
                   <input
                     type="number"
                     name="numberOfGuests"
                     value={formData.numberOfGuests}
                     onChange={handleInputChange}
                     min="1"
-                    max="12"
+                    max="5"
                     required
                     className="w-full px-4 py-3 border-2 border-cocinarte-blue/30 rounded-xl focus:ring-2 focus:ring-cocinarte-orange focus:border-cocinarte-orange transition-all duration-200 text-sm bg-white hover:bg-gray-50"
-                    placeholder="Total people (1-12)"
+                    placeholder="Total people (1-5)"
                   />
                 </div>
                 <div>

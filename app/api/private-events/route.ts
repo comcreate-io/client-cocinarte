@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
             <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
               <h3 style="color: #92400e; margin-top: 0; margin-bottom: 10px;">💰 Pricing Info</h3>
               <p style="color: #78350f; font-size: 16px; margin: 0;">
-                Standard Rate: <strong>$350</strong> (up to 12 people, no decorations included)
+                Standard Rate: <strong>$350</strong> (up to 5 people, no decorations included)
               </p>
             </div>
 
@@ -181,7 +181,7 @@ ${dietaryRestrictions ? `Dietary Restrictions: ${dietaryRestrictions}` : ''}
 
 PRICING INFO:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Standard Rate: $350 (up to 12 people, no decorations included)
+Standard Rate: $350 (up to 5 people, no decorations included)
 
 CONTACT INFORMATION:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -255,7 +255,7 @@ This request was submitted from the Private Classes section on your website.
 
             <div style="background-color: #FCB414; color: #000000; padding: 15px 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
               <p style="margin: 0; font-size: 18px; font-weight: bold;">Package Price: $350</p>
-              <p style="margin: 5px 0 0 0; font-size: 14px;">Up to 12 people • 2-hour class • All ingredients included</p>
+              <p style="margin: 5px 0 0 0; font-size: 14px;">Up to 5 people • 2-hour class • All ingredients included</p>
             </div>
 
             <div style="background-color: #CDECF9; padding: 20px; border-radius: 8px; margin: 25px 0;">
@@ -309,7 +309,7 @@ Time: ${preferredTime}
 Selected Dish: ${selectedMenuName}
 
 PACKAGE PRICE: $350
-• Up to 12 people
+• Up to 5 people
 • 2-hour class
 • All ingredients included
 • Decorations NOT included
