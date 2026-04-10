@@ -880,11 +880,12 @@ export default function CocinarteBookingPopup({ isOpen, onClose, selectedClass, 
       }
 
       const enrolled = currentClass.enrolled || 0
+      const reservedSpots = currentClass.reserved_spots || 0
       const maxStudents = currentClass.maxStudents || 0
 
       const totalBookingChildren = selectedChildIds.length + guestList.length
-      if (enrolled + totalBookingChildren > maxStudents) {
-        const spotsLeft = maxStudents - enrolled
+      if (enrolled + reservedSpots + totalBookingChildren > maxStudents) {
+        const spotsLeft = maxStudents - enrolled - reservedSpots
         if (spotsLeft <= 0) {
           setPaymentError('Sorry, this class is now full. Please choose another class.')
         } else {

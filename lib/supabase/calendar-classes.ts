@@ -18,6 +18,7 @@ export interface CalendarClass {
   requires_parent?: boolean;
   min_age?: number | null;
   max_age?: number | null;
+  reserved_spots?: number;
 }
 
 export class CalendarClassesService {
@@ -109,7 +110,8 @@ export class CalendarClassesService {
       image_url: clase.image_url,
       requires_parent: clase.requires_parent ?? false,
       min_age: clase.min_age ?? null,
-      max_age: clase.max_age ?? null
+      max_age: clase.max_age ?? null,
+      reserved_spots: clase.reserved_spots ?? 0
     };
   }
 }

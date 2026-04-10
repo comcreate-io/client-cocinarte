@@ -9,7 +9,8 @@ export interface Clase {
   enrolled: number; // number of students currently enrolled
   price: number;
   classDuration: number; // duration in minutes
-  class_type?: 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa'; // type of cooking class
+  class_type?: 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa' | 'Private Event'; // type of cooking class
+  reserved_spots?: number; // admin-set spots that reduce public availability
   image_url?: string | null; // URL to the class image
   cancelled_at?: string | null; // ISO timestamp when class was cancelled
   late_cancel_refund_type?: 'percentage' | 'fixed' | null;
@@ -49,13 +50,14 @@ export interface CreateClaseData {
   enrolled?: number; // optional, defaults to 0
   price: number;
   classDuration: number;
-  class_type?: 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa';
+  class_type?: 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa' | 'Private Event';
   image_url?: string | null;
   late_cancel_refund_type?: 'percentage' | 'fixed' | null;
   late_cancel_refund_value?: number | null;
   min_age?: number | null;
   max_age?: number | null;
   requires_parent?: boolean;
+  reserved_spots?: number;
 }
 
 export interface UpdateClaseData extends Partial<CreateClaseData> {

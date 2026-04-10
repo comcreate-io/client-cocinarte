@@ -1071,46 +1071,55 @@ export default function CocinarteMonthlyCalendar() {
                     </p>
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-2 mb-3 sm:mb-4">
-                  <div className="text-xs sm:text-sm bg-white/60 rounded-lg p-2">
+                {classItem.class_type === 'Private Event' ? (
+                  <div className="text-xs sm:text-sm bg-white/60 rounded-lg p-2 mb-3 sm:mb-4">
                     <span className="text-slate-medium block mb-0.5">Duration</span>
                     <span className="font-semibold text-slate">{classItem.classDuration}min</span>
                   </div>
-                  <div className="text-xs sm:text-sm bg-white/60 rounded-lg p-2">
-                    <span className="text-slate-medium block mb-0.5">Spots Left</span>
-                    <span className="font-semibold text-slate">{classItem.maxStudents - classItem.enrolled}/{classItem.maxStudents}</span>
-                  </div>
-                </div>
-                {(classItem.min_age || classItem.max_age) && (
-                  <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 flex items-center gap-2">
-                    <Baby className="h-4 w-4 text-amber-600 flex-shrink-0" />
-                    <span className="text-amber-700 font-medium">
-                      Ages: {classItem.min_age && classItem.max_age
-                        ? `${classItem.min_age}-${classItem.max_age}`
-                        : classItem.min_age
-                        ? `${classItem.min_age}+`
-                        : `Up to ${classItem.max_age}`}
-                    </span>
-                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-2 mb-3 sm:mb-4">
+                      <div className="text-xs sm:text-sm bg-white/60 rounded-lg p-2">
+                        <span className="text-slate-medium block mb-0.5">Duration</span>
+                        <span className="font-semibold text-slate">{classItem.classDuration}min</span>
+                      </div>
+                      <div className="text-xs sm:text-sm bg-white/60 rounded-lg p-2">
+                        <span className="text-slate-medium block mb-0.5">Spots Left</span>
+                        <span className="font-semibold text-slate">{Math.max(0, classItem.maxStudents - classItem.enrolled - (classItem.reserved_spots || 0))}/{classItem.maxStudents}</span>
+                      </div>
+                    </div>
+                    {(classItem.min_age || classItem.max_age) && (
+                      <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg p-2 mb-3 flex items-center gap-2">
+                        <Baby className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                        <span className="text-amber-700 font-medium">
+                          Ages: {classItem.min_age && classItem.max_age
+                            ? `${classItem.min_age}-${classItem.max_age}`
+                            : classItem.min_age
+                            ? `${classItem.min_age}+`
+                            : `Up to ${classItem.max_age}`}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <span className="text-xl sm:text-2xl font-bold text-amber">${classItem.price}</span>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedClass(classItem)
+                          setIsBookingOpen(true)
+                        }}
+                        disabled={classItem.enrolled + (classItem.reserved_spots || 0) >= classItem.maxStudents}
+                        className={`${
+                          classItem.enrolled + (classItem.reserved_spots || 0) >= classItem.maxStudents
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-amber hover:bg-golden text-cocinarte-white'
+                        } font-bold rounded-xl px-4 sm:px-6 py-2 text-sm sm:text-base`}
+                      >
+                        {classItem.enrolled + (classItem.reserved_spots || 0) >= classItem.maxStudents ? 'Full' : 'Book Now'}
+                      </Button>
+                    </div>
+                  </>
                 )}
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-xl sm:text-2xl font-bold text-amber">${classItem.price}</span>
-                  <Button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedClass(classItem)
-                      setIsBookingOpen(true)
-                    }}
-                    disabled={classItem.enrolled >= classItem.maxStudents}
-                    className={`${
-                      classItem.enrolled >= classItem.maxStudents
-                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                        : 'bg-amber hover:bg-golden text-cocinarte-white'
-                    } font-bold rounded-xl px-4 sm:px-6 py-2 text-sm sm:text-base`}
-                  >
-                    {classItem.enrolled >= classItem.maxStudents ? 'Full' : 'Book Now'}
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           ))}
@@ -1193,6 +1202,12 @@ export default function CocinarteMonthlyCalendar() {
               {/* Class Details */}
               <div className="space-y-2">
                 <h3 className="text-base sm:text-lg lg:text-xl font-bold text-slate">Class Details</h3>
+                {selectedClass.class_type === 'Private Event' ? (
+                  <div className="bg-slate-50 p-3 rounded-lg">
+                    <p className="text-xs text-slate-medium mb-1">Duration</p>
+                    <p className="text-sm font-bold text-slate">{selectedClass.classDuration} minutes</p>
+                  </div>
+                ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-slate-50 p-3 rounded-lg">
                     <p className="text-xs text-slate-medium mb-1">Duration</p>
@@ -1200,9 +1215,10 @@ export default function CocinarteMonthlyCalendar() {
                   </div>
                   <div className="bg-slate-50 p-3 rounded-lg">
                     <p className="text-xs text-slate-medium mb-1">Available Spots</p>
-                    <p className="text-sm font-bold text-slate">{selectedClass.maxStudents - selectedClass.enrolled} / {selectedClass.maxStudents}</p>
+                    <p className="text-sm font-bold text-slate">{Math.max(0, selectedClass.maxStudents - selectedClass.enrolled - (selectedClass.reserved_spots || 0))} / {selectedClass.maxStudents}</p>
                   </div>
                 </div>
+                )}
                 {(selectedClass.min_age || selectedClass.max_age) && (
                   <div className="bg-amber-50 border-2 border-amber-300 p-3 rounded-lg mt-3">
                     <div className="flex items-center space-x-2">
@@ -1235,27 +1251,39 @@ export default function CocinarteMonthlyCalendar() {
 
               {/* Action Buttons */}
               <div className="flex space-x-3 pt-3 sm:pt-4">
-                <Button 
-                  onClick={() => {
-                    setIsDialogOpen(false)
-                    setIsBookingOpen(true)
-                  }}
-                  disabled={selectedClass.enrolled >= selectedClass.maxStudents}
-                  className={`${
-                    selectedClass.enrolled >= selectedClass.maxStudents 
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                      : 'bg-cocinarte-red hover:bg-cocinarte-orange text-cocinarte-white'
-                  } font-bold rounded-xl px-4 sm:px-6 lg:px-8 py-2 sm:py-3 text-sm sm:text-base lg:text-lg flex-[0.7]`}
-                >
-                  {selectedClass.enrolled >= selectedClass.maxStudents ? 'Class Full' : 'Book This Class'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-cocinarte-navy text-cocinarte-navy hover:bg-cocinarte-navy hover:text-cocinarte-white font-bold rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base lg:text-lg flex-[0.3]"
-                  onClick={() => setIsDialogOpen(false)}
-                >
-                  Close
-                </Button>
+                {selectedClass.class_type === 'Private Event' ? (
+                  <Button
+                    variant="outline"
+                    className="border-cocinarte-navy text-cocinarte-navy hover:bg-cocinarte-navy hover:text-cocinarte-white font-bold rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base lg:text-lg flex-1"
+                    onClick={() => setIsDialogOpen(false)}
+                  >
+                    Close
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={() => {
+                        setIsDialogOpen(false)
+                        setIsBookingOpen(true)
+                      }}
+                      disabled={selectedClass.enrolled + (selectedClass.reserved_spots || 0) >= selectedClass.maxStudents}
+                      className={`${
+                        selectedClass.enrolled + (selectedClass.reserved_spots || 0) >= selectedClass.maxStudents
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-cocinarte-red hover:bg-cocinarte-orange text-cocinarte-white'
+                      } font-bold rounded-xl px-4 sm:px-6 lg:px-8 py-2 sm:py-3 text-sm sm:text-base lg:text-lg flex-[0.7]`}
+                    >
+                      {selectedClass.enrolled + (selectedClass.reserved_spots || 0) >= selectedClass.maxStudents ? 'Class Full' : 'Book This Class'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="border-cocinarte-navy text-cocinarte-navy hover:bg-cocinarte-navy hover:text-cocinarte-white font-bold rounded-xl px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base lg:text-lg flex-[0.3]"
+                      onClick={() => setIsDialogOpen(false)}
+                    >
+                      Close
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           )}

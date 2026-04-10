@@ -58,6 +58,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
         min_age: editingClass.min_age ?? null,
         max_age: editingClass.max_age ?? null,
         requires_parent: editingClass.requires_parent ?? false,
+        reserved_spots: editingClass.reserved_spots ?? 0,
       }
     }
     return {
@@ -76,6 +77,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
       min_age: null,
       max_age: null,
       requires_parent: false,
+      reserved_spots: 0,
     }
   }
 
@@ -240,7 +242,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
               <Label htmlFor="class_type">Class Type</Label>
               <Select
                 value={formData.class_type || ''}
-                onValueChange={(value) => handleChange('class_type', value as 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa')}
+                onValueChange={(value) => handleChange('class_type', value as 'Mini Chefcitos' | 'Chefcitos Together' | 'Cocina Creativa' | 'Private Event')}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a class type" />
@@ -249,6 +251,7 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
                   <SelectItem value="Mini Chefcitos">Mini Chefcitos</SelectItem>
                   <SelectItem value="Chefcitos Together">Chefcitos Together</SelectItem>
                   <SelectItem value="Cocina Creativa">Cocina Creativa</SelectItem>
+                  <SelectItem value="Private Event">Private Event</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -317,6 +320,23 @@ export function ClassForm({ isOpen, onClose, onSuccess, editingClass }: ClassFor
                   />
                 </div>
               )}
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="reserved_spots">Reserved Spots</Label>
+              <Input
+                id="reserved_spots"
+                type="number"
+                min="0"
+                value={formData.reserved_spots ?? 0}
+                onChange={(e) => {
+                  const next = e.target.value === '' ? 0 : Number(e.target.value)
+                  handleChange('reserved_spots', isNaN(next) ? 0 : next)
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Reduces available spots on the public calendar without needing real bookings. Use for private events or to make a class appear full.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

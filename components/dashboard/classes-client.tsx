@@ -228,7 +228,7 @@ export function ClassesClient({ initialClases }: ClassesClientProps) {
 
             <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>
               <Users className="h-4 w-4" />
-              <span>{enrolledCounts[clase.id] ?? 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity)</span>
+              <span>{enrolledCounts[clase.id] ?? 0}/{clase.maxStudents} enrolled ({clase.minStudents}-{clase.maxStudents} capacity){(clase.reserved_spots ?? 0) > 0 ? ` + ${clase.reserved_spots} reserved` : ''}</span>
             </div>
 
             <div className={`flex items-center space-x-2 text-sm ${isCancelled ? 'text-gray-400' : 'text-muted-foreground'}`}>

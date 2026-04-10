@@ -62,12 +62,13 @@ export async function POST(request: NextRequest) {
     }
 
     const enrolled = classData.enrolled || 0;
+    const reservedSpots = classData.reserved_spots || 0;
     const maxStudents = classData.maxStudents || 0;
 
     // Check capacity for total children (own + guests)
     const childrenCount = body.totalChildren || 1;
-    if (enrolled + childrenCount > maxStudents) {
-      const spotsLeft = maxStudents - enrolled;
+    if (enrolled + reservedSpots + childrenCount > maxStudents) {
+      const spotsLeft = maxStudents - enrolled - reservedSpots;
       if (spotsLeft <= 0) {
         return NextResponse.json(
           { error: 'Sorry, this class is now full. Please choose another class.' },
