@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'UTC'
     })
 
     const isApproved = action === 'approve'

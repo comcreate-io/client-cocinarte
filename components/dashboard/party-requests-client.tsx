@@ -392,7 +392,7 @@ export function PartyRequestsClient() {
         escCsv(child?.has_cooking_experience ? 'Yes' : child ? 'No' : ''),
         escCsv(child?.additional_notes),
         escCsv(child?.parent_name_signed),
-        escCsv(child?.signed_at ? new Date(child.signed_at).toLocaleDateString() : ''),
+        escCsv(child?.signed_at ? new Date(child.signed_at).toLocaleDateString('en-US', { timeZone: 'UTC' }) : ''),
       ].join(',')
     })
 
@@ -400,7 +400,7 @@ export function PartyRequestsClient() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    const partyDate = new Date(selectedRequest.preferred_date).toISOString().split('T')[0]
+    const partyDate = new Date(selectedRequest.preferred_date).toLocaleDateString('en-CA', { timeZone: 'UTC' })
     a.href = url
     a.download = `party-guests-${selectedRequest.parent_name.replace(/\s+/g, '-').toLowerCase()}-${partyDate}.csv`
     a.click()
@@ -411,7 +411,7 @@ export function PartyRequestsClient() {
     if (!selectedRequest) return
     setEditFormData({
       package: selectedRequest.package,
-      preferred_date: selectedRequest.preferred_date ? new Date(selectedRequest.preferred_date).toISOString().split('T')[0] : '',
+      preferred_date: selectedRequest.preferred_date ? new Date(selectedRequest.preferred_date).toLocaleDateString('en-CA', { timeZone: 'UTC' }) : '',
       number_of_children: selectedRequest.number_of_children,
       child_name_age: selectedRequest.child_name_age || '',
       parent_name: selectedRequest.parent_name,
@@ -439,7 +439,7 @@ export function PartyRequestsClient() {
         .from('party_requests')
         .update({
           package: editFormData.package,
-          preferred_date: editFormData.preferred_date,
+          preferred_date: editFormData.preferred_date ? `${editFormData.preferred_date}T00:00:00.000Z` : editFormData.preferred_date,
           number_of_children: editFormData.number_of_children,
           child_name_age: editFormData.child_name_age || null,
           parent_name: editFormData.parent_name,
@@ -700,7 +700,8 @@ export function PartyRequestsClient() {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'UTC'
     })
   }
 
@@ -710,7 +711,8 @@ export function PartyRequestsClient() {
       day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      timeZone: 'UTC'
     })
   }
 
