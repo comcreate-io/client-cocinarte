@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import Link from 'next/link'
 import {
   Dialog,
   DialogContent,
@@ -35,11 +34,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import Link from 'next/link'
 import {
   Calendar, Clock, Users, Mail, Phone, DollarSign, User, Loader2,
   AlertCircle, Send, CheckCircle2, Camera, CameraOff, FileCheck,
   FileX, AlertTriangle, Tag, CreditCard, Ticket, Download, FileSpreadsheet, FileText,
-  Eye, XCircle, Code, Plus, ArrowLeft, Pencil, Save, Trash2
+  Eye, XCircle, Code, Plus, ArrowLeft, Pencil, Save, Trash2, BookOpen
 } from 'lucide-react'
 
 interface Child {
@@ -62,6 +62,7 @@ interface Child {
 interface EnrolledStudent {
   id: string
   booking_id: string
+  child_id?: string
   child_name: string
   parent_name: string
   email: string
@@ -225,9 +226,15 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const [addChildSuccess, setAddChildSuccess] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
+  // Class history state (keyed by child_id)
+  const [classHistoryMap, setClassHistoryMap] = useState<Record<string, { class_title: string; class_date: string }[]>>({})
+
   useEffect(() => {
     if (isOpen && clase) {
       fetchEnrolledStudents()
+    }
+    if (!isOpen) {
+      setClassHistoryMap({})
     }
   }, [isOpen, clase])
 
@@ -349,6 +356,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
         return {
           id: booking.students?.id || booking.student_id,
           booking_id: booking.id,
+          child_id: booking.child_id || undefined,
           child_name: guestBooking?.guest_child_name || child?.child_full_name || booking.students?.child_name || 'Unknown',
           parent_name: guestBooking?.guest_parent_name || booking.students?.parent_name || 'Unknown',
           email: guestBooking?.guest_parent_email || booking.students?.email || '',
@@ -383,6 +391,36 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
       })
 
       setStudents(enrolledStudents)
+
+      // Fetch past class history for all enrolled children
+      const historyChildIds = enrolledStudents.map(s => s.child_id).filter(Boolean) as string[]
+      const uniqueChildIds = [...new Set(historyChildIds)]
+      if (uniqueChildIds.length > 0) {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'UTC' })
+        const { data: historyData } = await supabase
+          .from('bookings')
+          .select('child_id, class:clases(title, date)')
+          .in('child_id', uniqueChildIds)
+          .in('booking_status', ['confirmed', 'completed'])
+
+        const historyMap: Record<string, { class_title: string; class_date: string }[]> = {}
+        if (historyData) {
+          for (const booking of historyData) {
+            const cls = booking.class as any
+            if (cls?.date && cls.date < today && booking.child_id) {
+              if (!historyMap[booking.child_id]) historyMap[booking.child_id] = []
+              historyMap[booking.child_id].push({
+                class_title: cls.title,
+                class_date: cls.date,
+              })
+            }
+          }
+          for (const id of Object.keys(historyMap)) {
+            historyMap[id].sort((a, b) => b.class_date.localeCompare(a.class_date))
+          }
+        }
+        setClassHistoryMap(historyMap)
+      }
     } catch (err) {
       console.error('Error:', err)
       setError('An error occurred while loading students')
@@ -1445,6 +1483,26 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                               )}
                             </div>
                           )}
+                          {/* Past Classes - only show if they have any */}
+                          {student.child_id && (classHistoryMap[student.child_id] ?? []).length > 0 && (
+                            <div className="flex flex-wrap items-start gap-x-3 gap-y-1 text-xs text-slate-500">
+                              <span className="flex items-center gap-1 font-semibold text-slate-600">
+                                <BookOpen className="h-3 w-3" /> Past Classes
+                              </span>
+                              {(classHistoryMap[student.child_id] ?? []).map((pc, i) => (
+                                <span key={i} className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3 text-slate-400" />
+                                  {new Date(pc.class_date + 'T00:00:00Z').toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                    timeZone: 'UTC',
+                                  })}
+                                  {' '}{pc.class_title}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )
@@ -1466,12 +1524,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                     <div key={student.booking_id} className="border border-slate-200 rounded-lg px-4 py-3 opacity-50">
                       <div className="flex items-center justify-between">
                         <div>
-                          <Link
-                            href={`/dashboard/students?student=${student.id}&childName=${encodeURIComponent(student.child_name)}&parentEmail=${encodeURIComponent(student.email)}`}
-                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline inline-block"
-                          >
-                            {student.child_name}
-                          </Link>
+                          <span className="font-medium text-slate-600">{student.child_name}</span>
                           <p className="text-xs text-slate-400">Parent: {student.parent_name} &middot; {student.email}</p>
                         </div>
                         <div className="flex items-center gap-2">
@@ -2087,50 +2140,59 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
               </div>
             ) : (
               <>
-                {/* Search Input */}
+                {/* Search & Select Child */}
                 <div>
-                  <label className="block text-sm font-medium mb-2">Search Children</label>
+                  <label className="block text-sm font-medium mb-2">Search & Select Child</label>
                   <Input
                     type="text"
                     placeholder="Search by child or parent name..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value)
+                      setSelectedChildId('')
+                    }}
                     className="w-full"
                   />
-                </div>
-
-                {/* Child Select */}
-                <div>
-                  <label className="block text-sm font-medium mb-2">Select Child</label>
-                  <Select value={selectedChildId} onValueChange={setSelectedChildId}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choose a child..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allChildren
-                        .filter((child) => {
-                          if (!searchTerm) return true
-                          const search = searchTerm.toLowerCase()
-                          return (
-                            child.child_full_name.toLowerCase().includes(search) ||
-                            child.parent.parent_guardian_names.toLowerCase().includes(search) ||
-                            child.parent.parent_email.toLowerCase().includes(search)
-                          )
-                        })
-                        .map((child) => (
-                          <SelectItem key={child.id} value={child.id}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">
-                                {child.child_full_name} (Age {child.child_age})
-                              </span>
-                              <span className="text-xs text-slate-500">
-                                Parent: {child.parent.parent_guardian_names}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="mt-2 max-h-48 overflow-y-auto border rounded-md">
+                    {allChildren
+                      .filter((child) => {
+                        if (!searchTerm) return true
+                        const search = searchTerm.toLowerCase()
+                        return (
+                          child.child_full_name.toLowerCase().includes(search) ||
+                          child.parent.parent_guardian_names.toLowerCase().includes(search) ||
+                          child.parent.parent_email.toLowerCase().includes(search)
+                        )
+                      })
+                      .map((child) => (
+                        <button
+                          key={child.id}
+                          type="button"
+                          onClick={() => setSelectedChildId(child.id)}
+                          className={`w-full text-left px-3 py-2 text-sm hover:bg-slate-100 transition-colors border-b last:border-b-0 ${
+                            selectedChildId === child.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
+                          }`}
+                        >
+                          <span className="font-medium">
+                            {child.child_full_name} (Age {child.child_age})
+                          </span>
+                          <span className="block text-xs text-slate-500">
+                            Parent: {child.parent.parent_guardian_names}
+                          </span>
+                        </button>
+                      ))}
+                    {allChildren.filter((child) => {
+                      if (!searchTerm) return true
+                      const search = searchTerm.toLowerCase()
+                      return (
+                        child.child_full_name.toLowerCase().includes(search) ||
+                        child.parent.parent_guardian_names.toLowerCase().includes(search) ||
+                        child.parent.parent_email.toLowerCase().includes(search)
+                      )
+                    }).length === 0 && (
+                      <p className="px-3 py-2 text-sm text-slate-400">No children found.</p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Selected Child Details */}

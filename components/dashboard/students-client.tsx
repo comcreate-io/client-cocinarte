@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Users, Mail, Phone, Search, Baby, AlertCircle, ChefHat, Camera, Shield, FileCheck, XCircle, Download, Eye, Send, Tag } from 'lucide-react'
+import { Users, Mail, Phone, Search, Baby, AlertCircle, ChefHat, Camera, Shield, FileCheck, XCircle, Download, Eye, Send, Tag, BookOpen, Calendar } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -52,6 +53,13 @@ type Parent = {
   children?: Child[]
 }
 
+type PastClass = {
+  booking_id: string
+  class_title: string
+  class_date: string
+  class_time: string
+}
+
 interface StudentsClientProps {
   initialParents: Parent[]
 }
@@ -69,6 +77,10 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
   const [emailSubject, setEmailSubject] = useState('')
   const [emailMessage, setEmailMessage] = useState('')
   const [isSendingEmail, setIsSendingEmail] = useState(false)
+
+  // Class history state
+  const [classHistory, setClassHistory] = useState<Record<string, PastClass[]>>({})
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   // Coupon sending state
   const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false)
@@ -114,9 +126,69 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
         setHighlightedStudentId(matchedChildId)
         setSelectedParent(parentWithChild)
         setIsDetailsOpen(true)
+        if (parentWithChild.children?.length) {
+          fetchClassHistory(parentWithChild.children)
+        }
       }
     }
   }, [searchParams, parents])
+
+  const fetchClassHistory = async (children: Child[]) => {
+    if (!children.length) return
+    setLoadingHistory(true)
+    try {
+      const supabase = createClient()
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'UTC' })
+      const childIds = children.map(c => c.id)
+
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          child_id,
+          class:clases (
+            title,
+            date,
+            time
+          )
+        `)
+        .in('child_id', childIds)
+        .in('booking_status', ['confirmed', 'completed'])
+        .not('class', 'is', null)
+
+      if (error) throw error
+
+      const historyMap: Record<string, PastClass[]> = {}
+      for (const childId of childIds) {
+        historyMap[childId] = []
+      }
+
+      if (data) {
+        for (const booking of data) {
+          const cls = booking.class as any
+          if (cls && cls.date && cls.date < today) {
+            historyMap[booking.child_id!]?.push({
+              booking_id: booking.id,
+              class_title: cls.title,
+              class_date: cls.date,
+              class_time: cls.time || '',
+            })
+          }
+        }
+      }
+
+      // Sort each child's classes by date descending
+      for (const childId of childIds) {
+        historyMap[childId].sort((a, b) => b.class_date.localeCompare(a.class_date))
+      }
+
+      setClassHistory(historyMap)
+    } catch (err) {
+      console.error('Error fetching class history:', err)
+    } finally {
+      setLoadingHistory(false)
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!query) return parents
@@ -140,6 +212,9 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
   const openDetails = (parent: Parent) => {
     setSelectedParent(parent)
     setIsDetailsOpen(true)
+    if (parent.children?.length) {
+      fetchClassHistory(parent.children)
+    }
   }
 
   const openContractPopup = (child: Child) => {
@@ -673,6 +748,36 @@ export function StudentsClient({ initialParents }: StudentsClientProps): JSX.Ele
                               </div>
                             </div>
                           )}
+
+                          {/* Class History */}
+                          <div className="border rounded-lg p-2.5 sm:p-3 bg-muted/30">
+                            <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
+                              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+                              <span className="text-xs sm:text-sm font-semibold">Past Classes</span>
+                            </div>
+                            {loadingHistory ? (
+                              <p className="text-xs sm:text-sm text-muted-foreground ml-5 sm:ml-6">Loading...</p>
+                            ) : (classHistory[child.id] ?? []).length > 0 ? (
+                              <div className="ml-5 sm:ml-6 space-y-1">
+                                {(classHistory[child.id] ?? []).map((pc) => (
+                                  <div key={pc.booking_id} className="flex items-center gap-2 text-xs sm:text-sm">
+                                    <Calendar className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
+                                    <span className="text-muted-foreground">
+                                      {new Date(pc.class_date + 'T00:00:00Z').toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                        timeZone: 'UTC',
+                                      })}
+                                    </span>
+                                    <span className="font-medium">{pc.class_title}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs sm:text-sm text-muted-foreground ml-5 sm:ml-6">No past classes found.</p>
+                            )}
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
