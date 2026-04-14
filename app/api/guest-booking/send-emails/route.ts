@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       hour12: true,
     })
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cocinarte.com'
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.cocinartepdx.com'
     const formUrl = `${baseUrl}/guest-form/${form_token}`
 
     // 1. Purchaser confirmation email

@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function sendGiftCardEmail(giftCard: any, metadata: any) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://cocinartepdx.com'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.cocinartepdx.com'
 
   const emailHtml = `
     <!DOCTYPE html>

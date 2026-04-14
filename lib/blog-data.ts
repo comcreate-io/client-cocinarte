@@ -1114,20 +1114,20 @@ export const blogPosts: BlogPost[] = [
           "author": {
             "@type": "Organization",
             "name": "Cocinarte PDX",
-            "url": "https://www.cocinarte-pdx.com"
+            "url": "https://www.cocinartepdx.com"
           },
           "publisher": {
             "@type": "Organization",
             "name": "Cocinarte PDX",
-            "url": "https://www.cocinarte-pdx.com"
+            "url": "https://www.cocinartepdx.com"
           },
           "datePublished": "2026-03-16",
           "dateModified": "2026-03-16",
           "mainEntityOfPage": {
             "@type": "WebPage",
-            "@id": "https://www.cocinarte-pdx.com/blog/cooking-classes-for-kids"
+            "@id": "https://www.cocinartepdx.com/blog/cooking-classes-for-kids"
           },
-          "image": "https://www.cocinarte-pdx.com/images/blog/cooking-classes-for-kids.jpg",
+          "image": "https://www.cocinartepdx.com/images/blog/cooking-classes-for-kids.jpg",
           "keywords": "cooking classes for kids, kids cooking classes near me, hands-on cooking experience, kitchen skills for kids, Latin American cooking"
         },
         {

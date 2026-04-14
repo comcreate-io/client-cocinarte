@@ -1,7 +1,15 @@
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
 export async function middleware(request: NextRequest) {
+  // Force non-www → www with 301 permanent redirect
+  const host = request.headers.get('host') || ''
+  if (host === 'cocinartepdx.com') {
+    const url = new URL(request.url)
+    url.host = 'www.cocinartepdx.com'
+    return NextResponse.redirect(url, 301)
+  }
+
   return await updateSession(request)
 }
 

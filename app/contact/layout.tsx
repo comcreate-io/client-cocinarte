@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact Us - Our Programs",
     description: "Get in touch with us for information about Cocinarte cooking classes, Casita Azul preschool, and Camp Alegría summer camp in Hillsboro, Oregon.",
-    url: 'https://cocinarte.com/contact',
+    url: 'https://www.cocinartepdx.com/contact',
     siteName: 'Our Programs',
     images: [
       {

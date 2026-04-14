@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (prData?.dashboard_token) {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://cocinartepdx.com'
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.cocinartepdx.com'
         dashboardUrl = `${baseUrl}/party-dashboard/${prData.dashboard_token}`
       }
     }

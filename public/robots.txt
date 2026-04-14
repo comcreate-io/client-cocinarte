@@ -2,20 +2,28 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://cocinarte.com/sitemap.xml
+Sitemap: https://www.cocinartepdx.com/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1
 
-# Disallow admin areas (if any)
+# Disallow admin areas
 Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
 Disallow: /static/
+Disallow: /dashboard/
+Disallow: /login/
+Disallow: /signup/
 
 # Allow important pages
 Allow: /
 Allow: /landing/
 Allow: /casita-azul/
 Allow: /camp-alegria/
-Allow: /contact/ 
+Allow: /contact/
+Allow: /blog/
+Allow: /programs/
+Allow: /admissions/
+Allow: /faq/
+Allow: /terms/

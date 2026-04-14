@@ -58,7 +58,7 @@ async function sendClassCancellationEmail(student: any, clase: any) {
             <p style="color: #155724; margin: 10px 0;">Any payment authorization has been completely released, and you will not see any charge on your statement.</p>
           </div>
           <p>We apologize for any inconvenience and hope to see ${childName} in a future class!</p>
-          <p>Browse other available classes at: <a href="https://cocinartepdx.com">cocinartepdx.com</a></p>
+          <p>Browse other available classes at: <a href="https://www.cocinartepdx.com">cocinartepdx.com</a></p>
           <p style="margin-top: 20px;">Best regards,<br/>The Cocinarte Team</p>
           <p style="color: #666; font-size: 12px;">
             Questions? Contact us at cocinarte@casitaazulpdx.org or +1 (503) 916-9758

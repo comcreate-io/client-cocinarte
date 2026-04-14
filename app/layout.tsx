@@ -81,18 +81,18 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://cocinartepdx.com'),
+  metadataBase: new URL('https://www.cocinartepdx.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     title: "Cocinarte - Cooking Classes for Kids in Hillsboro, Oregon",
     description: "Cocinarte offers hands-on cooking classes for kids ages 5-12 in Hillsboro, Oregon. Learn to cook delicious Latin-inspired dishes while building confidence and life skills in a fun, safe environment.",
-    url: 'https://cocinartepdx.com',
+    url: 'https://www.cocinartepdx.com',
     siteName: 'Cocinarte',
     images: [
       {
-        url: 'https://cocinartepdx.com/openGraphCocinarte.png',
+        url: 'https://www.cocinartepdx.com/openGraphCocinarte.png',
         width: 1200,
         height: 630,
         alt: 'Cocinarte - Cooking Classes for Kids in Hillsboro, Oregon',
@@ -106,7 +106,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: "Cocinarte - Cooking Classes for Kids in Hillsboro, Oregon",
     description: "Cocinarte offers hands-on cooking classes for kids ages 5-12 in Hillsboro, Oregon. Learn to cook delicious Latin-inspired dishes while building confidence and life skills in a fun, safe environment.",
-    images: ['https://cocinartepdx.com/openGraphCocinarte.png'],
+    images: ['https://www.cocinartepdx.com/openGraphCocinarte.png'],
     creator: '@cocinarte',
   },
   robots: {
@@ -164,8 +164,8 @@ export default function RootLayout({
         <meta name="theme-color" content="#1e293b" />
         
         {/* Force Open Graph Image - Explicit Tags */}
-        <meta property="og:image" content="https://cocinartepdx.com/openGraphCocinarte.png" />
-        <meta property="og:image:secure_url" content="https://cocinartepdx.com/openGraphCocinarte.png" />
+        <meta property="og:image" content="https://www.cocinartepdx.com/openGraphCocinarte.png" />
+        <meta property="og:image:secure_url" content="https://www.cocinartepdx.com/openGraphCocinarte.png" />
         <meta property="og:image:type" content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -173,12 +173,12 @@ export default function RootLayout({
         
         {/* Twitter Card - Explicit Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:image" content="https://cocinartepdx.com/openGraphCocinarte.png" />
+        <meta name="twitter:image" content="https://www.cocinartepdx.com/openGraphCocinarte.png" />
         <meta name="twitter:image:alt" content="Cocinarte - Cooking Classes for Kids in Hillsboro, Oregon" />
 
         {/* WhatsApp Specific - Uses Open Graph */}
         <meta property="og:site_name" content="Cocinarte" />
-        <meta property="og:url" content="https://cocinartepdx.com" />
+        <meta property="og:url" content="https://www.cocinartepdx.com" />
 
         {/* Additional Meta Tags */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
@@ -199,9 +199,9 @@ export default function RootLayout({
               "@type": "EducationalOrganization",
               "name": "Cocinarte",
               "description": "Cocinarte offers hands-on cooking classes for kids ages 5-12 in Hillsboro, Oregon. Learn to cook delicious Latin-inspired dishes while building confidence and life skills in a fun, safe environment.",
-              "url": "https://cocinartepdx.com",
-              "logo": "https://cocinartepdx.com/openGraphCocinarte.png",
-              "image": "https://cocinartepdx.com/openGraphCocinarte.png",
+              "url": "https://www.cocinartepdx.com",
+              "logo": "https://www.cocinartepdx.com/openGraphCocinarte.png",
+              "image": "https://www.cocinartepdx.com/openGraphCocinarte.png",
               "address": {
                 "@type": "PostalAddress",
                 "streetAddress": "770 NE Rogahn Street",

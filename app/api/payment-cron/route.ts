@@ -371,7 +371,7 @@ async function sendClassCancellationEmail(student: any, clase: any) {
                         <p style="color: #155724; margin: 10px 0;">The payment authorization has been completely released, and you will not see any charge on your statement.</p>
                     </div>
                     <p>We apologize for any inconvenience and hope to see ${childName} in a future class!</p>
-                    <p>Browse other available classes at: <a href="https://cocinartepdx.com">cocinartepdx.com</a></p>
+                    <p>Browse other available classes at: <a href="https://www.cocinartepdx.com">cocinartepdx.com</a></p>
                 </div>
             </div>
         `
@@ -428,7 +428,7 @@ async function sendAdminNotificationEmail(clase: any, enrolled: number, minStude
                     </div>
 
                     <p style="margin-top: 20px;">
-                        <a href="https://cocinartepdx.com/dashboard/classes"
+                        <a href="https://www.cocinartepdx.com/dashboard/classes"
                            style="background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                             Go to Dashboard
                         </a>

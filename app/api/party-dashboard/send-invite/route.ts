@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const formUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://cocinartepdx.com'}/party-form/${guest.form_token}`
+    const formUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.cocinartepdx.com'}/party-form/${guest.form_token}`
 
     const packageNames: { [key: string]: string } = {
       'art-canvas': 'Art: Canvas Painting',

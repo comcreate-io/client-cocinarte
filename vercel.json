@@ -1,5 +1,18 @@
 {
   "version": 2,
+  "redirects": [
+    {
+      "source": "/:path(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "cocinartepdx.com"
+        }
+      ],
+      "destination": "https://www.cocinartepdx.com/:path",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/payment-cron",
