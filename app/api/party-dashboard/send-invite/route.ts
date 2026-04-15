@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     // Validate dashboard token
     const { data: partyRequest, error: prError } = await supabase
       .from('party_requests')
-      .select('id, parent_name, child_name_age, preferred_date, package')
+      .select('id, request_type, parent_name, child_name_age, preferred_date, package, event_type, preferred_time, selected_menu')
       .eq('dashboard_token', dashboard_token)
       .single()
 
@@ -57,6 +57,8 @@ export async function POST(request: NextRequest) {
 
     const formUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.cocinartepdx.com'}/party-form/${guest.form_token}`
 
+    const isPrivateEvent = partyRequest.request_type === 'private_event'
+
     const packageNames: { [key: string]: string } = {
       'art-canvas': 'Art: Canvas Painting',
       'diy-party': 'DIY Party',
@@ -65,7 +67,24 @@ export async function POST(request: NextRequest) {
       'premium-fiesta': 'Premium Fiesta',
       'vip-package': 'VIP Package',
     }
-    const packageDisplayName = packageNames[partyRequest.package] || partyRequest.package
+
+    const menuNames: { [key: string]: string } = {
+      'tostadas': 'Baked Tostadas with Shredded Chicken',
+      'tamales': 'Mini Tamales Express Tricolor',
+      'arepas': 'Turkey and Cheese Arepa Sliders',
+      'empanadas': 'Mini Chicken Empanadas',
+      'tacos': 'Crispy Sweet Potato and Black Bean Tacos',
+      'quesadillas': 'Mini Quesadillas with Monster Guacamole',
+      'birria': 'Turkey Birria with Bean Sopes',
+      'chicken-rolls': 'Mini Spinach & Cheese Chicken Rolls',
+      'wraps': 'Mini Chicken and Veggie Wraps',
+      'mac-cheese': 'Mac & Cheese with Hidden Vegetables',
+      'custom': 'Custom Menu (to be discussed)',
+    }
+
+    const displayName = isPrivateEvent
+      ? menuNames[partyRequest.selected_menu || partyRequest.package] || partyRequest.selected_menu || partyRequest.package
+      : packageNames[partyRequest.package] || partyRequest.package
 
     const formattedDate = new Date(partyRequest.preferred_date).toLocaleDateString('en-US', {
       weekday: 'long',
@@ -73,6 +92,20 @@ export async function POST(request: NextRequest) {
       month: 'long',
       day: 'numeric',
     })
+
+    const headerTitle = isPrivateEvent ? '🎊 Cooking Event Invitation!' : '🎉 Birthday Party Invitation!'
+    const headerSubtext = isPrivateEvent
+      ? `${guest.child_name} is invited to a cooking event!`
+      : `${guest.child_name} is invited to a cooking party!`
+    const inviteText = isPrivateEvent
+      ? `<strong>${partyRequest.parent_name}</strong> has invited <strong>${guest.child_name}</strong> to a private cooking event at Cocinarte!`
+      : `<strong>${partyRequest.parent_name}</strong> has invited <strong>${guest.child_name}</strong> to a birthday cooking party at Cocinarte!`
+    const detailsIcon = isPrivateEvent ? '🎊' : '🎂'
+    const detailsTitle = isPrivateEvent ? 'Event Details' : 'Party Details'
+    const detailLabel = isPrivateEvent ? 'Menu' : 'Package'
+    const actionText = isPrivateEvent
+      ? 'To attend, please complete the enrollment form. This includes important health, safety, and consent information we need before the event.'
+      : 'To attend, please complete the enrollment form for your child. This includes important health, safety, and consent information we need before the party.'
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -86,8 +119,8 @@ export async function POST(request: NextRequest) {
           <!-- Header with Logo -->
           <div style="background: #F0614F; color: white; padding: 30px 20px; text-align: center; border-radius: 10px 10px 0 0;">
             <img src="https://www.cocinartepdx.com/cocinarte/cocinarteLogo.png" alt="Cocinarte" style="height: 50px; margin: 0 auto 15px auto; display: block;" />
-            <h1 style="margin: 0; font-size: 26px; font-weight: bold; line-height: 1.3;">🎉 Birthday Party Invitation!</h1>
-            <p style="margin: 10px 0 0 0; font-size: 15px; line-height: 1.4; opacity: 0.95;">${guest.child_name} is invited to a cooking party!</p>
+            <h1 style="margin: 0; font-size: 26px; font-weight: bold; line-height: 1.3;">${headerTitle}</h1>
+            <p style="margin: 10px 0 0 0; font-size: 15px; line-height: 1.4; opacity: 0.95;">${headerSubtext}</p>
           </div>
 
           <!-- Main Content -->
@@ -96,22 +129,24 @@ export async function POST(request: NextRequest) {
               Hi ${guest.parent_name},
             </p>
             <p style="color: #374151; font-size: 15px; line-height: 1.6;">
-              Great news! <strong>${partyRequest.parent_name}</strong> has invited <strong>${guest.child_name}</strong> to a birthday cooking party at Cocinarte!
+              Great news! ${inviteText}
             </p>
 
-            <!-- Party Details Box -->
+            <!-- Details Box -->
             <div style="background: #F0F9FF; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00ADEE;">
-              <h3 style="color: #00ADEE; margin: 0 0 12px 0; font-size: 17px;">🎂 Party Details</h3>
+              <h3 style="color: #00ADEE; margin: 0 0 12px 0; font-size: 17px;">${detailsIcon} ${detailsTitle}</h3>
+              ${isPrivateEvent && partyRequest.event_type ? `<p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Event Type:</strong> ${partyRequest.event_type}</p>` : ''}
               <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Date:</strong> ${formattedDate}</p>
-              <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Package:</strong> ${packageDisplayName}</p>
-              ${partyRequest.child_name_age ? `<p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Birthday Child:</strong> ${partyRequest.child_name_age}</p>` : ''}
+              ${isPrivateEvent && partyRequest.preferred_time ? `<p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Time:</strong> ${partyRequest.preferred_time}</p>` : ''}
+              <p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">${detailLabel}:</strong> ${displayName}</p>
+              ${!isPrivateEvent && partyRequest.child_name_age ? `<p style="margin: 8px 0; color: #374151; font-size: 15px;"><strong style="color: #1E3A8A;">Birthday Child:</strong> ${partyRequest.child_name_age}</p>` : ''}
             </div>
 
             <!-- Action Required Box -->
             <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #FCB414;">
               <h3 style="color: #92400E; margin: 0 0 10px 0; font-size: 16px;">📋 Action Required</h3>
               <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0 0 15px 0;">
-                To attend, please complete the enrollment form for your child. This includes important health, safety, and consent information we need before the party.
+                ${actionText}
               </p>
               <div style="text-align: center;">
                 <a href="${formUrl}" style="background: #F0614F; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: bold; display: inline-block;">
@@ -139,9 +174,13 @@ export async function POST(request: NextRequest) {
       </html>
     `
 
+    const emailSubject = isPrivateEvent
+      ? `${guest.child_name} is invited to a cooking event at Cocinarte!`
+      : `${guest.child_name} is invited to a birthday party at Cocinarte!`
+
     await sendEmail({
       to: guest.parent_email,
-      subject: `${guest.child_name} is invited to a birthday party at Cocinarte!`,
+      subject: emailSubject,
       html: emailHtml,
     })
 

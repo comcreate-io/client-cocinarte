@@ -49,7 +49,7 @@ const navigationItems = [
     icon: CalendarDays,
   },
   {
-    title: "Party Requests",
+    title: "Event Requests",
     url: "/dashboard/party-requests",
     icon: Cake,
   },

@@ -24,9 +24,9 @@ export default async function PartyRequestsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Party Requests</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Event Requests</h1>
         <p className="text-muted-foreground">
-          Manage birthday party requests and send approval/decline emails to customers.
+          Manage birthday party and private event requests.
         </p>
       </div>
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sendEmail } from '@/lib/resend'
+import { createServiceRoleClient } from '@/lib/supabase/service-role'
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,6 +51,32 @@ export async function POST(request: NextRequest) {
         { error: 'Invalid email format' },
         { status: 400 }
       )
+    }
+
+    // Save to Supabase
+    const supabase = createServiceRoleClient()
+
+    const { error: dbError } = await supabase
+      .from('party_requests')
+      .insert({
+        request_type: 'private_event',
+        preferred_date: preferredDate,
+        number_of_children: numberOfGuests,
+        package: selectedMenu,
+        parent_name: contactName,
+        phone,
+        email,
+        special_requests: eventDetails || null,
+        event_type: eventType,
+        preferred_time: preferredTime,
+        selected_menu: selectedMenu,
+        dietary_restrictions: dietaryRestrictions || null,
+        status: 'pending'
+      })
+
+    if (dbError) {
+      console.error('Database error:', dbError)
+      // Continue with email even if database fails
     }
 
     // Format the date for better readability
