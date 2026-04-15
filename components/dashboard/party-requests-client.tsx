@@ -140,6 +140,7 @@ export function PartyRequestsClient() {
   const [guestCounts, setGuestCounts] = useState<Record<string, { total: number; completed: number }>>({})
   const [selectedGuests, setSelectedGuests] = useState<PartyGuestInfo[]>([])
   const [guestsLoading, setGuestsLoading] = useState(false)
+  const [guestsError, setGuestsError] = useState<string | null>(null)
   const [copiedDashboardLink, setCopiedDashboardLink] = useState<string | null>(null)
   const [expandedGuests, setExpandedGuests] = useState<Set<string>>(new Set())
   const [childDetails, setChildDetails] = useState<Record<string, GuestChildDetails>>({})
@@ -330,6 +331,7 @@ export function PartyRequestsClient() {
   const handleViewDetails = async (request: PartyRequest) => {
     setSelectedRequest(request)
     setSelectedGuests([])
+    setGuestsError(null)
     setExpandedGuests(new Set())
     setChildDetails({})
     setIsEditing(false)
@@ -352,9 +354,16 @@ export function PartyRequestsClient() {
             }
             setChildDetails(details)
           }
+        } else {
+          console.error('Admin party-guests API returned error:', {
+            status: res.status,
+            result,
+          })
+          setGuestsError(result?.error || `API error (HTTP ${res.status})`)
         }
-      } catch {
-        // Non-blocking
+      } catch (err) {
+        console.error('Admin party-guests fetch failed:', err)
+        setGuestsError(err instanceof Error ? err.message : 'Network error')
       } finally {
         setGuestsLoading(false)
       }
@@ -1174,6 +1183,8 @@ export function PartyRequestsClient() {
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Loading guests...
                     </div>
+                  ) : guestsError ? (
+                    <p className="text-sm text-red-600">Failed to load guests: {guestsError}</p>
                   ) : selectedGuests.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No guests added yet.</p>
                   ) : (
@@ -1576,6 +1587,8 @@ export function PartyRequestsClient() {
                       <Loader2 className="h-4 w-4 animate-spin" />
                       Loading guests...
                     </div>
+                  ) : guestsError ? (
+                    <p className="text-sm text-red-600">Failed to load guests: {guestsError}</p>
                   ) : selectedGuests.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No guests added yet.</p>
                   ) : (
