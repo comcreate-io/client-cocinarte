@@ -179,6 +179,7 @@ export default function PartyDashboardPage() {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: 'UTC',
     })
   }
 
