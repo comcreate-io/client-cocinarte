@@ -40,6 +40,7 @@ import {
 
 interface PartyRequest {
   id: string
+  request_type: 'birthday_party' | 'private_event'
   preferred_date: string
   number_of_children: number
   package: string
@@ -53,6 +54,10 @@ interface PartyRequest {
   dashboard_token: string
   created_at: string
   updated_at: string
+  event_type: string | null
+  preferred_time: string | null
+  selected_menu: string | null
+  dietary_restrictions: string | null
 }
 
 interface PartyGuestInfo {
@@ -93,6 +98,7 @@ interface GuestChildDetails {
 }
 
 interface EditFormData {
+  request_type: 'birthday_party' | 'private_event'
   package: string
   preferred_date: string
   number_of_children: number
@@ -102,6 +108,10 @@ interface EditFormData {
   phone: string
   special_requests: string
   admin_notes: string
+  event_type: string
+  preferred_time: string
+  selected_menu: string
+  dietary_restrictions: string
 }
 
 interface CampaignProgress {
@@ -150,9 +160,12 @@ export function PartyRequestsClient() {
   const [quickEmailSubject, setQuickEmailSubject] = useState('')
   const [quickEmailMessage, setQuickEmailMessage] = useState('')
 
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [createLoading, setCreateLoading] = useState(false)
   const [createFormData, setCreateFormData] = useState({
+    request_type: 'birthday_party' as 'birthday_party' | 'private_event',
     package: '',
     preferred_date: '',
     number_of_children: 1,
@@ -162,10 +175,15 @@ export function PartyRequestsClient() {
     phone: '',
     special_requests: '',
     admin_notes: '',
+    event_type: '',
+    preferred_time: '',
+    selected_menu: '',
+    dietary_restrictions: '',
   })
 
   const resetCreateForm = () => {
     setCreateFormData({
+      request_type: 'birthday_party',
       package: '',
       preferred_date: '',
       number_of_children: 1,
@@ -175,13 +193,26 @@ export function PartyRequestsClient() {
       phone: '',
       special_requests: '',
       admin_notes: '',
+      event_type: '',
+      preferred_time: '',
+      selected_menu: '',
+      dietary_restrictions: '',
     })
   }
 
   const handleCreateParty = async () => {
-    if (!createFormData.preferred_date || !createFormData.package || !createFormData.parent_name || !createFormData.email || !createFormData.phone) {
-      setError('Please fill in all required fields (date, package, parent name, email, phone)')
-      return
+    const isPrivate = createFormData.request_type === 'private_event'
+
+    if (isPrivate) {
+      if (!createFormData.preferred_date || !createFormData.parent_name || !createFormData.email || !createFormData.phone) {
+        setError('Please fill in all required fields (date, contact name, email, phone)')
+        return
+      }
+    } else {
+      if (!createFormData.preferred_date || !createFormData.package || !createFormData.parent_name || !createFormData.email || !createFormData.phone) {
+        setError('Please fill in all required fields (date, package, parent name, email, phone)')
+        return
+      }
     }
 
     setCreateLoading(true)
@@ -192,16 +223,21 @@ export function PartyRequestsClient() {
       const { data: inserted, error: dbError } = await supabase
         .from('party_requests')
         .insert({
+          request_type: createFormData.request_type,
           preferred_date: createFormData.preferred_date,
           number_of_children: createFormData.number_of_children,
-          package: createFormData.package,
+          package: isPrivate ? (createFormData.selected_menu || 'private-event') : createFormData.package,
           parent_name: createFormData.parent_name,
           phone: createFormData.phone,
           email: createFormData.email,
-          child_name_age: createFormData.child_name_age || null,
+          child_name_age: isPrivate ? null : (createFormData.child_name_age || null),
           special_requests: createFormData.special_requests || null,
           admin_notes: createFormData.admin_notes || null,
           status: 'approved',
+          event_type: isPrivate ? (createFormData.event_type || null) : null,
+          preferred_time: isPrivate ? (createFormData.preferred_time || null) : null,
+          selected_menu: isPrivate ? (createFormData.selected_menu || null) : null,
+          dietary_restrictions: isPrivate ? (createFormData.dietary_restrictions || null) : null,
         })
         .select()
         .single()
@@ -281,12 +317,15 @@ export function PartyRequestsClient() {
   }, [])
 
   useEffect(() => {
-    if (statusFilter === 'all') {
-      setFilteredRequests(requests)
-    } else {
-      setFilteredRequests(requests.filter(r => r.status === statusFilter))
+    let filtered = requests
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(r => r.status === statusFilter)
     }
-  }, [statusFilter, requests])
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(r => r.request_type === typeFilter)
+    }
+    setFilteredRequests(filtered)
+  }, [statusFilter, typeFilter, requests])
 
   const handleViewDetails = async (request: PartyRequest) => {
     setSelectedRequest(request)
@@ -410,6 +449,7 @@ export function PartyRequestsClient() {
   const handleStartEdit = () => {
     if (!selectedRequest) return
     setEditFormData({
+      request_type: selectedRequest.request_type || 'birthday_party',
       package: selectedRequest.package,
       preferred_date: selectedRequest.preferred_date ? new Date(selectedRequest.preferred_date).toLocaleDateString('en-CA', { timeZone: 'UTC' }) : '',
       number_of_children: selectedRequest.number_of_children,
@@ -419,6 +459,10 @@ export function PartyRequestsClient() {
       phone: selectedRequest.phone,
       special_requests: selectedRequest.special_requests || '',
       admin_notes: selectedRequest.admin_notes || '',
+      event_type: selectedRequest.event_type || '',
+      preferred_time: selectedRequest.preferred_time || '',
+      selected_menu: selectedRequest.selected_menu || '',
+      dietary_restrictions: selectedRequest.dietary_restrictions || '',
     })
     setIsEditing(true)
   }
@@ -435,18 +479,23 @@ export function PartyRequestsClient() {
     setError('')
 
     try {
+      const isPrivate = editFormData.request_type === 'private_event'
       const { error: dbError } = await supabase
         .from('party_requests')
         .update({
-          package: editFormData.package,
+          package: isPrivate ? (editFormData.selected_menu || 'private-event') : editFormData.package,
           preferred_date: editFormData.preferred_date ? `${editFormData.preferred_date}T00:00:00.000Z` : editFormData.preferred_date,
           number_of_children: editFormData.number_of_children,
-          child_name_age: editFormData.child_name_age || null,
+          child_name_age: isPrivate ? null : (editFormData.child_name_age || null),
           parent_name: editFormData.parent_name,
           email: editFormData.email,
           phone: editFormData.phone,
           special_requests: editFormData.special_requests || null,
           admin_notes: editFormData.admin_notes || null,
+          event_type: isPrivate ? (editFormData.event_type || null) : null,
+          preferred_time: isPrivate ? (editFormData.preferred_time || null) : null,
+          selected_menu: isPrivate ? (editFormData.selected_menu || null) : null,
+          dietary_restrictions: isPrivate ? (editFormData.dietary_restrictions || null) : null,
         })
         .eq('id', selectedRequest.id)
 
@@ -456,9 +505,13 @@ export function PartyRequestsClient() {
       setSelectedRequest({
         ...selectedRequest,
         ...editFormData,
-        child_name_age: editFormData.child_name_age || null,
+        child_name_age: isPrivate ? null : (editFormData.child_name_age || null),
         special_requests: editFormData.special_requests || null,
         admin_notes: editFormData.admin_notes || null,
+        event_type: isPrivate ? (editFormData.event_type || null) : null,
+        preferred_time: isPrivate ? (editFormData.preferred_time || null) : null,
+        selected_menu: isPrivate ? (editFormData.selected_menu || null) : null,
+        dietary_restrictions: isPrivate ? (editFormData.dietary_restrictions || null) : null,
       })
 
       await fetchRequests()
@@ -667,6 +720,32 @@ export function PartyRequestsClient() {
     }
   }
 
+  const getTypeBadge = (requestType: string) => {
+    if (requestType === 'private_event') {
+      return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-300">Private Event</Badge>
+    }
+    return <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-300">Birthday Party</Badge>
+  }
+
+  const getMenuDisplayName = (menu: string) => {
+    const menuNames: Record<string, string> = {
+      'tostadas': 'Baked Tostadas with Shredded Chicken',
+      'tamales': 'Mini Tamales Express Tricolor',
+      'arepas': 'Turkey and Cheese Arepa Sliders',
+      'empanadas': 'Mini Chicken Empanadas',
+      'tacos': 'Crispy Sweet Potato and Black Bean Tacos',
+      'quesadillas': 'Mini Quesadillas with Monster Guacamole',
+      'birria': 'Turkey Birria with Bean Sopes',
+      'chicken-rolls': 'Mini Spinach & Cheese Chicken Rolls',
+      'wraps': 'Mini Chicken and Veggie Wraps',
+      'mac-cheese': 'Mac & Cheese with Hidden Vegetables',
+      'custom': 'Custom Menu (to be discussed)',
+    }
+    return menuNames[menu] || menu
+  }
+
+  const isPrivateEvent = (request: PartyRequest) => request.request_type === 'private_event'
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -729,12 +808,22 @@ export function PartyRequestsClient() {
       {/* Filters */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Filter by type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              <SelectItem value="birthday_party">Birthday Parties</SelectItem>
+              <SelectItem value="private_event">Private Events</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Requests</SelectItem>
+              <SelectItem value="all">All Statuses</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="approved">Approved</SelectItem>
               <SelectItem value="declined">Declined</SelectItem>
@@ -747,7 +836,7 @@ export function PartyRequestsClient() {
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
           <Plus className="h-4 w-4 mr-1" />
-          Create Party
+          Create Event
         </Button>
       </div>
 
@@ -768,10 +857,11 @@ export function PartyRequestsClient() {
         <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
-              <TableHead>Parent Name</TableHead>
-              <TableHead>Package</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Contact Name</TableHead>
+              <TableHead>Package / Menu</TableHead>
               <TableHead>Preferred Date</TableHead>
-              <TableHead>Children</TableHead>
+              <TableHead>Guests</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Submitted</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -780,15 +870,16 @@ export function PartyRequestsClient() {
           <TableBody>
             {filteredRequests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
-                  No party requests found
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  No requests found
                 </TableCell>
               </TableRow>
             ) : (
               filteredRequests.map((request) => (
                 <TableRow key={request.id}>
+                  <TableCell>{getTypeBadge(request.request_type || 'birthday_party')}</TableCell>
                   <TableCell className="font-medium">{request.parent_name}</TableCell>
-                  <TableCell>{getPackageDisplayName(request.package)}</TableCell>
+                  <TableCell>{isPrivateEvent(request) ? getMenuDisplayName(request.selected_menu || request.package) : getPackageDisplayName(request.package)}</TableCell>
                   <TableCell>{formatDate(request.preferred_date)}</TableCell>
                   <TableCell>
                     <span>{request.number_of_children}</span>
@@ -883,7 +974,9 @@ export function PartyRequestsClient() {
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader className="pr-10">
-            <DialogTitle>Party Request Details</DialogTitle>
+            <DialogTitle>
+              {selectedRequest && isPrivateEvent(selectedRequest) ? 'Private Event' : 'Birthday Party'} Request Details
+            </DialogTitle>
             <DialogDescription>
               Submitted on {selectedRequest && formatDateTime(selectedRequest.created_at)}
             </DialogDescription>
@@ -911,33 +1004,80 @@ export function PartyRequestsClient() {
                   {getStatusBadge(selectedRequest.status)}
                 </div>
                 <div>
-                  <h4 className="font-semibold text-sm mb-1">Package</h4>
-                  <p>{getPackageDisplayName(selectedRequest.package)}</p>
+                  <h4 className="font-semibold text-sm mb-1">Type</h4>
+                  {getTypeBadge(selectedRequest.request_type || 'birthday_party')}
                 </div>
               </div>
 
-              <div className="border-t pt-4">
-                <h3 className="font-semibold mb-3 flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Party Details
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">Preferred Date</h4>
-                    <p>{formatDate(selectedRequest.preferred_date)}</p>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm mb-1">Number of Children</h4>
-                    <p>{selectedRequest.number_of_children}</p>
-                  </div>
-                  {selectedRequest.child_name_age && (
-                    <div className="col-span-2">
-                      <h4 className="font-semibold text-sm mb-1">Birthday Child</h4>
-                      <p>{selectedRequest.child_name_age}</p>
+              {isPrivateEvent(selectedRequest) ? (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Event Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedRequest.event_type && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-1">Event Type</h4>
+                        <p>{selectedRequest.event_type}</p>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Preferred Date</h4>
+                      <p>{formatDate(selectedRequest.preferred_date)}</p>
                     </div>
-                  )}
+                    {selectedRequest.preferred_time && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-1">Preferred Time</h4>
+                        <p>{selectedRequest.preferred_time}</p>
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Number of Guests</h4>
+                      <p>{selectedRequest.number_of_children}</p>
+                    </div>
+                    {selectedRequest.selected_menu && (
+                      <div className="col-span-2">
+                        <h4 className="font-semibold text-sm mb-1">Selected Menu</h4>
+                        <p>{getMenuDisplayName(selectedRequest.selected_menu)}</p>
+                      </div>
+                    )}
+                    {selectedRequest.dietary_restrictions && (
+                      <div className="col-span-2">
+                        <h4 className="font-semibold text-sm mb-1">Dietary Restrictions</h4>
+                        <p>{selectedRequest.dietary_restrictions}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="border-t pt-4">
+                  <h3 className="font-semibold mb-3 flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Party Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Package</h4>
+                      <p>{getPackageDisplayName(selectedRequest.package)}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Preferred Date</h4>
+                      <p>{formatDate(selectedRequest.preferred_date)}</p>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm mb-1">Number of Children</h4>
+                      <p>{selectedRequest.number_of_children}</p>
+                    </div>
+                    {selectedRequest.child_name_age && (
+                      <div>
+                        <h4 className="font-semibold text-sm mb-1">Birthday Child</h4>
+                        <p>{selectedRequest.child_name_age}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -1238,32 +1378,59 @@ export function PartyRequestsClient() {
                   {getStatusBadge(selectedRequest.status)}
                   <p className="text-xs text-muted-foreground mt-1">Use approve/decline to change status</p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-package">Package</Label>
-                  <Select
-                    value={editFormData.package}
-                    onValueChange={(value) => setEditFormData({ ...editFormData, package: value })}
-                  >
-                    <SelectTrigger id="edit-package">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="art-canvas">Art: Canvas Painting</SelectItem>
-                      <SelectItem value="mini-fiesta">Mini Fiesta</SelectItem>
-                      <SelectItem value="deluxe-fiesta">Deluxe Fiesta</SelectItem>
-                      <SelectItem value="premium-fiesta">Premium Fiesta</SelectItem>
-                      <SelectItem value="dance-music">Dance & Music Party</SelectItem>
-                      <SelectItem value="diy-party">DIY Party</SelectItem>
-                      <SelectItem value="vip-package">VIP Package</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                {editFormData.request_type === 'private_event' ? (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-menu">Selected Menu</Label>
+                    <Select
+                      value={editFormData.selected_menu}
+                      onValueChange={(value) => setEditFormData({ ...editFormData, selected_menu: value })}
+                    >
+                      <SelectTrigger id="edit-menu">
+                        <SelectValue placeholder="Select a menu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tostadas">Baked Tostadas with Shredded Chicken</SelectItem>
+                        <SelectItem value="tamales">Mini Tamales Express Tricolor</SelectItem>
+                        <SelectItem value="arepas">Turkey and Cheese Arepa Sliders</SelectItem>
+                        <SelectItem value="empanadas">Mini Chicken Empanadas</SelectItem>
+                        <SelectItem value="tacos">Crispy Sweet Potato and Black Bean Tacos</SelectItem>
+                        <SelectItem value="quesadillas">Mini Quesadillas with Monster Guacamole</SelectItem>
+                        <SelectItem value="birria">Turkey Birria with Bean Sopes</SelectItem>
+                        <SelectItem value="chicken-rolls">Mini Spinach & Cheese Chicken Rolls</SelectItem>
+                        <SelectItem value="wraps">Mini Chicken and Veggie Wraps</SelectItem>
+                        <SelectItem value="mac-cheese">Mac & Cheese with Hidden Vegetables</SelectItem>
+                        <SelectItem value="custom">Custom Menu (to be discussed)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-package">Package</Label>
+                    <Select
+                      value={editFormData.package}
+                      onValueChange={(value) => setEditFormData({ ...editFormData, package: value })}
+                    >
+                      <SelectTrigger id="edit-package">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="art-canvas">Art: Canvas Painting</SelectItem>
+                        <SelectItem value="mini-fiesta">Mini Fiesta</SelectItem>
+                        <SelectItem value="deluxe-fiesta">Deluxe Fiesta</SelectItem>
+                        <SelectItem value="premium-fiesta">Premium Fiesta</SelectItem>
+                        <SelectItem value="dance-music">Dance & Music Party</SelectItem>
+                        <SelectItem value="diy-party">DIY Party</SelectItem>
+                        <SelectItem value="vip-package">VIP Package</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               <div className="border-t pt-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <Calendar className="h-4 w-4" />
-                  Party Details
+                  {editFormData.request_type === 'private_event' ? 'Event Details' : 'Party Details'}
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
@@ -1275,8 +1442,20 @@ export function PartyRequestsClient() {
                       onChange={(e) => setEditFormData({ ...editFormData, preferred_date: e.target.value })}
                     />
                   </div>
+                  {editFormData.request_type === 'private_event' && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-time">Preferred Time</Label>
+                      <Input
+                        id="edit-time"
+                        type="text"
+                        value={editFormData.preferred_time}
+                        onChange={(e) => setEditFormData({ ...editFormData, preferred_time: e.target.value })}
+                        placeholder="e.g. 2:00 PM"
+                      />
+                    </div>
+                  )}
                   <div className="space-y-1.5">
-                    <Label htmlFor="edit-children">Number of Children</Label>
+                    <Label htmlFor="edit-children">{editFormData.request_type === 'private_event' ? 'Number of Guests' : 'Number of Children'}</Label>
                     <Input
                       id="edit-children"
                       type="number"
@@ -1285,16 +1464,42 @@ export function PartyRequestsClient() {
                       onChange={(e) => setEditFormData({ ...editFormData, number_of_children: parseInt(e.target.value) || 1 })}
                     />
                   </div>
-                  <div className="col-span-2 space-y-1.5">
-                    <Label htmlFor="edit-birthday-child">Birthday Child</Label>
-                    <Input
-                      id="edit-birthday-child"
-                      type="text"
-                      value={editFormData.child_name_age}
-                      onChange={(e) => setEditFormData({ ...editFormData, child_name_age: e.target.value })}
-                      placeholder="e.g. Emma, age 7"
-                    />
-                  </div>
+                  {editFormData.request_type === 'private_event' && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-event-type">Event Type</Label>
+                      <Input
+                        id="edit-event-type"
+                        type="text"
+                        value={editFormData.event_type}
+                        onChange={(e) => setEditFormData({ ...editFormData, event_type: e.target.value })}
+                        placeholder="e.g. Team Building, Family Reunion"
+                      />
+                    </div>
+                  )}
+                  {editFormData.request_type === 'private_event' && (
+                    <div className="col-span-2 space-y-1.5">
+                      <Label htmlFor="edit-dietary">Dietary Restrictions</Label>
+                      <Input
+                        id="edit-dietary"
+                        type="text"
+                        value={editFormData.dietary_restrictions}
+                        onChange={(e) => setEditFormData({ ...editFormData, dietary_restrictions: e.target.value })}
+                        placeholder="Any dietary restrictions..."
+                      />
+                    </div>
+                  )}
+                  {editFormData.request_type !== 'private_event' && (
+                    <div className="col-span-2 space-y-1.5">
+                      <Label htmlFor="edit-birthday-child">Birthday Child</Label>
+                      <Input
+                        id="edit-birthday-child"
+                        type="text"
+                        value={editFormData.child_name_age}
+                        onChange={(e) => setEditFormData({ ...editFormData, child_name_age: e.target.value })}
+                        placeholder="e.g. Emma, age 7"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1450,40 +1655,84 @@ export function PartyRequestsClient() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Party Dialog */}
+      {/* Create Event Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
         setIsCreateDialogOpen(open)
         if (!open) resetCreateForm()
       }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Create Party</DialogTitle>
+            <DialogTitle>Create {createFormData.request_type === 'private_event' ? 'Private Event' : 'Birthday Party'}</DialogTitle>
             <DialogDescription>
-              Create a new party for a client. The party will be created as approved and the client will receive an email with their dashboard link.
+              Create a new {createFormData.request_type === 'private_event' ? 'private event' : 'birthday party'} for a client. It will be created as approved and the client will receive an email with their dashboard link.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Type Selection */}
+            <div className="space-y-1.5">
+              <Label>Request Type *</Label>
+              <Select
+                value={createFormData.request_type}
+                onValueChange={(value: 'birthday_party' | 'private_event') => setCreateFormData({ ...createFormData, request_type: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="birthday_party">Birthday Party</SelectItem>
+                  <SelectItem value="private_event">Private Event</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="create-package">Package *</Label>
-                <Select
-                  value={createFormData.package}
-                  onValueChange={(value) => setCreateFormData({ ...createFormData, package: value })}
-                >
-                  <SelectTrigger id="create-package">
-                    <SelectValue placeholder="Select a package" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="art-canvas">Art: Canvas Painting</SelectItem>
-                    <SelectItem value="diy-party">DIY Party</SelectItem>
-                    <SelectItem value="mini-fiesta">Mini Fiesta</SelectItem>
-                    <SelectItem value="deluxe-fiesta">Deluxe Fiesta</SelectItem>
-                    <SelectItem value="premium-fiesta">Premium Fiesta</SelectItem>
-                    <SelectItem value="vip-package">VIP Package</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {createFormData.request_type === 'private_event' ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-menu">Selected Menu</Label>
+                  <Select
+                    value={createFormData.selected_menu}
+                    onValueChange={(value) => setCreateFormData({ ...createFormData, selected_menu: value })}
+                  >
+                    <SelectTrigger id="create-menu">
+                      <SelectValue placeholder="Select a menu" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tostadas">Baked Tostadas with Shredded Chicken</SelectItem>
+                      <SelectItem value="tamales">Mini Tamales Express Tricolor</SelectItem>
+                      <SelectItem value="arepas">Turkey and Cheese Arepa Sliders</SelectItem>
+                      <SelectItem value="empanadas">Mini Chicken Empanadas</SelectItem>
+                      <SelectItem value="tacos">Crispy Sweet Potato and Black Bean Tacos</SelectItem>
+                      <SelectItem value="quesadillas">Mini Quesadillas with Monster Guacamole</SelectItem>
+                      <SelectItem value="birria">Turkey Birria with Bean Sopes</SelectItem>
+                      <SelectItem value="chicken-rolls">Mini Spinach & Cheese Chicken Rolls</SelectItem>
+                      <SelectItem value="wraps">Mini Chicken and Veggie Wraps</SelectItem>
+                      <SelectItem value="mac-cheese">Mac & Cheese with Hidden Vegetables</SelectItem>
+                      <SelectItem value="custom">Custom Menu (to be discussed)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-package">Package *</Label>
+                  <Select
+                    value={createFormData.package}
+                    onValueChange={(value) => setCreateFormData({ ...createFormData, package: value })}
+                  >
+                    <SelectTrigger id="create-package">
+                      <SelectValue placeholder="Select a package" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="art-canvas">Art: Canvas Painting</SelectItem>
+                      <SelectItem value="diy-party">DIY Party</SelectItem>
+                      <SelectItem value="mini-fiesta">Mini Fiesta</SelectItem>
+                      <SelectItem value="deluxe-fiesta">Deluxe Fiesta</SelectItem>
+                      <SelectItem value="premium-fiesta">Premium Fiesta</SelectItem>
+                      <SelectItem value="vip-package">VIP Package</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="create-date">Preferred Date *</Label>
                 <Input
@@ -1497,7 +1746,7 @@ export function PartyRequestsClient() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="create-children">Number of Children</Label>
+                <Label htmlFor="create-children">{createFormData.request_type === 'private_event' ? 'Number of Guests' : 'Number of Children'}</Label>
                 <Input
                   id="create-children"
                   type="number"
@@ -1506,17 +1755,56 @@ export function PartyRequestsClient() {
                   onChange={(e) => setCreateFormData({ ...createFormData, number_of_children: parseInt(e.target.value) || 1 })}
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="create-birthday-child">Birthday Child</Label>
-                <Input
-                  id="create-birthday-child"
-                  type="text"
-                  value={createFormData.child_name_age}
-                  onChange={(e) => setCreateFormData({ ...createFormData, child_name_age: e.target.value })}
-                  placeholder="e.g. Emma, age 7"
-                />
-              </div>
+              {createFormData.request_type === 'private_event' ? (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="create-event-type">Event Type</Label>
+                    <Input
+                      id="create-event-type"
+                      type="text"
+                      value={createFormData.event_type}
+                      onChange={(e) => setCreateFormData({ ...createFormData, event_type: e.target.value })}
+                      placeholder="e.g. Team Building, Family Reunion"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-birthday-child">Birthday Child</Label>
+                  <Input
+                    id="create-birthday-child"
+                    type="text"
+                    value={createFormData.child_name_age}
+                    onChange={(e) => setCreateFormData({ ...createFormData, child_name_age: e.target.value })}
+                    placeholder="e.g. Emma, age 7"
+                  />
+                </div>
+              )}
             </div>
+
+            {createFormData.request_type === 'private_event' && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-time">Preferred Time</Label>
+                  <Input
+                    id="create-time"
+                    type="text"
+                    value={createFormData.preferred_time}
+                    onChange={(e) => setCreateFormData({ ...createFormData, preferred_time: e.target.value })}
+                    placeholder="e.g. 2:00 PM"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="create-dietary">Dietary Restrictions</Label>
+                  <Input
+                    id="create-dietary"
+                    type="text"
+                    value={createFormData.dietary_restrictions}
+                    onChange={(e) => setCreateFormData({ ...createFormData, dietary_restrictions: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="border-t pt-4">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -1525,7 +1813,7 @@ export function PartyRequestsClient() {
               </h3>
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label htmlFor="create-parent">Parent/Guardian Name *</Label>
+                  <Label htmlFor="create-parent">{createFormData.request_type === 'private_event' ? 'Contact Name' : 'Parent/Guardian Name'} *</Label>
                   <Input
                     id="create-parent"
                     type="text"
@@ -1558,12 +1846,12 @@ export function PartyRequestsClient() {
 
             <div className="border-t pt-4 space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="create-special">Special Requests</Label>
+                <Label htmlFor="create-special">{createFormData.request_type === 'private_event' ? 'Event Details / Special Requests' : 'Special Requests'}</Label>
                 <Textarea
                   id="create-special"
                   value={createFormData.special_requests}
                   onChange={(e) => setCreateFormData({ ...createFormData, special_requests: e.target.value })}
-                  placeholder="Any special requests or dietary restrictions..."
+                  placeholder={createFormData.request_type === 'private_event' ? 'Any event details or special requirements...' : 'Any special requests or dietary restrictions...'}
                   rows={3}
                 />
               </div>
@@ -1606,7 +1894,7 @@ export function PartyRequestsClient() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {actionType === 'approve' ? 'Approve' : 'Decline'} Party Request
+              {actionType === 'approve' ? 'Approve' : 'Decline'} {selectedRequest && isPrivateEvent(selectedRequest) ? 'Event' : 'Party'} Request
             </DialogTitle>
             <DialogDescription>
               {selectedRequest && `${actionType === 'approve' ? 'Approve' : 'Decline'} request from ${selectedRequest.parent_name}`}

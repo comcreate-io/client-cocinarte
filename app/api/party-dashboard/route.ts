@@ -65,12 +65,17 @@ export async function GET(request: NextRequest) {
       success: true,
       party_request: {
         id: partyRequest.id,
+        request_type: partyRequest.request_type || 'birthday_party',
         preferred_date: partyRequest.preferred_date,
         number_of_children: partyRequest.number_of_children,
         package: partyRequest.package,
         parent_name: partyRequest.parent_name,
         child_name_age: partyRequest.child_name_age,
         status: partyRequest.status,
+        event_type: partyRequest.event_type,
+        preferred_time: partyRequest.preferred_time,
+        selected_menu: partyRequest.selected_menu,
+        dietary_restrictions: partyRequest.dietary_restrictions,
       },
       guests: guests || [],
     }, {

@@ -47,7 +47,18 @@
       "Bash(xxd:*)",
       "Bash(vercel logs:*)",
       "Bash(vercel ls:*)",
-      "Bash(vercel env:*)"
+      "Bash(vercel env:*)",
+      "Bash(find \"C:\\\\Users\\\\52999\\\\Desktop\\\\client-cocinarte\" -type f -name \"*.ts\" -o -name \"*.tsx\" -o -name \"*.js\" -o -name \"*.jsx\" 2>/dev/null | grep -v node_modules | head -50)",
+      "Bash(find \"C:\\\\Users\\\\52999\\\\Desktop\\\\client-cocinarte/app\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) 2>/dev/null | head -100)",
+      "Bash(find \"C:\\\\Users\\\\52999\\\\Desktop\\\\client-cocinarte/components\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) 2>/dev/null | head -100)",
+      "Bash(find \"C:\\\\Users\\\\52999\\\\Desktop\\\\client-cocinarte\" -type f -name \"*coupon*\" 2>/dev/null | grep -v node_modules)",
+      "Bash(find \"C:\\\\Users\\\\52999\\\\Desktop\\\\client-cocinarte\" -type d -name \"*email*\" -o -type d -name \"*template*\" 2>/dev/null | grep -v node_modules | head -20)",
+      "Bash(find \"C:\\\\Users\\\\52999\\\\Desktop\\\\client-cocinarte/lib\" -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) 2>/dev/null | head -50)",
+      "Bash(find \"C:\\\\Users\\\\52999\\\\Desktop\\\\client-cocinarte\" -type f \\\\\\( -name \"*.html\" -o -name \"*.mjml\" \\\\\\) 2>/dev/null | grep -v node_modules)",
+      "Bash(ls:*)",
+      "Bash(xargs sed:*)",
+      "Bash(find:*)",
+      "Bash(git check-ignore *)"
     ],
     "deny": [],
     "ask": []

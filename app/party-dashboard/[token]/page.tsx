@@ -195,6 +195,25 @@ export default function PartyDashboardPage() {
     return packageNames[pkg] || pkg
   }
 
+  const getMenuDisplayName = (menu: string) => {
+    const menuNames: { [key: string]: string } = {
+      'tostadas': 'Baked Tostadas with Shredded Chicken',
+      'tamales': 'Mini Tamales Express Tricolor',
+      'arepas': 'Turkey and Cheese Arepa Sliders',
+      'empanadas': 'Mini Chicken Empanadas',
+      'tacos': 'Crispy Sweet Potato and Black Bean Tacos',
+      'quesadillas': 'Mini Quesadillas with Monster Guacamole',
+      'birria': 'Turkey Birria with Bean Sopes',
+      'chicken-rolls': 'Mini Spinach & Cheese Chicken Rolls',
+      'wraps': 'Mini Chicken and Veggie Wraps',
+      'mac-cheese': 'Mac & Cheese with Hidden Vegetables',
+      'custom': 'Custom Menu (to be discussed)',
+    }
+    return menuNames[menu] || menu
+  }
+
+  const isPrivateEvent = partyRequest?.request_type === 'private_event'
+
   const getGuestStatusBadge = (guest: PartyGuest) => {
     if (guest.form_completed_at) {
       return <Badge className="bg-green-100 text-green-700 border-green-300">Completed</Badge>
@@ -253,7 +272,9 @@ export default function PartyDashboardPage() {
         <div className="text-center mb-6 sm:mb-8">
           <div className="flex items-center justify-center gap-2 mb-3">
             <PartyPopper className="h-6 w-6 sm:h-8 sm:w-8 text-[#F0614F] flex-shrink-0" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">Party Guest Dashboard</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
+              {isPrivateEvent ? 'Event Guest Dashboard' : 'Party Guest Dashboard'}
+            </h1>
             <PartyPopper className="h-6 w-6 sm:h-8 sm:w-8 text-[#F0614F] flex-shrink-0 hidden sm:block" />
           </div>
           <p className="text-sm sm:text-base text-slate-600">
@@ -261,7 +282,7 @@ export default function PartyDashboardPage() {
           </p>
         </div>
 
-        {/* Party Details Card */}
+        {/* Event/Party Details Card */}
         {partyRequest && (
           <Card className="mb-4 sm:mb-6 border-[#1E3A8A]/20">
             <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6">
@@ -270,7 +291,9 @@ export default function PartyDashboardPage() {
                   <ChefHat className="h-5 w-5 sm:h-6 sm:w-6 text-[#1E3A8A]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg sm:text-xl font-bold text-slate-800">Birthday Party</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-slate-800">
+                    {isPrivateEvent ? 'Private Event' : 'Birthday Party'}
+                  </h3>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-4 mt-2 text-sm text-slate-600">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
@@ -278,13 +301,26 @@ export default function PartyDashboardPage() {
                     </span>
                     <span className="flex items-center gap-1">
                       <Users className="h-4 w-4 flex-shrink-0" />
-                      {partyRequest.number_of_children} children
+                      {partyRequest.number_of_children} {isPrivateEvent ? 'guests' : 'children'}
                     </span>
                   </div>
                   <div className="flex flex-col sm:flex-row sm:flex-wrap gap-1 sm:gap-4 mt-1 text-sm text-slate-600">
-                    <span><strong>Package:</strong> {getPackageDisplayName(partyRequest.package)}</span>
-                    {partyRequest.child_name_age && (
-                      <span><strong>Birthday Child:</strong> {partyRequest.child_name_age}</span>
+                    {isPrivateEvent ? (
+                      <>
+                        {partyRequest.selected_menu && (
+                          <span><strong>Menu:</strong> {getMenuDisplayName(partyRequest.selected_menu)}</span>
+                        )}
+                        {partyRequest.event_type && (
+                          <span><strong>Event Type:</strong> {partyRequest.event_type}</span>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <span><strong>Package:</strong> {getPackageDisplayName(partyRequest.package)}</span>
+                        {partyRequest.child_name_age && (
+                          <span><strong>Birthday Child:</strong> {partyRequest.child_name_age}</span>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -341,8 +377,10 @@ export default function PartyDashboardPage() {
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
               {guestLimitReached
-                ? `Guest limit reached (${partyRequest?.number_of_children} children maximum)`
-                : 'Add a guest child and their parent will receive an enrollment form by email'
+                ? `Guest limit reached (${partyRequest?.number_of_children} ${isPrivateEvent ? 'guests' : 'children'} maximum)`
+                : isPrivateEvent
+                  ? 'Add a guest and they will receive an enrollment form by email'
+                  : 'Add a guest child and their parent will receive an enrollment form by email'
               }
             </CardDescription>
           </CardHeader>
@@ -362,12 +400,12 @@ export default function PartyDashboardPage() {
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="childName" className="text-sm">Child's Name *</Label>
+                  <Label htmlFor="childName" className="text-sm">{isPrivateEvent ? "Guest's Name" : "Child's Name"} *</Label>
                   <Input
                     id="childName"
                     value={childName}
                     onChange={(e) => setChildName(e.target.value)}
-                    placeholder="Guest child's name"
+                    placeholder={isPrivateEvent ? "Guest's name" : "Guest child's name"}
                     disabled={addingGuest}
                   />
                 </div>
