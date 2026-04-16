@@ -372,7 +372,9 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
           allergies: guestChild?.allergies || child?.allergies || undefined,
           dietary_restrictions: guestChild?.dietary_restrictions || child?.dietary_restrictions || undefined,
           medical_conditions: guestChild?.medical_conditions || child?.medical_conditions || undefined,
-          media_permission: guestChild?.media_permission ?? child?.media_permission ?? undefined,
+          media_permission: isGuest
+            ? (guestChild?.media_permission ?? undefined)
+            : (consent?.social_media_consent ?? child?.media_permission ?? undefined),
           consent_signed: isGuest
             ? !!guestChild?.liability_consent
             : !!consent,

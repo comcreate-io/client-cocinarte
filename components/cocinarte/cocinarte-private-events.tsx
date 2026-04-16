@@ -11,63 +11,63 @@ import { useToast } from "@/hooks/use-toast"
 // Menu options for private classes
 const MENU_OPTIONS = [
   {
-    id: "tostadas",
-    name: "Baked Tostadas with Shredded Chicken",
-    description: "Tostadas horneadas con pollo deshebrado, salsa BBQ-chipotle suave, frijoles refritos, lechuga y queso",
-    category: "Main Course"
-  },
-  {
     id: "tamales",
-    name: "Mini Tamales Express Tricolor",
-    description: "Traditional tricolor mini tamales with pickled red onion",
+    name: "Tamales",
+    description: "Traditional Mexican tamales",
     category: "Main Course"
   },
   {
-    id: "arepas",
-    name: "Turkey and Cheese Arepa Sliders",
-    description: "Arepas sliders de pavo y queso - delicious Colombian-style sliders",
+    id: "enchiladas",
+    name: "Enchiladas",
+    description: "Classic Mexican enchiladas",
     category: "Main Course"
   },
   {
-    id: "empanadas",
-    name: "Mini Chicken Empanadas",
-    description: "Empanaditas de pollo - crispy baked empanadas with savory chicken filling",
+    id: "ceviche",
+    name: "Ceviche",
+    description: "Fresh citrus-marinated ceviche",
     category: "Main Course"
   },
   {
-    id: "tacos",
-    name: "Crispy Sweet Potato and Black Bean Tacos",
-    description: "Tacos crujientes de camote y frijoles negros - vegetarian friendly",
+    id: "fajitas",
+    name: "Fajitas",
+    description: "Sizzling Mexican fajitas",
     category: "Main Course"
   },
   {
-    id: "quesadillas",
-    name: "Mini Quesadillas with Monster Guacamole",
-    description: "Fun quesadillas served with freshly made guacamole",
+    id: "chilaquiles",
+    name: "Chilaquiles",
+    description: "Traditional Mexican chilaquiles",
     category: "Main Course"
   },
   {
-    id: "birria",
-    name: "Turkey Birria with Bean Sopes",
-    description: "Birria de pavo with sopes de frijoles con queso fresco",
+    id: "chiles-rellenos",
+    name: "Chiles Rellenos",
+    description: "Stuffed Mexican chiles rellenos",
     category: "Main Course"
   },
   {
-    id: "chicken-rolls",
-    name: "Mini Spinach & Cheese Chicken Rolls",
-    description: "Mini Rollitos de Pollo con Espinaca y Queso - elegant and delicious",
+    id: "carne-en-su-jugo",
+    name: "Carne en su Jugo",
+    description: "A Jalisco beef & bean stew",
     category: "Main Course"
   },
   {
-    id: "wraps",
-    name: "Mini Chicken and Veggie Wraps",
-    description: "Mini wraps de pollo y vegetales - healthy and colorful",
+    id: "chicken-sopes",
+    name: "Chicken Sopes",
+    description: "On thick masa rounds",
     category: "Main Course"
   },
   {
-    id: "mac-cheese",
-    name: "Mac & Cheese with Hidden Vegetables",
-    description: "Creamy mac & cheese with nutritious hidden veggies",
+    id: "pozole",
+    name: "Pozole",
+    description: "A hearty hominy stew",
+    category: "Main Course"
+  },
+  {
+    id: "pork-dumplings",
+    name: "Pork Dumplings",
+    description: "Delicious pork dumplings",
     category: "Main Course"
   },
   {
