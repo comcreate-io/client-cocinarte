@@ -738,16 +738,16 @@ export function PartyRequestsClient() {
 
   const getMenuDisplayName = (menu: string) => {
     const menuNames: Record<string, string> = {
-      'tostadas': 'Baked Tostadas with Shredded Chicken',
-      'tamales': 'Mini Tamales Express Tricolor',
-      'arepas': 'Turkey and Cheese Arepa Sliders',
-      'empanadas': 'Mini Chicken Empanadas',
-      'tacos': 'Crispy Sweet Potato and Black Bean Tacos',
-      'quesadillas': 'Mini Quesadillas with Monster Guacamole',
-      'birria': 'Turkey Birria with Bean Sopes',
-      'chicken-rolls': 'Mini Spinach & Cheese Chicken Rolls',
-      'wraps': 'Mini Chicken and Veggie Wraps',
-      'mac-cheese': 'Mac & Cheese with Hidden Vegetables',
+      'tamales': 'Tamales',
+      'enchiladas': 'Enchiladas',
+      'ceviche': 'Ceviche',
+      'fajitas': 'Fajitas',
+      'chilaquiles': 'Chilaquiles',
+      'chiles-rellenos': 'Chiles Rellenos',
+      'carne-en-su-jugo': 'Carne en su Jugo',
+      'chicken-sopes': 'Chicken Sopes',
+      'pozole': 'Pozole',
+      'pork-dumplings': 'Pork Dumplings',
       'custom': 'Custom Menu (to be discussed)',
     }
     return menuNames[menu] || menu
@@ -1400,16 +1400,16 @@ export function PartyRequestsClient() {
                         <SelectValue placeholder="Select a menu" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="tostadas">Baked Tostadas with Shredded Chicken</SelectItem>
-                        <SelectItem value="tamales">Mini Tamales Express Tricolor</SelectItem>
-                        <SelectItem value="arepas">Turkey and Cheese Arepa Sliders</SelectItem>
-                        <SelectItem value="empanadas">Mini Chicken Empanadas</SelectItem>
-                        <SelectItem value="tacos">Crispy Sweet Potato and Black Bean Tacos</SelectItem>
-                        <SelectItem value="quesadillas">Mini Quesadillas with Monster Guacamole</SelectItem>
-                        <SelectItem value="birria">Turkey Birria with Bean Sopes</SelectItem>
-                        <SelectItem value="chicken-rolls">Mini Spinach & Cheese Chicken Rolls</SelectItem>
-                        <SelectItem value="wraps">Mini Chicken and Veggie Wraps</SelectItem>
-                        <SelectItem value="mac-cheese">Mac & Cheese with Hidden Vegetables</SelectItem>
+                        <SelectItem value="tamales">Tamales</SelectItem>
+                        <SelectItem value="enchiladas">Enchiladas</SelectItem>
+                        <SelectItem value="ceviche">Ceviche</SelectItem>
+                        <SelectItem value="fajitas">Fajitas</SelectItem>
+                        <SelectItem value="chilaquiles">Chilaquiles</SelectItem>
+                        <SelectItem value="chiles-rellenos">Chiles Rellenos</SelectItem>
+                        <SelectItem value="carne-en-su-jugo">Carne en su Jugo</SelectItem>
+                        <SelectItem value="chicken-sopes">Chicken Sopes</SelectItem>
+                        <SelectItem value="pozole">Pozole</SelectItem>
+                        <SelectItem value="pork-dumplings">Pork Dumplings</SelectItem>
                         <SelectItem value="custom">Custom Menu (to be discussed)</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1711,16 +1711,16 @@ export function PartyRequestsClient() {
                       <SelectValue placeholder="Select a menu" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="tostadas">Baked Tostadas with Shredded Chicken</SelectItem>
-                      <SelectItem value="tamales">Mini Tamales Express Tricolor</SelectItem>
-                      <SelectItem value="arepas">Turkey and Cheese Arepa Sliders</SelectItem>
-                      <SelectItem value="empanadas">Mini Chicken Empanadas</SelectItem>
-                      <SelectItem value="tacos">Crispy Sweet Potato and Black Bean Tacos</SelectItem>
-                      <SelectItem value="quesadillas">Mini Quesadillas with Monster Guacamole</SelectItem>
-                      <SelectItem value="birria">Turkey Birria with Bean Sopes</SelectItem>
-                      <SelectItem value="chicken-rolls">Mini Spinach & Cheese Chicken Rolls</SelectItem>
-                      <SelectItem value="wraps">Mini Chicken and Veggie Wraps</SelectItem>
-                      <SelectItem value="mac-cheese">Mac & Cheese with Hidden Vegetables</SelectItem>
+                      <SelectItem value="tamales">Tamales</SelectItem>
+                      <SelectItem value="enchiladas">Enchiladas</SelectItem>
+                      <SelectItem value="ceviche">Ceviche</SelectItem>
+                      <SelectItem value="fajitas">Fajitas</SelectItem>
+                      <SelectItem value="chilaquiles">Chilaquiles</SelectItem>
+                      <SelectItem value="chiles-rellenos">Chiles Rellenos</SelectItem>
+                      <SelectItem value="carne-en-su-jugo">Carne en su Jugo</SelectItem>
+                      <SelectItem value="chicken-sopes">Chicken Sopes</SelectItem>
+                      <SelectItem value="pozole">Pozole</SelectItem>
+                      <SelectItem value="pork-dumplings">Pork Dumplings</SelectItem>
                       <SelectItem value="custom">Custom Menu (to be discussed)</SelectItem>
                     </SelectContent>
                   </Select>
