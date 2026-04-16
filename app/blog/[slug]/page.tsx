@@ -190,7 +190,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
               <div className="w-11 h-11 sm:w-14 sm:h-14 bg-white rounded-full flex items-center justify-center p-1.5 sm:p-2 flex-shrink-0">
                 <Image
-                  src="/cocinarte/cocinarteLogo.png"
+                  src="/cocinarte/cocinarteLogo.webp"
                   alt="CocinarTe Logo"
                   width={40}
                   height={40}

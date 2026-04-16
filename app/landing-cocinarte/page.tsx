@@ -29,7 +29,7 @@ export default function CocinarteLandingPage() {
           {/* Logo */}
           <div className="mb-8">
             <Image
-              src="/cocinarte/cocinarteLogo.png"
+              src="/cocinarte/cocinarteLogo.webp"
               alt="Cocinarte Logo"
               width={400}
               height={120}
@@ -476,7 +476,7 @@ export default function CocinarteLandingPage() {
         <div className="max-w-7xl mx-auto text-center">
           <div className="mb-6">
             <Image
-              src="/cocinarte/cocinarteLogo.png"
+              src="/cocinarte/cocinarteLogo.webp"
               alt="Cocinarte Logo"
               width={200}
               height={60}

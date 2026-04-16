@@ -259,7 +259,7 @@ function CocinarteHeaderInner() {
             <div className="flex items-center flex-shrink-0 justify-start">
               <Link href="/" className="flex items-center group">
                 <Image 
-                  src="/cocinarte/cocinarteLogo.png" 
+                  src="/cocinarte/cocinarteLogo.webp" 
                   alt="Cocinarte Logo" 
                   width={200} 
                   height={64} 
@@ -366,7 +366,7 @@ function CocinarteHeaderInner() {
           <div className="flex items-center flex-shrink-0 justify-start">
             <Link href="/" className="flex items-center group">
               <Image 
-                src="/cocinarte/cocinarteLogo.png" 
+                src="/cocinarte/cocinarteLogo.webp" 
                 alt="Cocinarte Logo" 
                 width={200} 
                 height={64} 
@@ -409,6 +409,7 @@ function CocinarteHeaderInner() {
             >
               <button
                 type="button"
+                onClick={() => setIsCampsDropdownOpen(!isCampsDropdownOpen)}
                 className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
               >
                 Camps
@@ -440,6 +441,8 @@ function CocinarteHeaderInner() {
               onMouseLeave={() => setIsMoreDropdownOpen(false)}
             >
               <button
+                type="button"
+                onClick={() => setIsMoreDropdownOpen(!isMoreDropdownOpen)}
                 className="px-4 lg:px-6 py-2 lg:py-3 rounded-xl text-sm lg:text-base font-semibold transition-all duration-200 text-cocinarte-white hover:bg-cocinarte-orange hover:text-cocinarte-black flex items-center gap-1"
               >
                 More

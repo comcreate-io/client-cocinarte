@@ -59,7 +59,7 @@ export default function CampAlegriaPage() {
             </div>
             <div className="relative">
               <Image
-                src="/camp-alegria.png"
+                src="/camp-alegria.webp"
                 alt="Camp Alegria"
                 width={400}
                 height={400}
@@ -170,7 +170,7 @@ export default function CampAlegriaPage() {
 
             <div className="relative">
               <Image
-                src="/pictures/discoverMore.jpeg"
+                src="/pictures/discoverMore.webp"
                 alt="Children enjoying Camp Alegria"
                 width={600}
                 height={400}

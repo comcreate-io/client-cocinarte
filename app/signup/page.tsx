@@ -35,7 +35,7 @@ export default function SignupPage() {
         <div className="flex justify-center mb-8">
           <Link href="/">
             <Image
-              src="/cocinarte/cocinarteLogo.png"
+              src="/cocinarte/cocinarteLogo.webp"
               alt="Cocinarte"
               width={200}
               height={64}

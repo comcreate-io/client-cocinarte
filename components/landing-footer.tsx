@@ -13,25 +13,25 @@ export default function LandingFooter() {
     {
       name: "Programs",
       href: "#overview",
-      logo: "/branding/logo.png",
+      logo: "/branding/logo.webp",
       description: "K-5 Spanish Immersion School"
     },
     {
       name: "Casita Azul",
       href: "#casita-azul",
-      logo: "/casita-azul.png",
+      logo: "/casita-azul.webp",
       description: "Preschool & Daycare"
     },
     {
       name: "Cocinarte",
       href: "#cocinarte",
-      logo: "/cocinarte/cocinarteLogo.png",
+      logo: "/cocinarte/cocinarteLogo.webp",
       description: "Cooking Classes"
     },
     {
       name: "Camp Alegría",
       href: "#camp-alegria",
-      logo: "/camp-alegria.png",
+      logo: "/camp-alegria.webp",
       description: "Summer Camp"
     }
   ]

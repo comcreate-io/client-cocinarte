@@ -19,7 +19,7 @@ export default function Footer() {
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4 p-2">
               <Image 
-                src="/branding/logo.png" 
+                src="/branding/logo.webp" 
                 alt="Logo" 
                 width={64} 
                 height={64}

@@ -484,7 +484,7 @@ export default function ContactPage() {
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat bg-fixed"
           style={{
-            backgroundImage: `url('/pictures/classroom4.png')`,
+            backgroundImage: `url('/pictures/classroom4.webp')`,
           }}
         />
         

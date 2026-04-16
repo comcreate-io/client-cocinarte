@@ -56,7 +56,7 @@ export default function CasitaAzulPage() {
             </div>
             <div className="relative">
               <Image
-                src="/casita-azul.png"
+                src="/casita-azul.webp"
                 alt="Casita Azul - Bilingual Minds, Boundless Hearts"
                 width={400}
                 height={400}
@@ -195,28 +195,28 @@ export default function CasitaAzulPage() {
             <div className="relative">
               <div className="grid grid-cols-2 gap-4">
                 <Image
-                  src="/casitaAzul/casita2.jpeg"
+                  src="/casitaAzul/casita2.webp"
                   alt="Children learning in Spanish immersion"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita3.jpeg"
+                  src="/casitaAzul/casita3.webp"
                   alt="Cultural activities and play"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita4.jpeg"
+                  src="/casitaAzul/casita4.webp"
                   alt="Heart-centered teaching"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita5.jpeg"
+                  src="/casitaAzul/casita5.webp"
                   alt="Bilingual minds and hearts"
                   width={300}
                   height={200}
@@ -350,28 +350,28 @@ export default function CasitaAzulPage() {
             <div className="relative">
               <div className="grid grid-cols-2 gap-4">
                 <Image
-                  src="/casitaAzul/casita1.jpeg"
+                  src="/casitaAzul/casita1.webp"
                   alt="Preschool activities in Spanish"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita2.jpeg"
+                  src="/casitaAzul/casita2.webp"
                   alt="Daycare environment"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita3.jpeg"
+                  src="/casitaAzul/casita3.webp"
                   alt="Children learning together"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita4.jpeg"
+                  src="/casitaAzul/casita4.webp"
                   alt="Bilingual education"
                   width={300}
                   height={200}
@@ -390,28 +390,28 @@ export default function CasitaAzulPage() {
             <div className="relative">
               <div className="grid grid-cols-2 gap-4">
                 <Image
-                  src="/casitaAzul/casita6.jpeg"
+                  src="/casitaAzul/casita6.webp"
                   alt="Foundation for lifelong learning"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita1.jpeg"
+                  src="/casitaAzul/casita1.webp"
                   alt="Spanish immersion environment"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita2.jpeg"
+                  src="/casitaAzul/casita2.webp"
                   alt="Whole development support"
                   width={300}
                   height={200}
                   className="rounded-xl object-cover h-48"
                 />
                 <Image
-                  src="/casitaAzul/casita3.jpeg"
+                  src="/casitaAzul/casita3.webp"
                   alt="Nurturing Spanish environment"
                   width={300}
                   height={200}

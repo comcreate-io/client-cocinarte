@@ -96,7 +96,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-2 px-2 py-2">
               <div className="flex h-[80px] w-[200px] items-center justify-center rounded overflow-hidden">
                 <Image 
-                  src="/cocinarte/cocinarteLogo.png" 
+                  src="/cocinarte/cocinarteLogo.webp" 
                   alt="Cocinarte Logo" 
                   width={32} 
                   height={32}

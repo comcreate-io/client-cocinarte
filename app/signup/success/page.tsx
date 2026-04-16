@@ -13,7 +13,7 @@ export default function SignupSuccessPage() {
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <Image
-            src="/cocinarte/cocinarteLogo.png"
+            src="/cocinarte/cocinarteLogo.webp"
             alt="Cocinarte"
             width={200}
             height={64}

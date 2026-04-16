@@ -62,7 +62,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex justify-center mb-8 w-[350px] h-[200px] mx-auto ">
           <Image
-            src="/cocinarte/cocinarteLogo.png"
+            src="/cocinarte/cocinarteLogo.webp"
             alt="Cocinarte"
             width={200}
             height={64}

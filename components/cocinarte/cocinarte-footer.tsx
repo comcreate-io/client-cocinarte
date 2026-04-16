@@ -10,7 +10,7 @@ export default function CocinarteFooter() {
         <div className="grid md:grid-cols-4 gap-8">
           <div className="col-span-1">
             <Image 
-              src="/cocinarte/cocinarteLogo.png" 
+              src="/cocinarte/cocinarteLogo.webp" 
               alt="Cocinarte Logo" 
               width={150} 
               height={48} 

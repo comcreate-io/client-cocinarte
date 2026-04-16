@@ -98,7 +98,7 @@ export default function ModernHeader() {
             <div className="flex items-center flex-shrink-0">
               <Link href="/" className="flex items-center group">
                 <Image 
-                  src="/branding/logo.png" 
+                  src="/branding/logo.webp" 
                   alt="Logo" 
                   width={200} 
                   height={64} 
@@ -188,7 +188,7 @@ export default function ModernHeader() {
                       onClick={() => setActiveDropdown(null)}
                     >
                       <Image 
-                        src="/casita-azul.png" 
+                        src="/casita-azul.webp" 
                         alt="Casita Azul Logo" 
                         width={44} 
                         height={44} 
@@ -202,7 +202,7 @@ export default function ModernHeader() {
                       onClick={() => setActiveDropdown(null)}
                     >
                       <Image
-                        src="/camp-alegria.png"
+                        src="/camp-alegria.webp"
                         alt="Camp Alegria Logo"
                         width={44}
                         height={44}
@@ -249,7 +249,7 @@ export default function ModernHeader() {
               <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-gradient-to-r from-amber/5 to-golden/5 flex-shrink-0">
                 <div className="flex items-center flex-1">
                   <Image 
-                    src="/branding/logo.png" 
+                    src="/branding/logo.webp" 
                     alt="Logo" 
                     width={120} 
                     height={40} 
@@ -366,7 +366,7 @@ export default function ModernHeader() {
                             }}
                           >
                             <Image 
-                              src="/casita-azul.png" 
+                              src="/casita-azul.webp" 
                               alt="Casita Azul Logo" 
                               width={36} 
                               height={36} 
@@ -386,7 +386,7 @@ export default function ModernHeader() {
                             }}
                           >
                             <Image
-                              src="/camp-alegria.png"
+                              src="/camp-alegria.webp"
                               alt="Camp Alegria Logo"
                               width={36}
                               height={36}
