@@ -56,8 +56,8 @@ Your application will be able to:
 Run this to verify tables are accessible:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL="https://mwipqlvteowoyipbozyu.supabase.co" \
-NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im13aXBxbHZ0ZW93b3lpcGJvenl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0MzAwMjEsImV4cCI6MjA3NTAwNjAyMX0.NndYYg5QRHpHaETFRvx2dm2Sf-oI4a49zYUNJKqvgxA" \
+NEXT_PUBLIC_SUPABASE_URL="your-supabase-url" \
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key" \
 npx tsx scripts/check-tables.ts
 ```
 

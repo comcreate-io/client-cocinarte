@@ -36,7 +36,7 @@ This guide explains how to apply the database migrations and use the new multi-c
 cd /Users/diego/Desktop/cocinarte
 
 # Apply all pending migrations
-PGPASSWORD="xwW1e714uxcNuZWk" supabase db push
+PGPASSWORD="your-db-password" supabase db push
 ```
 
 ---
