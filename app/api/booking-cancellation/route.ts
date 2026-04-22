@@ -90,39 +90,33 @@ export async function POST(request: NextRequest) {
       html: adminEmailContent,
     };
 
-    // User cancellation confirmation email — copy adapts to each case,
-    // design matches the class-cancellation template for consistency.
-    const introMessage = isAdminEnrollment
-      ? `This booking for ${studentName} has been cancelled. Since it was added to the class by our team, no payment was ever collected — so there's nothing to refund.`
-      : refundAmount != null && refundAmount === 0
-        ? `Your booking for ${studentName} has been cancelled. We're sorry to see you go this time!`
-        : `Your booking for ${studentName} has been cancelled — we're sorry we won't see you in class this time!`;
-
+    // Payment section adapts per case so refund language stays accurate;
+    // the surrounding copy uses the approved customer-facing wording.
     const paymentMessage = isAdminEnrollment
       ? 'This booking was added to the class by our team, so no payment was ever collected and no refund will be issued.'
       : refundAmount != null && refundAmount > 0
         ? isLateCancel
-          ? `Per our late cancellation policy, a refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> is on its way. You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.`
-          : `Your refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> is on its way! You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.`
+          ? `Per our late cancellation policy, a refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> is on its way! You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.`
+          : `Your refund is on its way! You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.`
         : refundAmount != null && refundAmount === 0
           ? 'Per our cancellation policy, no refund will be issued for this booking. If you have any questions, please reach out to us directly.'
-          : "If you paid for this class, your refund is on its way! You'll see it back on your card within 5–10 business days.";
+          : "Your refund is on its way! You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.";
 
     const userEmailContent = `
       <div style="font-family: 'Arial', 'Helvetica', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #F9FAFB;">
         <div style="background: #F0614F; color: white; padding: 35px; text-align: center; border-radius: 8px 8px 0 0;">
-          <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Booking Cancelled</h1>
+          <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Class Cancelled</h1>
         </div>
 
         <div style="background: white; padding: 30px; border: 2px solid #E5E7EB; border-top: none; border-radius: 0 0 8px 8px;">
           <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hi ${userName},</p>
 
           <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
-            ${introMessage}
+            We're so sorry — we've had to cancel the upcoming class and we know that's frustrating. We never take this lightly!
           </p>
 
           <div style="background: #FEF2F2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #DC2626;">
-            <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Class:</strong> ${classTitle}</p>
+            <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Class Cancelled:</strong> ${classTitle}</p>
             <p style="margin: 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Was scheduled for:</strong> ${formattedDate} at ${formattedTime}</p>
           </div>
 
@@ -134,7 +128,7 @@ export async function POST(request: NextRequest) {
           </div>
 
           <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
-            We hope to see ${studentName} back in the kitchen with us soon — there's always something delicious coming up! 🍳
+            We hope this is just a small bump in the road and that we'll get to cook with ${studentName} very soon. There's always something delicious coming up — we'd love to have you back in the kitchen with us! 🍳
           </p>
 
           <div style="text-align: center; margin: 30px 0;">
