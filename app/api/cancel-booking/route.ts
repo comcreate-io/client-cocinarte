@@ -48,6 +48,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing bookingId' }, { status: 400 })
     }
 
+    // Derive base URL from the incoming request so the self-call to
+    // /api/booking-cancellation works in every environment without needing
+    // a NEXT_PUBLIC_SITE_URL env var to be set.
+    const baseUrl = request.nextUrl.origin
+
     // Fetch booking with class data
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -122,7 +127,7 @@ export async function POST(request: NextRequest) {
       // Send cancellation email (with $0 refund)
       if (student?.email) {
         try {
-          await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/booking-cancellation`, {
+          const emailRes = await fetch(`${baseUrl}/api/booking-cancellation`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -139,6 +144,9 @@ export async function POST(request: NextRequest) {
               isAdminEnrollment: true,
             }),
           })
+          if (!emailRes.ok) {
+            console.error('[Cancel Booking] Cancellation email failed:', emailRes.status, await emailRes.text())
+          }
         } catch (emailError) {
           console.error('Error sending cancellation email:', emailError)
         }
@@ -317,7 +325,7 @@ export async function POST(request: NextRequest) {
     // 5. Send cancellation email
     if (student?.email) {
       try {
-        await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/booking-cancellation`, {
+        const emailRes = await fetch(`${baseUrl}/api/booking-cancellation`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -333,6 +341,9 @@ export async function POST(request: NextRequest) {
             isLateCancel,
           }),
         })
+        if (!emailRes.ok) {
+          console.error('[Cancel Booking] Cancellation email failed:', emailRes.status, await emailRes.text())
+        }
       } catch (emailError) {
         console.error('Error sending cancellation email:', emailError)
       }
