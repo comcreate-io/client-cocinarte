@@ -90,62 +90,68 @@ export async function POST(request: NextRequest) {
       html: adminEmailContent,
     };
 
-    // User cancellation confirmation email
+    // User cancellation confirmation email — copy adapts to each case,
+    // design matches the class-cancellation template for consistency.
+    const introMessage = isAdminEnrollment
+      ? `This booking for ${studentName} has been cancelled. Since it was added to the class by our team, no payment was ever collected — so there's nothing to refund.`
+      : refundAmount != null && refundAmount === 0
+        ? `Your booking for ${studentName} has been cancelled. We're sorry to see you go this time!`
+        : `Your booking for ${studentName} has been cancelled — we're sorry we won't see you in class this time!`;
+
+    const paymentMessage = isAdminEnrollment
+      ? 'This booking was added to the class by our team, so no payment was ever collected and no refund will be issued.'
+      : refundAmount != null && refundAmount > 0
+        ? isLateCancel
+          ? `Per our late cancellation policy, a refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> is on its way. You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.`
+          : `Your refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> is on its way! You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.`
+        : refundAmount != null && refundAmount === 0
+          ? 'Per our cancellation policy, no refund will be issued for this booking. If you have any questions, please reach out to us directly.'
+          : "If you paid for this class, your refund is on its way! You'll see it back on your card within 5–10 business days.";
+
     const userEmailContent = `
       <div style="font-family: 'Arial', 'Helvetica', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #F9FAFB;">
         <div style="background: #F0614F; color: white; padding: 35px; text-align: center; border-radius: 8px 8px 0 0;">
-          <h1 style="margin: 0; font-size: 36px; font-weight: bold;">Booking Cancelled</h1>
-          <p style="margin: 12px 0 0 0; font-size: 18px;">Your class reservation has been cancelled</p>
+          <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Booking Cancelled</h1>
         </div>
 
         <div style="background: white; padding: 30px; border: 2px solid #E5E7EB; border-top: none; border-radius: 0 0 8px 8px;">
-          <h2 style="color: #DC2626; margin: 0 0 25px 0; font-size: 26px; border-bottom: 2px solid #FCB414; padding-bottom: 10px;">Cancellation Confirmation</h2>
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hi ${userName},</p>
 
-          <div style="background: #FEF2F2; padding: 22px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #DC2626;">
-            <h3 style="color: #DC2626; margin: 0 0 15px 0; font-size: 20px;">🍳 Cancelled Class Details</h3>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Class:</strong> ${classTitle}</p>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Date:</strong> ${formattedDate}</p>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Time:</strong> ${formattedTime}</p>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Price:</strong> $${classPrice}</p>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Booking ID:</strong> ${bookingId}</p>
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+            ${introMessage}
+          </p>
+
+          <div style="background: #FEF2F2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #DC2626;">
+            <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Class:</strong> ${classTitle}</p>
+            <p style="margin: 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Was scheduled for:</strong> ${formattedDate} at ${formattedTime}</p>
           </div>
 
-          <div style="background: #F0F9FF; padding: 22px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #1E3A8A;">
-            <h3 style="color: #1E3A8A; margin: 0 0 15px 0; font-size: 20px;">👨‍🍳 Student Information</h3>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Student Name:</strong> ${studentName}</p>
-            <p style="margin: 8px 0; color: #374151; font-size: 16px;"><strong style="color: #1E3A8A;">Parent/Guardian:</strong> ${userName}</p>
-          </div>
-
-          <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-            <h4 style="color: #92400E; margin: 0 0 12px 0; font-size: 18px;">💳 Refund Information</h4>
-            <p style="color: #92400E; margin: 0; font-size: 15px; line-height: 1.6;">
-              ${isAdminEnrollment
-                ? 'This booking was added to the class by our team, so no payment was ever collected and no refund will be issued.'
-                : refundAmount != null && refundAmount > 0
-                  ? isLateCancel
-                    ? `A refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> will be processed to your original payment method within 5-7 business days (late cancellation policy).`
-                    : `A full refund of <strong>$${Number(refundAmount).toFixed(2)}</strong> will be processed to your original payment method within 5-7 business days.`
-                  : refundAmount != null && refundAmount === 0
-                    ? 'Per our late cancellation policy, no refund will be issued for this booking.'
-                    : 'If you paid for this class, a refund will be processed to your original payment method within 5-7 business days.'
-              }
+          <div style="background: #F0F9FF; padding: 22px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1E3A8A;">
+            <h3 style="color: #1E3A8A; margin: 0 0 12px 0; font-size: 20px;">About Your Payment</h3>
+            <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+              ${paymentMessage}
             </p>
           </div>
 
-          <div style="background: #FCB414; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-            <h4 style="color: white; margin: 0 0 12px 0; font-size: 18px;">🎉 We Hope to See You Again!</h4>
-            <p style="color: white; margin: 0; font-size: 15px; line-height: 1.6;">
-              We're sorry you had to cancel this time. We'd love to have ${studentName} join us for another cooking adventure soon!
-              Check out our calendar for upcoming classes.
-            </p>
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+            We hope to see ${studentName} back in the kitchen with us soon — there's always something delicious coming up! 🍳
+          </p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="https://www.cocinartepdx.com" style="display: inline-block; background: #F0614F; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+              👉 Browse Upcoming Classes
+            </a>
           </div>
+
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 24px 0 4px 0;">With love from the kitchen,</p>
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;"><strong>The CocinArte Team</strong></p>
 
           <div style="text-align: center; margin-top: 30px; padding: 20px; background: #F0F9FF; border-radius: 8px; border: 1px solid #BFDBFE;">
-            <p style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">Questions? We're here to help!</p>
+            <p style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">Questions? Reach us at</p>
             <p style="color: #374151; margin: 0; font-size: 15px;">
               📧 <a href="mailto:cocinarte@casitaazulpdx.org" style="color: #F0614F; text-decoration: none; font-weight: bold;">cocinarte@casitaazulpdx.org</a>
               <br>
-              📞 <a href="tel:+15039169758" style="color: #F0614F; text-decoration: none; font-weight: bold;">+1 (503) 916-9758</a>
+              📞 <a href="tel:+15039169758" style="color: #F0614F; text-decoration: none; font-weight: bold;">(503) 916-9758</a>
             </p>
           </div>
         </div>
