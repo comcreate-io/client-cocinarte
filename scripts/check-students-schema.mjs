@@ -2,15 +2,20 @@ import pkg from 'pg';
 const { Client } = pkg;
 
 const connectionConfig = {
-  host: 'aws-1-us-east-1.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
-  user: 'postgres.mwipqlvteowoyipbozyu',
-  password: 'xwW1e714uxcNuZWk',
+  host: process.env.DB_HOST || 'aws-1-us-east-1.pooler.supabase.com',
+  port: parseInt(process.env.DB_PORT || '6543'),
+  database: process.env.DB_NAME || 'postgres',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   ssl: {
     rejectUnauthorized: false
   }
 };
+
+if (!connectionConfig.user || !connectionConfig.password) {
+  console.error('Missing required env vars: DB_USER, DB_PASSWORD');
+  process.exit(1);
+}
 
 const client = new Client(connectionConfig);
 

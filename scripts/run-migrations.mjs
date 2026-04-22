@@ -12,17 +12,22 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Connection details with SSL configuration
-// Using the pooler connection
+// Set DB_USER and DB_PASSWORD env vars before running
 const connectionConfig = {
-  host: 'aws-1-us-east-1.pooler.supabase.com',
-  port: 6543,
-  database: 'postgres',
-  user: 'postgres.mwipqlvteowoyipbozyu',
-  password: 'Comcreate2025?',
+  host: process.env.DB_HOST || 'aws-1-us-east-1.pooler.supabase.com',
+  port: parseInt(process.env.DB_PORT || '6543'),
+  database: process.env.DB_NAME || 'postgres',
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   ssl: {
     rejectUnauthorized: false
   }
 };
+
+if (!connectionConfig.user || !connectionConfig.password) {
+  console.error('Missing required env vars: DB_USER, DB_PASSWORD');
+  process.exit(1);
+}
 
 async function runMigration(client, filePath, fileName) {
   console.log(`\n📄 Applying migration: ${fileName}`);

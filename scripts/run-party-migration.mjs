@@ -14,16 +14,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 async function main() {
   console.log('🚀 Running party_requests migration...\n');
 
+  if (!process.env.DATABASE_URL) {
+    console.error('Missing required env var: DATABASE_URL');
+    console.error('Example: DATABASE_URL="postgresql://user:pass@host:port/db" node scripts/run-party-migration.mjs');
+    process.exit(1);
+  }
+
   // Connection configurations to try
   const configs = [
     {
-      name: 'Direct DB connection',
-      connectionString: 'postgresql://postgres:xwW1e714uxcNuZWk@db.mwipqlvteowoyipbozyu.supabase.co:5432/postgres',
-      ssl: { rejectUnauthorized: false }
-    },
-    {
-      name: 'Pooler connection',
-      connectionString: 'postgresql://postgres.mwipqlvteowoyipbozyu:xwW1e714uxcNuZWk@aws-1-us-east-1.pooler.supabase.com:6543/postgres',
+      name: 'Database connection',
+      connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }
     }
   ];

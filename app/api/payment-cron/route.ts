@@ -348,30 +348,63 @@ async function sendClassCancellationEmail(student: any, clase: any) {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
+    const classTime = clase.time
+        ? new Date(`2000-01-01T${clase.time}`).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          })
+        : '';
+
     const mailOptions = {
         to: email,
-        subject: `❌ Class Cancelled: ${clase.title}`,
+        subject: `Class Cancelled: ${clase.title}`,
         html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: #ef4444; color: white; padding: 20px; text-align: center;">
-                    <h1 style="margin: 0;">Class Cancelled</h1>
+            <div style="font-family: 'Arial', 'Helvetica', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: #F9FAFB;">
+                <div style="background: #F0614F; color: white; padding: 35px; text-align: center; border-radius: 8px 8px 0 0;">
+                    <h1 style="margin: 0; font-size: 32px; font-weight: bold;">Class Cancelled</h1>
                 </div>
-                <div style="padding: 20px;">
-                    <p>Hello ${parentName},</p>
-                    <p>We regret to inform you that the following class has been cancelled due to insufficient enrollment:</p>
-                    <div style="background: #f3f4f6; padding: 15px; margin: 15px 0;">
-                        <h3>Cancelled Class:</h3>
-                        <p><strong>${clase.title}</strong></p>
-                        <p>📅 Was scheduled for: ${classDate} at ${clase.time}</p>
-                        <p>👥 Enrollment: ${clase.enrolled}/${clase.maxStudents} (minimum not reached)</p>
+
+                <div style="background: white; padding: 30px; border: 2px solid #E5E7EB; border-top: none; border-radius: 0 0 8px 8px;">
+                    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 16px 0;">Hi ${parentName},</p>
+
+                    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+                        We're so sorry — we've had to cancel the upcoming class and we know that's frustrating. We never take this lightly!
+                    </p>
+
+                    <div style="background: #FEF2F2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #DC2626;">
+                        <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Class Cancelled:</strong> ${clase.title}</p>
+                        <p style="margin: 0; color: #374151; font-size: 16px;"><strong style="color: #DC2626;">Was scheduled for:</strong> ${classDate}${classTime ? ` at ${classTime}` : ''}</p>
                     </div>
-                    <div style="background: #d4edda; padding: 15px; margin: 15px 0; border-left: 4px solid #28a745;">
-                        <h3 style="margin-top: 0; color: #155724;">💚 Payment Information</h3>
-                        <p style="color: #155724; margin: 10px 0;"><strong>Your card was NOT charged.</strong></p>
-                        <p style="color: #155724; margin: 10px 0;">The payment authorization has been completely released, and you will not see any charge on your statement.</p>
+
+                    <div style="background: #F0F9FF; padding: 22px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #1E3A8A;">
+                        <h3 style="color: #1E3A8A; margin: 0 0 12px 0; font-size: 20px;">About Your Payment</h3>
+                        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+                            Your refund is on its way! You'll see it back on your card within 5–10 business days. If you have any questions about your refund, don't hesitate to reach out to us directly.
+                        </p>
                     </div>
-                    <p>We apologize for any inconvenience and hope to see ${childName} in a future class!</p>
-                    <p>Browse other available classes at: <a href="https://www.cocinartepdx.com">cocinartepdx.com</a></p>
+
+                    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 20px 0;">
+                        We hope this is just a small bump in the road and that we'll get to cook with ${childName} very soon. There's always something delicious coming up — we'd love to have you back in the kitchen with us! 🍳
+                    </p>
+
+                    <div style="text-align: center; margin: 30px 0;">
+                        <a href="https://www.cocinartepdx.com" style="display: inline-block; background: #F0614F; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                            👉 Browse Upcoming Classes
+                        </a>
+                    </div>
+
+                    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 24px 0 4px 0;">With love from the kitchen,</p>
+                    <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;"><strong>The CocinArte Team</strong></p>
+
+                    <div style="text-align: center; margin-top: 30px; padding: 20px; background: #F0F9FF; border-radius: 8px; border: 1px solid #BFDBFE;">
+                        <p style="color: #1E3A8A; margin: 0 0 8px 0; font-size: 16px; font-weight: bold;">Questions? Reach us at</p>
+                        <p style="color: #374151; margin: 0; font-size: 15px;">
+                            📧 <a href="mailto:cocinarte@casitaazulpdx.org" style="color: #F0614F; text-decoration: none; font-weight: bold;">cocinarte@casitaazulpdx.org</a>
+                            <br>
+                            📞 <a href="tel:+15039169758" style="color: #F0614F; text-decoration: none; font-weight: bold;">(503) 916-9758</a>
+                        </p>
+                    </div>
                 </div>
             </div>
         `
