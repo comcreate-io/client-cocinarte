@@ -912,24 +912,30 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
   const handleCancelStudent = async (student: EnrolledStudent) => {
     if (!clase) return
 
+    const isAdminEnrolled = student.booking_comments?.startsWith('[Admin enrollment by')
+
     const now = new Date()
     const classDateTime = new Date(`${clase.date}T${clase.time}`)
     const hoursUntil = (classDateTime.getTime() - now.getTime()) / (1000 * 60 * 60)
     const isLateCancel = hoursUntil < 48
 
     let refundEstimate = 0
-    if (hoursUntil >= 48) {
-      refundEstimate = student.payment_amount
-    } else if (clase.late_cancel_refund_type && clase.late_cancel_refund_value != null) {
-      if (clase.late_cancel_refund_type === 'percentage') {
-        refundEstimate = Math.round(student.payment_amount * (clase.late_cancel_refund_value / 100) * 100) / 100
-      } else if (clase.late_cancel_refund_type === 'fixed') {
-        refundEstimate = Math.min(clase.late_cancel_refund_value, student.payment_amount)
+    if (!isAdminEnrolled) {
+      if (hoursUntil >= 48) {
+        refundEstimate = student.payment_amount
+      } else if (clase.late_cancel_refund_type && clase.late_cancel_refund_value != null) {
+        if (clase.late_cancel_refund_type === 'percentage') {
+          refundEstimate = Math.round(student.payment_amount * (clase.late_cancel_refund_value / 100) * 100) / 100
+        } else if (clase.late_cancel_refund_type === 'fixed') {
+          refundEstimate = Math.min(clase.late_cancel_refund_value, student.payment_amount)
+        }
       }
     }
 
     let msg = `Cancel booking for ${student.child_name} (Parent: ${student.parent_name})?\n\n`
-    if (!isLateCancel) {
+    if (isAdminEnrolled) {
+      msg += `This booking was added by an admin — no refund will be issued.`
+    } else if (!isLateCancel) {
       msg += `Full refund of $${refundEstimate.toFixed(2)} will be issued.`
     } else if (refundEstimate > 0) {
       msg += `Late cancellation — refund of $${refundEstimate.toFixed(2)} will be issued.`
@@ -1265,9 +1271,15 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                             )}
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge className={`${getPaymentColor(student.payment_status)} border-0 text-xs`}>
-                              {getPaymentLabel(student.payment_status)}
-                            </Badge>
+                            {student.booking_comments?.startsWith('[Admin enrollment by') ? (
+                              <Badge className="bg-slate-100 text-slate-700 border-0 text-xs">
+                                Admin Added
+                              </Badge>
+                            ) : (
+                              <Badge className={`${getPaymentColor(student.payment_status)} border-0 text-xs`}>
+                                {getPaymentLabel(student.payment_status)}
+                              </Badge>
+                            )}
                             <span className="text-sm font-semibold text-slate-700">
                               ${student.payment_amount.toFixed(2)}
                             </span>

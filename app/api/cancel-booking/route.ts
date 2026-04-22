@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
               bookingId: booking.id,
               refundAmount: 0,
               isLateCancel: false,
+              isAdminEnrollment: true,
             }),
           })
         } catch (emailError) {
