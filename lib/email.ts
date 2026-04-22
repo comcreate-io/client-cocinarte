@@ -85,8 +85,11 @@ export function personalizeEmailContent(
     );
 
   // Replace class context variables
+  // Note: {{class_title}} is an alias for {{class_name}} — both resolve to the class title
+  const className = classContext?.class_name || "";
   result = result
-    .replace(/{{class_name}}/gi, classContext?.class_name || "")
+    .replace(/{{class_name}}/gi, className)
+    .replace(/{{class_title}}/gi, className)
     .replace(/{{class_date}}/gi, classContext?.class_date || "")
     .replace(/{{class_time}}/gi, classContext?.class_time || "")
     .replace(/{{class_description}}/gi, classContext?.class_description || "")

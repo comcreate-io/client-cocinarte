@@ -384,15 +384,7 @@ export default function CocinarteBirthday() {
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-cocinarte-yellow mt-0.5 flex-shrink-0" />
-                    Birthday cake-making activity
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-cocinarte-yellow mt-0.5 flex-shrink-0" />
                     Take-home treats
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-cocinarte-yellow mt-0.5 flex-shrink-0" />
-                    In-kitchen party decorations
                   </li>
                 </ul>
               </div>
@@ -427,15 +419,11 @@ export default function CocinarteBirthday() {
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-cocinarte-red mt-0.5 flex-shrink-0" />
-                    Custom birthday cake
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-cocinarte-red mt-0.5 flex-shrink-0" />
                     Goodie bags
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-cocinarte-red mt-0.5 flex-shrink-0" />
-                    Full in-kitchen decorations
+                    Dedicated party coordinator
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-cocinarte-red mt-0.5 flex-shrink-0" />
@@ -476,10 +464,6 @@ export default function CocinarteBirthday() {
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-cocinarte-navy mt-0.5 flex-shrink-0" />
                     Premium goodie bags
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-cocinarte-navy mt-0.5 flex-shrink-0" />
-                    Themed in-kitchen decorations
                   </li>
                   <li className="flex items-start gap-2">
                     <Check className="w-4 h-4 text-cocinarte-navy mt-0.5 flex-shrink-0" />

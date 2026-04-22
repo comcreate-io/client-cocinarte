@@ -1793,7 +1793,7 @@ export function ClassStudentsPopup({ clase, isOpen, onClose }: ClassStudentsPopu
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                      Available variables: {'{{first_name}}'}, {'{{last_name}}'}, {'{{email}}'}, {'{{full_name}}'}, {'{{class_name}}'}, {'{{class_date}}'}, {'{{class_time}}'}, {'{{class_description}}'}, {'{{class_type}}'}, {'{{class_price}}'}
+                      Available variables: {'{{first_name}}'}, {'{{last_name}}'}, {'{{email}}'}, {'{{full_name}}'}, {'{{class_name}}'} (or {'{{class_title}}'}), {'{{class_date}}'}, {'{{class_time}}'}, {'{{class_description}}'}, {'{{class_type}}'}, {'{{class_price}}'}
                     </div>
 
                     {showEditorPreview ? (
